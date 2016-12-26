@@ -1,0 +1,9 @@
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="^[tDn<h2}w`]3y}hAo_~[C?o20umZ<tS\rfV"
+
+--^[tDn<h2}w`]3y}hAo_~[C?o20umZ<tS\rfV
+Content-ID: bs7
+Content-Type: application/xml
+
+﻿<?xml version="1.0" encoding="utf-8"?><BootSkin7 version="1"><Winload><BackgroundColor>000000</BackgroundColor><Messages><BackgroundColor>000000</BackgroundColor><Message id="1"><Text>© LockerLife</Text><Position>718</Position><TextColor>7F7F7F</TextColor><TextSize>11</TextSize></Message><Message id="2"><Text>Starting LockerLife</Text><Position>523</Position><TextColor>FFFFFF</TextColor><TextSize>18</TextSize></Message></Messages></Winload><Winresume><Animation source="winload" /><BackgroundColor>000000</BackgroundColor><Messages><BackgroundColor>000000</BackgroundColor><Message id="1"><Text>© Microsoft Corporation</Text><Position>718</Position><TextColor>7F7F7F</TextColor><TextSize>11</TextSize></Message><Message id="2"><Text>Resuming Windows</Text><Position>523</Position><TextColor>FFFFFF</TextColor><TextSize>18</TextSize></Message></Messages></Winresume></BootSkin7>
+--^[tDn<h2}w`]3y}hAo_~[C?o20umZ<tS\rfV--
