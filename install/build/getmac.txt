@@ -1,0 +1,6 @@
+
+Physical Address    Transport Name                                            
+=================== ==========================================================
+24-F5-AA-D4-3E-A3   Media disconnected                                        
+D0-53-49-4A-E6-72   Media disconnected                                        
+D0-53-49-4A-E6-71   \Device\Tcpip_{8377A853-A9EB-4AD7-95D1-AC95F3B1F13C}      
