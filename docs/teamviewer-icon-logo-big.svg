@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 19.2.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Ebene_4" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1024.2 1024.1" enable-background="new 0 0 1024.2 1024.1" xml:space="preserve">
+<g>
+	<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="512.8354" y1="655.5401" x2="512.8354" y2="368.3801">
+		<stop  offset="0" style="stop-color:#096FD2"/>
+		<stop  offset="1" style="stop-color:#0B7FDD"/>
+	</linearGradient>
+	<polygon fill="url(#SVGID_1_)" points="411.8,368.4 373.8,460.5 652.9,460.5 614.9,368.4 898.4,512 614.9,655.5 652.9,563.4 
+		373.8,563.4 411.5,655.5 127.3,512 	"/>
+</g>
+<linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="512.1" y1="1024.0801" x2="512.1" y2="-2.029810e-008">
+	<stop  offset="0" style="stop-color:#0564C8"/>
+	<stop  offset="1" style="stop-color:#0E8EE9"/>
+</linearGradient>
+<path fill="url(#SVGID_2_)" d="M964.2,1024.1H60c-33,0-60-27-60-60V60C0,27,27,0,60,0h904.2c33,0,60,27,60,60v904.1
+	C1024.2,997.1,997.2,1024.1,964.2,1024.1z M508.2,90C277.6,92,91.7,281.2,90,512C88.3,747,276.9,933.8,512,934
+	c231.1,0.2,418-191.9,422-422C938.1,274.3,746,87.9,508.2,90z"/>
+</svg>
