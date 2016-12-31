@@ -7,7 +7,7 @@ set SIMICCID=
 
 REM if %1 is NUL then display error msg "need to run setup-locker.bat <SCAN SIM CARD BARCODE>" and exit 1
 
-SET TMP="C:\TEMP" 
+SET TMP="C:\TEMP"
 SET TMPSITENAME="C:\TEMP\sitename"
 SET TMPFULLPATH="C:\TEMP\lockertmp"
 SET LOCKERADMINPATH=%HOMEPATH%\Dropbox\locker-admin
@@ -33,9 +33,9 @@ IF [%1]==[] (
 
     forfiles /p "%LOCKERCONFIGS%" /s /m %1 /c "cmd /c echo @relpath" > %TMPFULLPATH%
     cat %TMPFULLPATH%
-    
+
     tr -d '\n' < %TMPFULLPATH%
-    
+
     awk -F"\\" "{ print $2 }" %TMPFULLPATH% > %TMPSITENAME%
     cat %TMPSITENAME%
 
