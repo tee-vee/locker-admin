@@ -1,1 +1,0 @@
-net user /add kiosk-test2 * /active:yes /comment:"test user" /fullname:"script user" /passwordchg:no
