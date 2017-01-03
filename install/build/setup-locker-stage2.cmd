@@ -8,13 +8,7 @@ echo ====================================================
 echo          Start Locker Build Process - STAGE 2
 echo ====================================================
 :: build.cmd debug -- build debug version.
-
-echo "stage2"
-echo "stage2"
-echo "stage2"
-echo "stage2"
-echo "stage2"
-echo "stage2"
+title "LOCKER DEPLOYMENT - STAGE 2"
 
 ::  * Expects 1 parameter (REQUIRES SIM CARD ICCID)
 ::  * NOTE: DO NOT SCAN 2D CODE ON BOTTOM RIGHT CORNER
@@ -68,6 +62,7 @@ REM
 REM  SET SITENAME=%1%
 SET SITENAME=test-locker-hk03
 SET HOME=%SYSTEMDRIVE%%HOMEPATH%
+SET KIOSKHOME=C:\Users\kiosk
 SET TOOLS=%HOME%\Dropbox\locker-admin\tools
 SET LOCKERINSTALL=%HOME%\Dropbox\locker-admin\install
 SET LOCKERDRIVERS=%LOCKERINSTALL%\_drivers
@@ -191,8 +186,7 @@ REM [] ADD USER
 :: start /wait net localgroup "kiosk-group" "kiosk" /add
 :: REM [] auto create user profile (super quick, super dirty!)
 :: ECHO "create kiosk user profile"
-:: psexec -accepteula -nobanner -u kiosk -p locision123 -i cmd /c dir
-:: psexec -accepteula -nobanner -u kiosk -p locision123 -i cmd /c dir
+:: psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 
 REM [] Install JRE
 ECHO "INSTALL JAVA"
@@ -211,12 +205,13 @@ REM [][] INSTALL
 :: "%LOCKERINSTALL%\_pkg\Microsoft .NET Framework 4.6.2 (Offline Installer) for Windows 7 SP1.exe" /passive /norestart
 %TMP%\MicrosoftDotNETFramework462OfflineInstallerForWindows7SP1.exe /passive /norestart
 
-ping -n 50 127.0.0.1
+ping -n 30 127.0.0.1
 
 REM Install Microsoft Security Essentials
 ECHO "INSTALL MICROSOFT SECURITY ESSENTIALS"
 :: "%LOCKERINSTALL%\_pkg\MicrosoftSecurityEssentialsInstallWindows 7-32-bit-EN.exe" /s /q /o /runwgacheck
 %TMP%\MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe /s /q /o /runwgacheck
+"%ProgramFiles%\Windows Defender\MpCmdRun.exe" –signatureupdate
 
 ping -n 20 127.0.0.1
 
@@ -245,15 +240,15 @@ start /wait wusa.exe %TMP%\Win7-KB3134760-x86.msu /quiet /norestart
 
 
 REM [] LOCKERLIFE ENVIRONMENT SETUP
-ECHO "LOCKERLIFE ENVIRONMENT SETUP"
+ECHO "STAGE2: LOCKERLIFE ENVIRONMENT SETUP"
 mklink d:\status %LOCKERADMIN%\config\status
-xcopy /s /F /Y %LOCKERINSTALL%\kioskServer d:\
-xcopy /s /F /Y %LOCKERINSTALL%\Locker-Console d:\
-xcopy /s /F /Y %LOCKERINSTALL%\locker-libs d:\
-xcopy /s /F /Y %LOCKERINSTALL%\Locker-Slider d:\
-xcopy /s /F /Y %LOCKERINSTALL%\*.jar d:\
+copy /v /Y %LOCKERINSTALL%\kioskServer d:\
+copy /v /Y %LOCKERINSTALL%\Locker-Console d:\
+copy /v /Y %LOCKERINSTALL%\locker-libs d:\
+copy /v /Y %LOCKERINSTALL%\Locker-Slider d:\
+copy /v /Y %LOCKERINSTALL%\*.jar d:\
 REM mklink d:\run.bat %LOCKERINSTALL%\run.bat
-mklink "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run-production.bat" %LOCKERINSTALL%\run.bat
+mklink %KIOSKHOME%\AppData\Roaming\Microsoft\Windows\STARTM~1\Programs\Startup\run-production.bat" %LOCKERINSTALL%\run.bat
 
 REM Fetch java dependencies, place into locker-libs
 REM first fetch pkglist
@@ -376,6 +371,8 @@ net stop uxsms
 
 REM [] CLASSIC THEME
 ECHO "CLASSIC THEME"
+sc config themes start= disabled
+net stop themes
 rundll32.exe %SystemRoot%\system32\shell32.dll,Control_RunDLL %SystemRoot%\system32\desk.cpl desk,@Themes /Action:OpenTheme /file:"C:\Windows\Resources\Ease of Access Themes\classic.theme"
 
 REM [] DISABLE WINDOWS UPDATE
@@ -410,48 +407,63 @@ REM Set-TaskBarOptions -Lock -Size small -Verbose
 REM
 REM [] REGISTER ME FOR LOCKER CLOUD!
 REM    REMINDER: TRAP if not error then go next
-ECHO "REGISTER LOCKER CLOUD"
-::CALL %LOCKERINSTALL%\build\register-locker.bat
-CALL %TMP%\register-locker.bat
+ECHO "%~n0 REGISTER LOCKER CLOUD"
+:: CALL %LOCKERINSTALL%\build\register-locker.bat
+:: CALL %TMP%\register-locker.bat
 
-ECHO "INSTALL SERVICES"
+echo.
+ECHO "%~n0 INSTALL SERVICES"
 REM ******
 REM
 REM [] INSTALL SCANNER.JAR AS SERVICE
 :: CALL %LOCKERINSTALL%\build\new-service-scanner.bat
-CALL %TMP%\build\new-service-scanner.bat
+CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
 
 REM
 REM [] INSTALL KIOSKSERVER AS SERVICE
 :: CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
-CALL %TMP%\build\new-service-kioskserver.bat
+CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
 
 REM
 REM [] INSTALL DATA-COLLECTION.JAR AS SERVICE
 :: CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
-CALL %TMP%\build\new-service-datacollection.bat
+CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
 
 REM
 REM [] INSTALL CORE.JAR AS SERVICE
 :: CALL %LOCKERINSTALL%\build\new-service-core.bat
-CALL %TMP%\build\new-service-core.bat
+CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
 
 REM [] add locker-admin, tools, LOCKER, install links to favorites
 REM XXMKLINK.EXE "%userprofile%\Links\locker-admin.lnk" "C:%HOMEPATH\Dropbox\locker-admin"
 
-REM [] SET WORKGROUP NAME
+echo.
+echo "%~n0 SET WORKGROUP NAME"
 wmic computersystem where name="%computername%" call joindomainorworkgroup name=”LOCKERLIFE.HK”
 
-REM [] CLEANUP
-ECHO "CLEANUP"
-del /f /s /q "\Users\kiosk\Desktop\*.lnk"
-del /f /s /q "%HOMEPATH%\Desktop\*.lnk"
+ECHO "%~n0 CLEANUP"
+echo.
+echo "%~n0 DISABLE GUEST USER"
+net user guest /active:no
+echo.
+echo "%~n0 SET SYSTEM TIME"
+tzutil.exe /s "China Standard Time"
+w32tm /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
+echo.
+echo "%~n0 clean up desktop"
+:: powershell cleanup script (also executes function-specific cmdlets)
+:: powershell update-help
+del /f /s /q "C:\Users\kiosk\Desktop\*.lnk"
+del /f /s /q "C:%HOMEPATH%\Desktop\*.lnk"
 del /f /s /q "%Public%\Desktop\*.lnk"
 del /f /s /q "%ALLUSERSPROFILE%\Desktop\*.lnk"
 del /f /s /q c:\temp\*
-powershell update-help
 
-REM %LOCKERINSTALL%\Win7BootUpdaterCmd2.exe
+:: setup kiosk env
+copy /v %USERPROFILE%\Dropbox\locker-admin\install\build\complete-locker-setup.cmd %KIOSKHOME%\Desktop
+
+:: update boot screen
+%USERPROFILE%\Dropbox\locker-admin\tools\BootUpdCmd20.exe %USERPROFILE%\Dropbox\locker-admin\install\build\lockerlife-boot-custom.bs7
 
 pushd %LOCKERINSTALL%\build
 
