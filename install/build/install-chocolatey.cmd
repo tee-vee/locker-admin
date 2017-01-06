@@ -14,22 +14,31 @@ chocolatey feature enable -n=allowGlobalConfirmation
 
 choco install git
 choco install 7zip
+:: hack; used later in stage2
+mklink %programdata%\Chocolatey\bin\7z.exe %programdata%\Chocolatey\tools\7z.exe
+
 choco install notepadplusplus
 choco install boxstarter.common
 choco install boxstarter.winconfig
 choco install teamviewer
 choco install carbon
 choco install gow
+choco install fciv
 choco install curl
 choco install vim
 choco install clink
 choco install git
 choco install jq
+choco install carbon
+choco install putty
+choco install winscp
 choco install rsync
 choco install which
 choco install nssm
 choco install wget
 choco install pswindowsupdate
+choco install handle
+choco install teraterm
 :: choco install git-credential-manager-for-windows
 
 :: turn off the prompting from Chocolatey asking if you are sure you want to install

@@ -18,72 +18,106 @@ echo.
 echo "%~n0 setup work environment ..."
 echo.
 set bitsadmin=c:\windows\system32\bitsadmin.exe
-set tmp=C:\temp
-set baseurl=http://www.lockerlife.hk/deploy
+set _tmp=C:\temp
+set baseurl=http://lockerlife.hk/deploy
 
 :: get environment variables
-%bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %tmp%\setenv.cmd
+%bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
 :: call me maybe?
-call setenv.cmd
-
-:: just in case
-%bitsadmin% /reset
-cd %tmp%
-
-:: check for required exe or die
+call %_tmp%\setenv.cmd
+cd %_tmp%
 
 :: just in case
 start "BitsAdmin Service Init" %bitsadmin% /reset
-echo "bitsadmin completion status: %errorlevel%"
 
 :: --------------------------------------------------------------------------------------------
 :: grab stuff
 :: --------------------------------------------------------------------------------------------
-%bitsadmin% /transfer "fix-powershell" %baseurl%/fix-powershell.cmd %tmp%\fix-powershell.cmd
-:: %bitsadmin% /transfer "tv-reg" %baseurl%/l2-teamviewer.reg %tmp%\l2-teamviewer.reg
-:: %bitsadmin% /transfer "fix-powershell" %baseurl%/restore-powershell.cmd %tmp%\restore-powershell.cmd
+:: %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%' '%_tmp%';}"
+:: %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%' '%_tmp%';}"
 
-:: %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 '%baseurl%' '%tmp%';}"
-:: %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 '%baseurl%' '%tmp%';}"
+%bitsadmin% /transfer "fix-powershell" %baseurl%/fix-powershell.cmd %_tmp%\fix-powershell.cmd
+%bitsadmin% /transfer "fix-powershell" %baseurl%/restore-powershell.cmd %_tmp%\restore-powershell.cmd
 
-echo.
-echo "%~n0 downloading updates"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/_updates.tar.gz' 'C:\temp\_updates.tar.gz';}"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/_drivers.zip' 'C:\temp\_drivers.zip';}"
+timeout /t 10 /nobreak 
 
-echo.
-echo "%~n0 downloading security package"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/production-gpo.zip' 'C:\temp\production-gpo.zip';}"
+:: --------------------------------------------------------------------------------------------
+:: Dropbox check
+:: --------------------------------------------------------------------------------------------
 
-echo.
-echo "%~n0 downloading dotNet 4.6.2 framework"
-:: check before downloading?
-:: (Get-ItemProperty -Path 'HKLM:\Software\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction SilentlyContinue).Version -like '4.5*'
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/_pkg/MicrosoftDotNETFramework462OfflineInstallerForWindows7SP1.exe' 'C:\temp\MicrosoftDotNETFramework462OfflineInstallerForWindows7SP1.exe';}"
+tasklist /fi "IMAGENAME eq Dropbox.exe" | findstr /i Dropbox.exe 
+if not errorlevel 0 (
+    echo.
+    echo "Dropbox not started?"
+    echo "please check dropbox?"
+    echo "then return here"
+    pause
+    echo.
+) 
 
-echo.
-echo "%~n0 downloading msav"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/_pkg/MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe' 'C:\temp\MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe';}"
 
-echo.
-echo "%~n0 downloading java"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/_pkg/jre-8u111-windows-i586.exe' 'C:\temp\jre-8u111-windows-i586.exe';}"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/_pkg/jre-install.properties' 'C:\temp\jre-install.properties';}"
+:: --------------------------------------------------------------------------------------------
+:: Backup Plan
+:: --------------------------------------------------------------------------------------------
 
-echo.
-echo "%~n0 downloading cleanup"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/fix-powershell.cmd' 'C:\temp\fix-powershell.cmd';}"
-%ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 30 'http://www.lockerlife.hk/deploy/l2-teamviewer.reg' 'C:\temp\l2-teamviewer.reg';}"
+if not exist "%LOCKERINSTALL%" (
+    set BACKUPPLAN=YES
+    if not exist "%LOCKERINSTALL%\_drivers" (
+        echo.
+        echo "%~n0 downloading updates"
+        %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%/_updates.tar.gz' '%_tmp%\_updates.tar.gz';}"
+        %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%/_drivers.zip' '%_tmp%\_drivers.zip';}"
+        :: prep updates for stage2
+        "c:\program files\7-Zip\7z.exe" e _drivers.zip -aoa -y
+        "c:\program files\7-Zip\7z.exe" e _updates.tar.gz -aoa -y
+        "c:\program files\7-Zip\7z.exe" e _updates.tar -aoa -y
+    )
+
+    echo.
+    echo "%~n0 downloading security package"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%/production-gpo.zip' '%_tmp%\production-gpo.zip';}"
+
+    echo.
+    echo "%~n0 downloading dotNet 4.6.2 framework"
+    :: check before downloading?
+    :: (Get-ItemProperty -Path 'HKLM:\Software\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction SilentlyContinue).Version -like '4.5*'
+    %REGEXE% query "HKEY_LOCAL_MACHINE\Software\Microsoft\Net Framework Setup\NDP\v4\Full" /v Version
+    if Errorlevel 1 (
+        :: get .net installer 
+        echo.
+        %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%/_pkg/MicrosoftDotNETFramework462OfflineInstallerForWindows7SP1.exe' '%_tmp%\MicrosoftDotNETFramework462OfflineInstallerForWindows7SP1.exe';}"
+    )
+
+    echo.
+    echo "%~n0 downloading msav"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 '%baseurl%/_pkg/MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe' '%_tmp%\MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe';}"
+
+    echo.
+    echo "%~n0 downloading java"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/_pkg/jre-8u111-windows-i586.exe' 'C:\temp\jre-8u111-windows-i586.exe';}"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/_pkg/jre-install.properties' 'C:\temp\jre-install.properties';}"
+
+    echo.
+    echo "%~n0 downloading cleanup"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/fix-powershell.cmd' 'C:\temp\fix-powershell.cmd';}"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/l2-teamviewer.reg' 'C:\temp\l2-teamviewer.reg';}"
+    %bitsadmin% /transfer "Download TeamViewer Settings" %baseurl%/l2-teamviewer.reg %_tmp%\l2-teamviewer.reg
+
+) else (
+    :: no need to download anything; just use dropbox
+    :: buy time ...
+    set BACKUPPLAN=
+    echo "%~n0 Locker Deployment Condition = GOOD"
+    echo.
+    echo "Preparing for next step ..."
+    timeout /t 15 /nobreak
+)
 
 :: powershell -Command "& {Update-Help -Confirm}"
 :: just in case
 %bitsadmin% /reset
 echo "%~n0 statuscheck: %errorlevel%"
 echo.
-
-:: just prompt to run an elevated shell
-::   OLD-> Start-Process -FilePath "c:\temp\locker-setup\setup-locker-stage1.cmd" -Verb runAs
-::   OLD-> Start-Process -FilePath "c:\temp\locker-setup\test2.cmd" -Verb runAs
 
 :: echo "%~n0 creating kiosk user, hiding admin"
 :: ---
@@ -95,21 +129,19 @@ cd c:\temp
 
 echo.
 echo.%time%
-echo "LOCKERINSTALL is: %LOCKERINSTALL%"
-echo "LOCKERADMIN is: %LOCKERADMIN%"
-
-:: hstart.exe /runas /wait "%USERPROFILE%\Dropbox\locker-admin\install\build\setup-locker-stage1.cmd"
 :: echo "%~n0 statuscheck: %errorlevel%"
 
 echo.
 echo.%time%
 echo "%~n0 Fixing powershell runtime"
-hstart.exe /runas /wait "%USERPROFILE%\Dropbox\locker-admin\install\build\fix-powershell.cmd"
+%hstart% /runas /wait "%USERPROFILE%\Dropbox\locker-admin\install\build\fix-powershell.cmd"
 
 echo.%time%
 echo %errorlevel%
 
 echo.
+echo ==============================================
+echo "STAGE 0 COMPLETED"
 echo ==============================================
 echo.
 echo.
@@ -137,17 +169,17 @@ echo "%~n0 Preparing for stage2"
 
 :: cleanup function
 ::cleanup
-hstart.exe /runas /wait restore-powershell.cmd
-:: del /q %tmp%\*.ps1
-:: del /q %tmp%\*.txt
-:: del /q %tmp%\*.exe
-:: del /q %tmp%\*.cmd
-:: del /q %tmp%\*.bat
-:: del /q %tmp%\*.zip
-:: del /q %tmp%\*.reg
-:: rmdir /S /Q %tmp%\_gpo
-:: rmdir /S /Q %tmp%\_updates
-:: rmdir /S /Q %tmp%\chocolatey
+%hstart% /runas /wait restore-powershell.cmd
+:: del /q %_tmp%\*.ps1
+:: del /q %_tmp%\*.txt
+:: del /q %_tmp%\*.exe
+:: del /q %_tmp%\*.cmd
+:: del /q %_tmp%\*.bat
+:: del /q %_tmp%\*.zip
+:: del /q %_tmp%\*.reg
+:: rmdir /S /Q %_tmp%\_gpo
+:: rmdir /S /Q %_tmp%\_updates
+:: rmdir /S /Q %_tmp%\chocolatey
 
 endlocal
 popd
