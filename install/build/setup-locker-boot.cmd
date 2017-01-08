@@ -39,7 +39,7 @@ set _tmp=C:\temp
 set baseurl=http://lockerlife.hk/deploy
 
 :: get environment variables
-%bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
+REM ## %bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
 :: call me maybe? 
 call setenv.cmd
 

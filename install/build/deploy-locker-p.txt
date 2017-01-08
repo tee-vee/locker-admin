@@ -52,19 +52,23 @@ cinst handle
 cinst notepadplusplus
 cinst teraterm
 
+# test curl
+curl http://httpbin.org/ip
+
 # apply hotfix
 # See: https://support.microsoft.com/en-us/kb/2889748
 cd c:\temp
 %windir%\System32\net.exe stop wuauserv
-
 "%programfiles%\Gow\bin\curl.exe" -o "c:\temp" --url "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix475191/7600/free/468848_intl_i386_zip.exe"
 "%programfiles%\7-zip\7z.exe" e -y c:\temp\hotfix.exe
 %windir%\System32\wusa.exe c:\temp\Windows6.1-KB2889748-x86.msu /passive /quiet /norestart
 
+del /q c:\temp\*.exe
+del /q c:\temp\*.msu
 
-curl 
+# get install
+git clone https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git c:\temp
 
 
-pause
 
 

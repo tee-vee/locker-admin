@@ -13,6 +13,7 @@ setx _tmp c:\temp
 SET LOCKERCFG=locker.properties
 
 set _tmp=C:\temp
+set tmpbuild=%_tmp%\install\build
 set HOME=%USERPROFILE%
 set KIOSKHOME=C:\Users\kiosk
 set LOCKERBASE=%USERPROFILE%\Dropbox\locker-admin
@@ -39,19 +40,23 @@ set hstart=%SystemRoot%\System32\hstart.exe
 set ps=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
 
 
-:: use dropbox if psosible
-if exist "%USERPROFILE%\Dropbox\locker-admin\tools\hstart.exe" (
-    set hstart=%USERPROFILE%\Dropbox\locker-admin\tools\hstart.exe
+:: updated to support WebStart
+if exist %tmpbuild%\hstart.exe (
+    set hstart=%tmpbuild%\hstart.exe
     echo "%~n0: Build environment condition = GOOD"
-    set DROPBOXSTATUS="OK"
 ) else (
+    if exist "%USERPROFILE%\Dropbox\locker-admin\tools\hstart.exe" (
+        set hstart=%USERPROFILE%\Dropbox\locker-admin\tools\hstart.exe
+        echo "%~n0: Build environment condition = GOOD"
+        set DROPBOXSTATUS="OK"
+    ) else (
     echo.
     echo "%~n0: Downloading hstart"
-    REM ## %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/hstart.exe' 'C:\temp\hstart.exe';}"
+    %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/hstart.exe' 'C:\temp\hstart.exe';}"
     set hstart=c:\temp\hstart.exe
     echo "using temp hstart"
     echo "%~n0: Build environment condition = POOR"
-
+    )
 )
 
 :: Find Start Menu
@@ -67,5 +72,6 @@ echo.
 
 set _setenv=0
 echo "%~n0: Setup work environment ... done"
+echo "returning back to caller ..."
 echo.
 
