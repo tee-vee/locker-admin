@@ -22,9 +22,14 @@ set _tmp=C:\temp
 set baseurl=http://lockerlife.hk/deploy
 
 :: get environment variables
-%bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
 :: call me maybe?
-call %_tmp%\setenv.cmd
+if not defined _setenv (
+    start "BitsAdmin Service Init" %bitsadmin% /reset
+    %bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
+    cd %_tmp% & call %_tmp%\setenv.cmd
+    set _setenv=0
+)
+
 cd %_tmp%
 
 :: just in case

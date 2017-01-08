@@ -175,10 +175,14 @@ ECHO " INSTALL PRINTER DRIVERS"
 REM CALL 0-setup-env.bat
 REM CALL install-printer.bat
 REM RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 path-to-inf\infname.inf
+wmic printer list status
 %LOCKERDRIVERS%\printer\Windows81Driver\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 %LOCKERDRIVERS%\printer\Windows81Driver\POS88EN.inf
 %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
 
 %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--inf=%LOCKERDRIVERS%\printer\SPRT_Printer.inf"
+
+:: Print a test page to one or more printers
+REM ## for /f "tokens=1-4 delims=," %i in (%Printer.txt%) do cscript prnctrl.vbs -t -b \\%PrintServer%\%i
 
 :: --------------------------------------------------------------------------------------------
 REM INSTALL SCANNER DRIVER
@@ -246,10 +250,15 @@ ping -n 15 127.0.0.1
 :: --------------------------------------------------------------------------------------------
 echo.
 ECHO "INSTALL MICROSOFT SECURITY ESSENTIALS"
-:: "%LOCKERINSTALL%\_pkg\MicrosoftSecurityEssentialsInstallWindows 7-32-bit-EN.exe" /s /q /o /runwgacheck
+
 cd %PROGRAMFILES% & cd "Windows Defender"
-%hstart% /nouac /delay=1 /runas /wait "%LOCKERINSTALL%\_pkg\MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe /s /q /o /runwgacheck"
-%hstart% /d="%PROGRAMFILES%\Windows Defender" /nouac /runas "MpCmdRun.exe –SignatureUpdate"
+if not exist "%PROGRAMFILES%\Windows Defender\MpCmdRun.exe" (
+    REM ## "%LOCKERINSTALL%\_pkg\MicrosoftSecurityEssentialsInstallWindows 7-32-bit-EN.exe" /s /q /o /runwgacheck
+    REM ## %hstart% /nouac /delay=1 /runas /wait "%LOCKERINSTALL%\_pkg\MicrosoftSecurityEssentialsInstallWindows7-32bit-EN.exe /s /q /o /runwgacheck"
+) else (
+    %windir%\System32\sc.exe start MsMpSvc
+    %hstart% /d="%PROGRAMFILES%\Windows Defender" /nouac /runas "MpCmdRun.exe –SignatureUpdate"
+)
 
 ping -n 10 127.0.0.1
 
@@ -466,6 +475,28 @@ XXMKLINK.EXE %userprofile%\Links\locker-admin.lnk %LOCKERBASE%
 XXMKLINK.EXE %userprofile%\Links\locker-tools.lnk %LOCKERTOOLS%
 
 :: --------------------------------------------------------------------------------------------
+:: set scheduled tasks
+:: Examples: https://technet.microsoft.com/en-us/library/bb490996.aspx
+:: --------------------------------------------------------------------------------------------
+:: To schedule a command that runs every hour at five minutes past the hour
+:: The following command schedules the MyApp program to run hourly beginning at five minutes past midnight.
+:: Because the /mo parameter is omitted, the command uses the default value for the hourly schedule, which is every (1) hour. 
+:: If this command is issued after 12:05 A.M., the program will not run until the next day.
+REM ## schtasks /create /sc hourly /st 00:05:00 /tn "My App" /tr c:\apps\myapp.exe
+
+:: To schedule a command that runs every five hours
+:: The following command schedules the MyApp program to run every five hours beginning on the first day of March 2001.
+:: It uses the /mo parameter to specify the interval and the /sd parameter to specify the start date.
+:: Because the command does not specify a start time, the current time is used as the start time.
+REM ## schtasks /create /sc hourly /mo 5 /sd 03/01/2001 /tn "My App" /tr c:\apps\myapp.exe
+
+:: To schedule a task that runs every day
+:: The following example schedules the MyApp program to run once a day, every day, at 8:00 A.M. until December 31, 2001.
+:: Because it omits the /mo parameter, the default interval of 1 is used to run the command every day.
+REM ## schtasks /create /tn "My App" /tr c:\apps\myapp.exe /sc daily /st 08:00:00 /ed 12/31/2001
+
+
+:: --------------------------------------------------------------------------------------------
 echo.
 echo "%~n0 SET WORKGROUP NAME"
 %windir%\System32\Wbem\wmic computersystem where name="%computername%" call joindomainorworkgroup name=”LOCKERLIFE.HK”
@@ -485,6 +516,8 @@ del /f /s /q "%KIOSKHOME%\Recent\*.*"
 del /f /s /q "%USERPROFILE%\Desktop\*.lnk"
 del /f /s /q "%USERPROFILE%\Desktop\desktop.ini"
 del /f /s /q "%USERPROFILE%\Recent\*.*"
+del /f /s /q "%USERPROFILE%\Downloads\*.*"
+rm -fr "%USERPROFILE%\Favorites\*"
 del /f /s /q "%Public%\Desktop\*.lnk"
 del /f /s /q "%Public%\Desktop\desktop.ini"
 del /f /s /q "%Public%\Recent\*.*"
@@ -514,9 +547,17 @@ echo "%~n0 DISABLE GUEST USER"
 %LOCKERINSTALL%\build\disable-admin.cmd
 %LOCKERINSTALL%\build\enable-UAC.cmd
 
+:: --------------------------------------------------------------------------------------------
 :: unset setenv
 set _setenv=
 
+:: --------------------------------------------------------------------------------------------
+%SYSTEMROOT%\System32\WinSAT.exe -v forgethistory
+%SYSTEMROOT%\System32\dism.exe /english /online /disable-feature /featurename:WindowsGadgetPlatform
+
+
+
+:: --------------------------------------------------------------------------------------------
 cd %LOCKERINSTALL%\build
 
 ECHO "ALL DONE! REBOOTING"

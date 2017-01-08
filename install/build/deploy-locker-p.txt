@@ -1,0 +1,70 @@
+# Derek Yuen <derekyuen@lockerlife.hk>
+# January 2017
+# Bootstrap script for use with http://boxstarter.org/
+# To use append the URL to the raw snippet to http://boxstarter.org/package/nr/url? (e.g. http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/....txt)
+
+# Create temp dir
+mkdir c:\temp
+
+# Set System time zone and time (via NTP)
+%windir\System32\%tzutil.exe /s "China Standard Time"
+%windir%\System32\tzutil.exe /g
+%windir%\System32\w32tm.exe /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
+
+# Windows Settings
+Set-ExplorerOptions -showFileExtensions
+Update-ExecutionPolicy RemoteSigned
+Disable-MicrosoftUpdate
+Disable-UAC
+Disable-BingSearch
+Set-WindowsExplorerOptions -DisableShowHiddenFilesFoldersDrives -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableOpenFileExplorerToQuickAccess -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess -DisableExpandToOpenFolder
+Set-TaskbarOptions -Size Small -Lock -Dock Bottom
+
+# Windows updates & features
+cinst dotnet4.6.2
+## cinst powershell4
+cinst microsoftsecurityessentials
+
+# local primary dependencies
+cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
+cinst teamviewer
+cinst pstools
+cinst curl
+cinst gow
+cinst nssm
+cinst wget
+cinst jq
+cinst 7zip
+cinst boxstarter.common
+cinst boxstarter.winconfig
+cinst chocolatey
+
+# secondary dependencies
+cinst fciv
+cinst vim
+cinst clink
+cinst putty
+cinst winscp
+cinst rsync
+cinst which
+cinst pswindowsupdate
+cinst handle
+cinst notepadplusplus
+cinst teraterm
+
+# apply hotfix
+# See: https://support.microsoft.com/en-us/kb/2889748
+cd c:\temp
+%windir%\System32\net.exe stop wuauserv
+
+"%programfiles%\Gow\bin\curl.exe" -o "c:\temp" --url "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix475191/7600/free/468848_intl_i386_zip.exe"
+"%programfiles%\7-zip\7z.exe" e -y c:\temp\hotfix.exe
+%windir%\System32\wusa.exe c:\temp\Windows6.1-KB2889748-x86.msu /passive /quiet /norestart
+
+
+curl 
+
+
+pause
+
+

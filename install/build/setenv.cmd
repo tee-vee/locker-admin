@@ -33,6 +33,7 @@ SET DROPBOXSTATUS=
 :: Set path of Reg.exe and other exe's
 set REGEXE="%SystemRoot%\System32\REG.exe"
 set tar="%ProgramFiles%\Gow\bin\tar.exe"
+set git="%ProgramFiles%\Git\cmd\Git.exe"
 set bitsadmin=%SystemRoot%\System32\bitsadmin.exe
 set hstart=%SystemRoot%\System32\hstart.exe
 set ps=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
