@@ -1,19 +1,21 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 # Bootstrap script for use with http://boxstarter.org/
-# To use append the URL to the raw snippet to http://boxstarter.org/package/nr/url? (e.g. http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/....txt)
+# To use append the URL to the raw snippet to http://boxstarter.org/package/nr/url? 
+#  (e.g. http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/....txt)
 
 
 #
 # Create temp dir
 #
 mkdir c:\temp
+mkdir c:\local
 
 
 #
 # Set System time zone and time (via NTP)
 #
-%windir\System32\%tzutil.exe /s "China Standard Time"
+%windir%\System32\tzutil.exe /s "China Standard Time"
 %windir%\System32\tzutil.exe /g
 %windir%\System32\w32tm.exe /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
 
@@ -71,7 +73,7 @@ cinst teraterm
 
 #
 # test curl
-curl http://httpbin.org/ip
+"%programfiles%\Gow\bin\curl.exe" http://httpbin.org/ip
 
 
 #
@@ -83,6 +85,24 @@ cd c:\temp
 "%programfiles%\7-zip\7z.exe" e -y c:\temp\hotfix.exe
 %windir%\System32\wusa.exe c:\temp\Windows6.1-KB2889748-x86.msu /passive /quiet /norestart
 
+timeout /t 10 /nobreak
+
+#
+# get new powershell
+#
+curl -k -o c:\temp\Windows6.1-KB2506143-x86.msu --url "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x86.msu"
+%windir%\System32\wusa.exe c:\temp\Windows6.1-KB2506143-x86.msu /passive /quiet /norestart
+
+timeout /t 10 /nobreak
+
+# 
+# Get and install IE11 - only supported browser (maintain supported footing)
+#
+"%programfiles%\Gow\bin\curl.exe" -k -o c:\temp\IE11-Windows6.1-x86-en-us.exe --url "https://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe"
+c:\temp\IE11-Windows6.1-x86-en-us.exe /quiet /norestart
+
+timeout /t 20 /nobreak
+
 #
 # light cleanup
 #
@@ -90,33 +110,23 @@ del /q c:\temp\*.exe
 del /q c:\temp\*.msu
 del /q %userprofile%\*.lnk
 
-#
-# prompt to scan sim card; capture input
-
-
-#
-# get install
-#
-git clone https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git c:\temp
-
-#
-# get new powershell
-#
-#curl -k -o c:\temp\Windows6.1-KB2506143-x86.msu --url "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x86.msu"
-#%windir%\System32\wusa.exe c:\temp\Windows6.1-KB2506143-x86.msu /passive /quiet /norestart
-
 
 #
 # generate call to next stage ...
 #
 echo.
-set _stage2=%userprofile%\Desktop\setup-locker-stage2.cmd
-type NUL > %_stage2%
-echo "@echo off" >> %_stage2%
-echo "" >> %_stage2%
-echo "START http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/deploy-locker-p2.txt"
+type NUL > %userprofile%\Desktop\deploy-locker.cmd
+echo "@echo off" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "#" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "# prompt to scan sim card; capture input" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "#" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "START http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/deploy-locker2.txt" >> %userprofile%\Desktop\deploy-locker.cmd
+echo "" >> %userprofile%\Desktop\deploy-locker.cmd
 
-echo "
+echo.
 
 #
 # reboot

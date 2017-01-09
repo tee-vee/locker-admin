@@ -10,6 +10,7 @@ echo ====================================================
 :: build.cmd debug -- build debug version.
 title "LOCKER DEPLOYMENT - STAGE 2"
 
+
 :: --------------------------------------------------------------------------------------------
 :: Setup work environment
 :: --------------------------------------------------------------------------------------------
@@ -433,12 +434,26 @@ net stop themes
 rundll32.exe %WINDIR%\system32\shell32.dll,Control_RunDLL %WINDIR%\system32\desk.cpl desk,@Themes /Action:OpenTheme /file:"C:\Windows\Resources\Ease of Access Themes\classic.theme"
 
 :: --------------------------------------------------------------------------------------------
-REM [] DISABLE WINDOWS UPDATE
+:: [] DISABLE WINDOWS UPDATE
+:: https://support.microsoft.com/en-us/kb/328010
+:: --------------------------------------------------------------------------------------------
 echo.
-ECHO "DISABLE WINDOWS UPDATE"
+echo "DISABLE WINDOWS UPDATE"
 %REGEXE% add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /t REG_DWORD /v NoWindowsUpdate /d 1 /f
+%REGEXE% add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update" /v AUOptions /t REG_DWORD /d 1 /f
 %ps% -executionpolicy bypass -file %LOCKERINSTALL%\build\setup-windowsupdate.ps1
 echo.
+
+REM disable windows update
+
+
+REM Stopping Automatic updates service 
+net stop wuauserv
+
+
+
+
+
 
 REM
 REM [] REGISTER ME FOR LOCKER CLOUD!
