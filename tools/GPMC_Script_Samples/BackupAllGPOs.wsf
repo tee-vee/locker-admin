@@ -1,0 +1,204 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:	BackupAllGPOs.wsf
+'// Author:	mtreit@microsoft.com
+'// Created:	1/3/2002
+'//
+'// Purpose:	Takes a domain name and backs up all GPOs in that domain
+'//		to the specified backup location
+'// Revision:	Ported from JScript->VBScript by dtsaltas (October 20, 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+
+Dim ArgumentList     : Set ArgumentList = ProcessCommandLineArguments()
+Dim szDomainName     : szDomainName     = ArgumentList.Item("Domain")
+Dim szBackupLocation : szBackupLocation = ArgumentList.Item("BackupLocation")
+Dim szComment        : szComment        = ArgumentList.Item("Comment")
+
+' Validate the path given
+Dim bValidPath	: bValidPath = ValidatePath(szBackupLocation)
+
+If bValidPath = false Then
+	WScript.Echo "The path '" & szBackupLocation & "' could not be found."
+	WScript.Echo "Verify the path exists."
+	WScript.Quit
+End If
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Backup all GPOs in the specified domain
+
+BackupAllGPOs szBackupLocation, szComment, GPMDomain
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Backs up all GPOs in the specified domain to a given file system location
+Function BackupAllGPOs(strBackupLocation, strComment, GPMDomain)
+
+	' Create the search criteria object
+	Dim GPMSearchCriteria : Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+
+	' Get all of the GPOs by passing in a default SearchCriteria object
+	
+        Dim GPOList
+        Set GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria)
+
+	' Now process the list
+	Dim GPMGPO
+
+	WScript.Echo "== Found " & GPOList.Count & " GPOs in " & GPMDomain.Domain & " to backup ==" & vbCrLf
+
+	' Loop through the list and print info for each GPO	
+	Dim iSuccessCount : iSuccessCount = 0
+	Dim iFailureCount : iFailureCount = 0
+        Dim bFailure      : bFailure = false
+
+	For Each GPMGPO in GPOList
+           On Error Resume Next
+           Dim GPMResult
+           Set GPMResult = GPMGPO.Backup(strBackupLocation,strComment)
+ 	   ' call the overallstatus method to force an error if there were any problems
+	   GPMResult.OverallStatus
+
+
+			' FAILURE
+			' There was a problem, let the user know the details and increment the failure counter
+              
+           If Err.Number <> 0 Then
+
+	      If Not IsNull(GPMResult) Then
+                 PrintStatusMessages(GPMResult)
+              End If
+	      WScript.Echo vbCrLf
+	      WScript.Echo "The backup attempt failed for GPO " & GPMGPO.ID
+	      WScript.Echo "Attempted to backup GPO "           & GPMGPO.ID & " to location " & strBackupLocation
+	      WScript.Echo Err.Number & " - " & Err.Description '[todo]wrap with ErrCode
+	      iFailureCount = iFailureCount + 1 
+              bFailure = true             
+
+           End If
+
+          
+           ' SUCCESS
+           ' Backup appears to have been successful. Print any status messages in GPMResult and 
+           ' provide the user with some details about the backup
+
+
+           If Not bFailure = True Then   
+
+                ' Print any status message warnings
+		PrintStatusMessages(GPMResult)
+
+		Dim GPMBackup : Set GPMBackup = GPMResult.Result
+				
+		WScript.Echo vbCrLf & "Backed up GPO '" & GPMBackup.GPODisplayName & "' with the following properties:"
+		WScript.Echo vbCrLf
+	 	WScript.Echo "GPO ID:"    & vbTab & vbTab & GPMBackup.GPOID
+		WScript.Echo "Timestamp:" & vbTab & GPMBackup.TimeStamp
+		WScript.Echo "Backup ID:" & vbTab & GPMBackup.ID
+		
+		iSuccessCount = iSuccessCount + 1
+           Else
+                ' reset the failure flag
+                bFailure = False
+           End If
+	Next
+
+	WScript.Echo vbCrLf
+	WScript.Echo "Backup succeeded for " & iSuccessCount & " GPOs."
+	WScript.Echo "Backup failed for "    & iFailureCount & " GPOs."
+
+End Function
+
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szBackupLocation : szBackupLocation = ""
+	Dim szDomainName     : szDomainName =     ""
+	Dim szComment        : szComment =        ""
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length = 0 Then
+		WScript.Arguments.ShowUsage()
+		WScript.Quit(-1)
+	End If
+	
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	szBackupLocation = WScript.Arguments(0)
+
+	' Get the comment to use, if specified
+	If WScript.Arguments.Named.Exists("Comment") Then
+		szComment = WScript.Arguments.Named("Comment")
+	End If
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Domain"         , szDomainName
+	Result.Add "BackupLocation" , szBackupLocation
+	Result.Add "Comment"        , szComment
+
+	Set ProcessCommandLineArguments = Result
+End Function
+
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Backs up all GPOs in the a given domain to the specified file system location.
+</description>
+
+<unnamed name="BackupLocation" helpstring="File system location to back up to" type="string" required="true"  />
+<named   name="Comment"        helpstring="Optional comment for the backup"    type="string" required="false" />
+<named   name="Domain"         helpstring="DNS name of domain"                 type="string" required="false" />
+
+<example>
+Example: BackupAllGPOs.wsf c:\GPO-Backups /comment:"Weekly backup"
+</example>
+
+</runtime>
+
+</job>

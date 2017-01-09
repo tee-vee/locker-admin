@@ -1,0 +1,276 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		DeleteGPO.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		10/23/2001
+'//
+'// Purpose:		Takes a GPO name or GUID and deleted the GPO
+'//			options.
+'// Revision:		Ported from JScript->VBScript by dtsaltas (December 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList : Set ArgumentList = ProcessCommandLineArguments()
+Dim szGPOName    : szGPOName        = ArgumentList.Item("GPOName")
+Dim bKeepLinks   : bKeepLinks       = ArgumentList.Item("KeepLinks")
+Dim szDomainName : szDomainName     = ArgumentList.Item("Domain")
+
+' Get the forest name
+Dim szForestName : szForestName = GetForestDNSName(szDomainName)
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Initialize the SitesContainer object 
+Dim GPMSitesContainer
+Set GPMSitesContainer = GPM.GetSitesContainer(szForestName, szDomainName, "",Constants.UseAnyDC)
+
+' Get the GPO specified
+On Error Resume Next
+
+Set GPMGPO = GetGPO(szGPOName, GPMDomain)
+If GPMGPO Is Nothing Then
+	WScript.Echo "Could not find GPO '" & szGPOName & "' in domain '" & GPMDomain.Domain & "'."
+	WScript.Quit()
+End If
+
+On Error Goto 0
+
+'**********************************************************************
+' We could get back a collection of multiple GPOs instead of just one
+' If so, warn the user and quit
+'
+'**********************************************************************
+On Error Resume Next
+Err.Clear
+Dim iGPOCount : iGPOCount = GPMGPO.Count
+
+If Err.Number = 0 Then
+	If iGPOCount > 0 Then
+
+		WScript.Echo "There are multiple GPOs with the name '" & szGPOName & "'"
+		WScript.Echo "Please pass in the unique ID (GUID) of the GPO you want to delete."
+		WScript.Quit()
+	End If
+End If
+Err.Clear
+On Error Goto 0
+
+' Delete the GPO
+On Error Resume Next
+Err.Clear
+GPMGPO.Delete()
+
+If Err.Number <> 0 Then
+	WScript.Echo "The attempt to delete GPO " & szGPOName & " failed."
+	WScript.Echo "The error was " & Err.Description & " - " & Err.Number
+	WScript.Quit()
+End If
+
+WScript.Echo "Deleted GPO " & GPMGPO.ID
+
+On Error Goto 0
+
+If bKeepLinks = True Then
+	WScript.Quit()
+End If
+
+' Delete any links in the domain
+DeleteAllLinks GPMGPO, GPMDomain
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Deletes all links for a GPO in the domain
+Function DeleteAllLinks(GPMGPO, GPMDomain)
+
+	WScript.Echo vbCrLf & "Deleting links for GPO '" & szGPOName & _
+                              "' in domain '" & GPMDomain.Domain
+
+	' The GPO exists, so search for all SOMs where it is linked
+	Dim GPMSearchCriteria
+        Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+	GPMSearchCriteria.Add Constants.SearchPropertySOMLinks, Constants.SearchOpContains, GPMGPO
+
+	Dim SOMList
+        Set SOMList  = GPMDomain.SearchSOMs(GPMSearchCriteria)
+
+	Dim SiteList
+        Set SiteList = GPMSitesContainer.SearchSites(GPMSearchCriteria)
+
+        '***********************
+        ' Didn't find any links 
+        ' -> Done.
+        '
+        '***********************
+	If SOMList.Count = 0 AND SiteList.Count = 0 Then
+		WScript.Echo "No links found."
+		Set DeleteAllLinks = Nothing
+		Exit Function
+	End If
+
+        '*******************
+        ' Found some links
+        '
+        '*******************
+	If SOMList.Count > 0 Then
+	
+		WScript.Echo vbCrLf & SOMList.Count & " SOMs found."
+
+		For Each objSOM in SOMList
+			WScript.Echo vbCrLf & "Processing " & objSOM.Name
+			
+			' Enumerate the links and look for a match
+                        Set colLinks = objSOM.GetGPOLinks()
+			
+			For Each objLink in colLinks
+				Dim bDeleteFailure : bDeleteFailure = False
+				If LCase(objLink.GPOID) = LCase(GPMGPO.ID) Then
+			
+					' Attempt to delete the link
+					On Error Resume Next
+					Err.Clear
+					objLink.Delete()
+					If Err.Number <> 0 Then
+						WScript.Echo "There was an error deleting the link to SOM" & objLink.SOM.Path
+						WScript.Echo Err.Number & " - " & Err.Description
+						bDeleteFailure = True
+					End If
+					
+					If Not bDeleteFailure = True Then
+						WScript.Echo "Deleted link to GPO '" & szGPOName & "' from SOM '" & objSOM.Name & "'"
+					End If
+				End If
+			Next
+		Next
+	End If
+
+	If SiteList.Count > 0 Then
+		WScript.Echo vbCrLf & SiteList.Count & " Sites found."
+
+		For Each objSite in SiteList
+			WScript.Echo vbCrLf & "Processing " & objSite.Name
+			
+			Set colLinks = objSite.GetGPOLinks()
+
+			For Each objLink in colLinks
+				bDeleteFailure = False
+				If LCase(objLink.GPOID) = LCase(GPMGPO.ID) Then
+					' Attempt to delete the link
+					On Error Resume Next
+					Err.Clear
+					objLink.Delete()
+					
+					If Err.Number <> 0 Then
+						WScript.Echo "There was an error deleting the link " & objLink.SOM.Path
+						WScript.Echo Err.Number & " - " & Err.Description
+						bDeleteFailure = True
+					End If
+					
+					If Not bDeleteFailure = True Then
+						WScript.Echo "Deleted link to GPO '" & szGPOName & _
+                                                             "' from Site '" & objSite.Name & "'"
+					End If
+				End If
+			Next
+		Next
+	End If
+
+End Function
+
+
+' Returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szGPOName    : szGPOName    = ""
+	Dim szDomainName : szDomainName = ""
+	Dim bKeepLinks   : bKeepLinks   = False
+
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length = 0 Then
+	
+		WScript.Arguments.ShowUsage()
+		WScript.Quit(-1)
+	End If
+	
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+	
+	' get the parameter(s)
+	szGPOName = WScript.Arguments(0)
+
+	If WScript.Arguments.Named.Exists("KeepLinks") Then
+	
+		bKeepLinks = True
+	End If
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+	
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+	
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "GPOName", szGPOName
+	Result.Add "KeepLinks", bKeepLinks
+	Result.Add "Domain", szDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Deletes the GPO with the specified name.
+
+Any links to the GPO in the specified domain, and in any sites,
+are also deleted, unless /KeepLinks is specified.
+</description>
+
+<unnamed name="GPOName" helpstring="The name or GUID of the GPO to delete" type="string" required="true" />
+<named name="KeepLinks" helpstring="Deletes the GPO but does not delete the links" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: DeleteGPO.wsf MyGPO /Domain:Testdomain.mycompany.com
+</example>
+
+</runtime>
+
+</job>

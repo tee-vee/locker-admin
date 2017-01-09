@@ -1,0 +1,126 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		FindOrphanedGPOs.wsf
+'// Author:		jstatia@microsoft.com
+'// Created:		01/2/2003
+'//
+'// Purpose:		Finds All Orphaned GPO objects in Sysvol with no AD Source
+'//			and Prints them out
+'////////////////////////////////////////////////////////////////////////////
+
+'//////////////////////////////////////
+'/ Initialization
+'///////////////////////////////////// 
+ <job>
+
+<script language="VBSCRIPT">
+Option Explicit
+on error resume next
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+''// Handle command line arguments
+dim ArgumentList
+dim szDomainName, szDomainSysvolPolicy,szFolder, szFullADPol, szObject, szBase, szADPol
+dim fsoFILE, foPolicy, Folder
+dim iCtr
+dim ldapRoot
+
+ProcessCommandLineArguments WScript.Arguments, ArgumentList
+szDomainName = ArgumentList.Item("Domain")
+
+szDomainSysvolPolicy = "\\" & szDomainName & "\sysvol\" & szDomainName & "\policies"
+
+set fsoFile = CreateObject("Scripting.FileSystemObject")
+
+set foPolicy = fsoFile.GetFolder(szDomainSysvolPolicy)
+if err then
+	Show_Error(err)
+end if
+
+szBase = replace(szDomainName,".",",DC=")
+szADPol = "CN=Policies,CN=System,DC=" & szBase
+
+WScript.Echo "Policies Not In AD But Located in:"
+WScript.Echo "  " & szDomainSysvolPolicy
+WScript.Echo ""
+
+iCtr = 0
+for each Folder in foPolicy.SubFolders
+	szBase = "CN=" & Folder.Name & "," & szADPol
+	szObject = "LDAP://" & szDomainName & "/" &  szBase
+	Set ldapRoot = GetObject(szObject)
+	if err then 
+		WScript.Echo " " & Folder.Name
+		iCtr = iCtr + 1
+		err.clear
+	end if
+next
+
+WScript.Echo ""
+WScript.Echo "Total Orphaned GPO's: " & iCtr
+
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+Public Sub Show_Error(e)
+	WScript.Echo "An Error Has Occured"
+	WScript.Echo "Error Number: " & e.number
+	WScript.Echo "Error Description: " & e.description
+'	WScript.Quit(1)
+End Sub
+
+'Takes a WScript.Arguments object and returns a dictionary object
+'containing the named arguments and values that were passed in
+public Sub ProcessCommandLineArguments ( Arguments, Result)
+	dim szDomainName
+	
+	szDomainName = ""
+
+	'// Check if this is cscript. If not, print an error and bail out
+	if instr(lcase(WScript.FullName),"wscript") <> 0 Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(1)
+	end if
+	if not IsObject(Result) then
+		set Result = CreateObject("Scripting.Dictionary")
+	end if	
+
+	if  Arguments.Named.Exists("Domain") Then
+		szDomainName = Arguments.Named("Domain")
+	End IF
+
+	'// Get the current domain if none was specified
+	if  szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	end If
+
+	Result.add "Domain", szDomainName
+End Sub
+
+ </script>
+
+ <!-- Usage and command line argument information -->
+ <runtime>
+
+ <description>
+ Finds and prints all GPOs in SYSVOL with no corresponding Active Directory (AD) source. 
+ These GPOs are usually referred to as orphaned GPOs.  A GPO can become orphaned usually in two different ways: 1) if the
+ GPO is deleted directly through ADSI edit.  2) if the GPO was deleted by someone that had permissions to do so in AD, but not in Sysvol.  
+ In this case, the AD portion of the GPO would be deleted but the SYSVOL portion of the GPO would be left behind.
+ </description>
+
+ <named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+ <example>
+ Example: FindOrphanedGPOs.wsf /domain:Test.MyDomain.com
+ </example>
+
+ </runtime>
+
+ </job>

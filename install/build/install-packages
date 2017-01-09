@@ -1,0 +1,77 @@
+REM [] INSTALL REQUIRED PACKAGES
+
+choco install googlechrome -y
+
+choco install notepadplusplus.install -y
+
+choco install 7zip -y
+
+choco install sysinternals -y
+
+choco install putty -y
+
+choco install curl -y
+
+choco install dropbox -y
+
+choco install vim -y
+
+choco install wget -y
+
+choco install winscp -y
+
+choco install nssm -y
+
+choco install pswindowsupdate -y
+
+choco install boxstarter.common -y
+
+choco install boxstarter.winconfig -y
+
+choco install speccy -y
+
+choco install gow -y
+
+choco install carbon -y
+
+choco install clink -y
+
+choco install jq -y
+
+choco install rsync -y
+
+choco install sysinternals -y
+
+choco install which -y
+
+choco install procdump -y
+
+choco install wget -y
+
+choco install winscp -y
+
+choco install nssm -y
+
+choco install pswindowsupdate -y
+
+choco install boxstarter.common -y
+
+choco install boxstarter.winconfig -y
+
+choco install speccy -y
+
+choco install gow -y
+
+choco install carbon -y
+
+choco install clink -y
+
+choco install jq -y
+
+choco install rsync -y
+
+choco install sysinternals -y
+
+choco install teraterm -y
+
+rem choco install handle -y

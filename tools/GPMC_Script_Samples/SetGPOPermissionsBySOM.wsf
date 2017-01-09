@@ -1,0 +1,510 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	SetGPOPermissionsBySOM.wsf
+// Author:	mtreit@microsoft.com
+// Created:	12/2/2001
+//
+// Purpose:	For a given SOM, update all GPOs linked to that SOM to
+//		set the specified permission level for the given trustee
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+// Define ADS related values - see IADS.h
+var ADS_SCOPE_BASE = 0;
+var ADS_SCOPE_ONELEVEL = 1;
+var ADS_SCOPE_SUBTREE = 2;
+var ADSIPROP_CHASE_REFERRALS		=	0x9;
+var ADS_CHASE_REFERRALS_NEVER		=	0;
+var ADS_CHASE_REFERRALS_SUBORDINATE	=	0x20;
+var ADS_CHASE_REFERRALS_EXTERNAL	=	0x40;
+var ADS_CHASE_REFERRALS_ALWAYS		=	ADS_CHASE_REFERRALS_SUBORDINATE | ADS_CHASE_REFERRALS_EXTERNAL;
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szDomainName = ArgumentList.Item("Domain");
+var szSOMName = ArgumentList.Item("SOM");
+var szGroupName = ArgumentList.Item("Group");
+var szPermission = ArgumentList.Item("Permission");
+var bRecurse = ArgumentList.Item("Recursive");
+var bReplace = ArgumentList.Item("Replace");
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Determine what type of permission we are setting
+var bRemoveAll = false;
+var perm
+switch (szPermission.toLowerCase())
+{
+	case "read":
+	perm = Constants.PermGPORead;
+	break;
+
+	case "edit":
+	perm = Constants.PermGPOEdit;
+	break;
+	
+	case "apply":
+	perm = Constants.PermGPOApply;
+	break;
+
+	case "fulledit":
+	perm = Constants.PermGPOEditSecurityAndDelete;
+	break;
+
+	case "none":
+	bRemoveAll = true;
+	perm = Constants.PermGPORead;
+	break;
+	
+	default:
+	perm = null;
+	break;
+}
+
+if (perm == null)
+{
+	WScript.Echo("The specified permission type " + szPermission + " is not recognized.");
+	WScript.Quit();
+}
+
+// Get a GPMPermission object that represents the specified permission level
+var GPMPermission = GPM.CreatePermission(szGroupName, perm, false);
+
+// Initialize the domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Determine the LDAP suffix for the domain, which we will use when doing our
+// ADSI queries
+//
+var szGlobalLDAPSuffix = GPMDomain.GetSOM("").Path;
+
+// If the user passed in the domain name as the SOM, handle that
+if (szSOMName.toLowerCase() == szDomainName.toLowerCase())
+{
+	szSOMName = "LDAP://" + szGlobalLDAPSuffix;
+}
+
+// Create a global ADO connection for use by our functions
+var ADOConnection = new ActiveXObject("ADODB.Connection");
+ADOConnection.Provider = "ADsDSOObject";    
+ADOConnection.Open("Active Directory Provider");    
+
+// Process the specified SOM
+ProcessSOM(szSOMName);
+
+// Cleanup
+ADOConnection.Close();
+
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Process a given SOM
+function ProcessSOM(szSOMName)
+{
+	// First try to get the SOM, in case a valid LDAP path was passed in
+	var SOM;
+
+	try
+	{
+		SOM = GetObject(szSOMName);
+	}
+	catch (err)
+	{
+		SOM = false;
+	}
+	
+	// If we found the SOM, go print out the GPOs for it
+	if (SOM)
+	{
+		UpdateGPOSecurity(SOM, szGroupName, GPMPermission);
+	}
+	else
+	{
+		// Go search for the SOM by name
+		ProcessSOMByName(szSOMName);
+	}
+}
+
+// Takes a SOM, group and permission level and updates all GPOs under that SOM to have the
+// specified permissions.
+function UpdateGPOSecurity(SOM, szGroupName, GPMPermission)
+{
+	// If we only need to process the current SOM, do so
+	if (bRecurse == false)
+	{
+		SetGPOPermissions(SOM, szGroupName, GPMPermission);
+		return;
+	}
+
+	SetGPOPermissions(SOM, szGroupName, GPMPermission);
+		
+	// We need to process any child SOMs recursively
+	var ADOCommand =  new ActiveXObject("ADODB.Command");
+	ADOCommand.ActiveConnection = ADOConnection;
+
+	// Get a collection of all child OU's for the current object
+	var szSQL = "select AdsPath from '" + EscapeString(SOM.ADsPath) + "'";
+	szSQL += " where objectCategory='organizationalUnit'";
+
+	// Execute the search
+	ADOCommand.CommandText = szSQL;
+	ADOCommand.Properties("Page Size") = 1000;
+	ADOCommand.Properties("Timeout") = 500;
+	ADOCommand.Properties("SearchScope") = ADS_SCOPE_ONELEVEL;
+	ADOCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL; // Needed when querying a different domain
+	ADOCommand.Properties("Cache Results") = false;
+
+	try
+	{
+		var rs = ADOCommand.Execute();
+	}
+	catch (err)
+	{
+		WScript.Echo("There was an error executing the DS query " + szSQL);
+		WScript.Echo("The error was:");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return false;
+	}
+
+	if (rs.eof == true)
+	{
+		return;
+	}
+		
+	// Now walk the list and recursively process each child
+	while (rs.eof != true)
+	{
+		var CurrentObject = GetObject(rs.fields(0));
+		UpdateGPOSecurity(CurrentObject, szGroupName, GPMPermission);
+		rs.MoveNext();
+	}	
+
+}
+
+// Set the specified permission level on all GPOs linked to the SOM
+function SetGPOPermissions(SOM, szGroupName, GPMPermission)
+{
+	if (szPermission.toLowerCase() == "none")
+	{
+		var szPermName = "no";
+	}
+	else
+	{
+		var szPermName = szPermission;
+	}
+
+	// First get the GPMSom object
+	var GPMSOM;
+		
+	// We don't know if it's a site or an OU so try both
+	try
+	{
+		GPMSOM = GPMDomain.GetSOM(SOM.distinguishedName);
+	}
+	catch (err)
+	{
+		GPMSOM = false;
+	}
+	
+	if (!GPMSOM)
+	{
+		// Try it as a site
+		var adSys = new ActiveXObject("ADSystemInfo");
+		var szForestName = adSys.ForestDNSName;
+
+		try
+		{
+			var SitesContainer = GPM.GetSitesContainer(szForestName, szDomainName, "",0);
+			// The .cn property of a site will give us just the name
+			GPMSOM = SitesContainer.GetSite(SOM.cn);
+		}
+		catch (err)
+		{
+			WScript.Echo("Error getting SOM " + SOM.distinguishedName);
+			return;
+		}
+	}
+	
+	// Determine the type and name of the SOM
+	var szType;
+	switch (GPMSOM.Type)
+	{
+		case Constants.SOMSite:
+		szType = "site";
+		break;
+		
+		case Constants.SOMOU:
+		szType = "OU";
+		break;
+		
+		case Constants.SOMDomain:
+		szType = "domain";
+		break;
+	}
+
+	szName = GPMSOM.Name;
+
+	WScript.Echo("\nUpdating all GPOs linked to " + szType + " " + szName + " to give " + szPermName + " rights to " + szGroupName);	
+	
+	// Now we have the GPMSom object, so get all GPO links for this SOM
+	var GPOLinks = GPMSOM.GetGPOLinks();
+	var GPOLink;
+	var e = new Enumerator(GPOLinks);
+	for (; !e.atEnd(); e.moveNext())
+	{
+		GPOLink = e.item();
+		try
+		{
+			GPO = GPMDomain.GetGPO(GPOLink.GPOID);
+		}
+		catch (err)
+		{
+			// If the link points to an inaccessible or non-existent GPO, just ignore it
+			WScript.Echo("Skipping link to GPO " + GPOLink.GPOID + " because the GPO could not be accessed");
+			continue;
+		}
+		
+		WScript.Echo("Updating permissions on linked GPO '" + GPO.DisplayName + "'");
+		
+		// Get the existing set of permissions for the GPO
+		var SecurityInfo = GPO.GetSecurityInfo();
+
+		// Strip off any existing rights for the given group if necessary
+		if (bReplace == true || bRemoveAll == true)
+		{
+			// Determine the SID
+			var szSID = GPMPermission.Trustee.TrusteeSid;
+			SecurityInfo.RemoveTrustee(szSID);
+		}
+		
+		if (bRemoveAll != true)
+		{
+			// Add the specified permissions
+			SecurityInfo.Add(GPMPermission);
+		}
+
+		try
+		{
+			// Now write the new set of permissions to the GPO
+			GPO.SetSecurityInfo(SecurityInfo);
+		}
+		catch(err)
+		{
+			WScript.Echo("There was an error setting the security permission on GPO " + GPO.DisplayName + ".");
+			WScript.Echo("Error was: " + ErrCode(err.number) + " - " + err.description);
+			continue;
+		}
+	}
+	
+
+	return;
+}
+
+// Search for a SOM by name and then process any SOMs found
+function ProcessSOMByName(szSOMName)
+{
+	// Define ADS related values - see IADS.h
+	var ADS_SCOPE_BASE = 0;
+	var ADS_SCOPE_ONELEVEL = 1;
+	var ADS_SCOPE_SUBTREE = 2;
+	
+	var SOM = false;
+	
+	// Create the ADO objects and open the connection
+	var ADOConnection = new ActiveXObject("ADODB.Connection");
+	var ADOCommand =  new ActiveXObject("ADODB.Command");
+	ADOConnection.Provider = "ADsDSOObject";    
+	ADOConnection.Open("Active Directory Provider");    
+	ADOCommand.ActiveConnection = ADOConnection;
+	
+	// First look for OUs
+	var szDomainLDAPPath = "LDAP://" + szGlobalLDAPSuffix;
+	var szSQL = "select AdsPath from '" + EscapeString(szDomainLDAPPath) + "'";
+	szSQL += " where Name='" + szSOMName + "'";
+
+	// Execute the search
+	ADOCommand.CommandText = szSQL;
+	ADOCommand.Properties("Page Size") = 1000;
+	ADOCommand.Properties("Timeout") = 500;
+	ADOCommand.Properties("SearchScope") = ADS_SCOPE_SUBTREE;
+	ADOCommand.Properties("Cache Results") = false;
+	ADOCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL; // Needed when querying a different domain
+
+	try
+	{
+		var rs = ADOCommand.Execute();
+	}
+	catch (err)
+	{
+		WScript.Echo("There was an error executing the DS query " + szSQL);
+		WScript.Echo("The error was:");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return false;
+	}
+
+	while ( ! rs.eof )
+	{
+		SOM = GetObject(rs.Fields(0));
+
+		// Ignore objects that are not OUs or the domain level
+		if (SOM.Class == 'organizationalUnit' || SOM.Class == 'fTDfs')
+		{
+			UpdateGPOSecurity(SOM, szGroupName, GPMPermission);
+		}
+	
+		rs.MoveNext();
+	}
+
+	// Now look for Sites - assume that the domain we are using is in the same
+	// forest as the machine we are executing on
+	var adSys = new ActiveXObject("ADSystemInfo");
+	var szForestName = adSys.ForestDNSName;
+
+	// Get the LDAP suffix from the forest name
+	ForestDomain = GPM.GetDomain(szForestName, "", Constants.UseAnyDC);
+	szLDAPSuffix = ForestDomain.GetSOM("").Path;
+
+	var szSitesLDAPPath = "LDAP://CN=Sites,CN=Configuration," + szLDAPSuffix;
+	var szSQL = "select AdsPath from '" + EscapeString(szSitesLDAPPath) + "'";
+	szSQL += " where Name='" + szSOMName + "'";
+
+	// Execute the search
+	ADOCommand.CommandText = szSQL;
+
+	try
+	{
+		var rs = ADOCommand.Execute();
+	}
+	catch (err)
+	{
+		WScript.Echo("There was an error executing the DS query " + szSQL);
+		WScript.Echo("The error was:");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return false;
+	}
+
+	while ( ! rs.eof )
+	{
+		SOM = GetObject(rs.Fields(0));
+		UpdateGPOSecurity(SOM, szGroupName, GPMPermission);
+		rs.MoveNext();
+	}
+
+	// Cleanup
+	ADOConnection.Close();
+
+	return SOM;
+}
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szDomainName = "";
+	var szSOMName = "";
+	var szGroupName = "";
+	var szPermission = "";
+	var bReplace = false;
+	var bRecursive = false;
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	if (Arguments.Length < 3 || !Arguments.Named.Exists("Permission"))
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	szSOMName = Arguments(0);
+	szGroupName = Arguments(1);
+	szPermission = Arguments.Named("Permission");
+
+	if (Arguments.Named.Exists("Replace"))
+	{
+		bReplace = true;
+	}
+
+	if (Arguments.Named.Exists("Recursive"))
+	{
+		bRecursive = true;
+	}
+
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	Result.add("SOM", szSOMName);
+	Result.add("Group", szGroupName);
+	Result.add("Permission", szPermission);
+	Result.add("Replace", bReplace);
+	Result.add("Recursive", bRecursive);
+	Result.add("Domain", szDomainName);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+For a particular Scope Of Management (SOM), grant a user or group the specified level of permissions for all GPOs that are linked to that particular SOM.
+</description>
+
+<unnamed name="SOM" helpstring="The name of the site, domain or OU to process" type="string" required="true" />
+<unnamed name="Group" helpstring="The name of the group or user to grant permissions to" type="string" required="true" />
+<named name="Permission" helpstring="The permission to grant. Can be 'None', 'Read', 'Apply', 'Edit' or 'FullEdit'" type="string" required="true" />
+<named name="Replace" helpstring="Replaces any existing permissions for the specified trustee. Otherwise, the script simply ensures that the trustee has at least the permission level specified" type="simple" required="false" />
+<named name="Recursive" helpstring="Applies the changes to all child OUs as well" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: SetGPOPermissionsBySOM.wsf MarketingOU "Marketing Admins" /Permission:Edit /Recursive
+</example>
+
+</runtime>
+
+</job>

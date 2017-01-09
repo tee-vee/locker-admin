@@ -1,0 +1,127 @@
+'////////////////////////////////////////////////////////////////////////////
+' Copyright (c) Microsoft Corporation.  All rights reserved
+'
+' Title:	BackupGPO.wsf
+' Author:	mtreit@microsoft.com
+' Created:	10/23/2001
+'
+' Purpose:	Takes a GPO name and creates the GPO using the default
+'		options.
+' Revision:     Ported from JScript->VBScript by dtsaltas (December 2002)
+'
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList : Set ArgumentList = ProcessCommandLineArguments()
+Dim szGPOName    : szGPOName        = ArgumentList.Item("GPOName")
+Dim szDomainName : szDomainName     = ArgumentList.Item("Domain")
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Attempt the actual GPO copy
+On Error Resume Next
+Err.Clear
+
+Dim GPMGPO : Set GPMGPO = GPMDomain.CreateGPO()
+If Err.Number <> 0 Then
+	WScript.Echo "There was an error creating the GPO."
+	WScript.Echo "The error was: " & Hex(Err.Number) & " - " & Err.Description
+	WScript.Quit()
+End If 
+
+' Now set the display name. If this fails, delete the GPO and report an error
+Err.Clear
+
+GPMGPO.DisplayName = szGPOName
+
+If Err.Number <> 0 Then
+	GPMGPO.Delete()
+	WScript.Echo "There was an error creating the GPO."
+	WScript.Echo "The error was: " & Hex(Err.Number) & " - " & Err.Description
+	WScript.Quit()
+End If
+
+WScript.Echo "Created GPO '" & GPMGPO.DisplayName & "'"
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szGPOName    : szGPOName    = ""
+	Dim szDomainName : szDomainName = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length = 0 Or WScript.Arguments.Unnamed.Length = 0Then
+		WScript.Arguments.ShowUsage()
+		WScript.Quit(-1)
+	End If
+	
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	' get the parameter(s)
+	szGPOName = WScript.Arguments(0)
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "GPOName", szGPOName
+	Result.Add "Domain" , szDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Creates a new GPO with the specified name
+</description>
+
+<unnamed name="GPOName" helpstring="The name of the GPO to create" type="string" required="true" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: CreateGPO.wsf NewGPO /Domain:Testdomain.mycompany.com
+</example>
+
+</runtime>
+
+</job>

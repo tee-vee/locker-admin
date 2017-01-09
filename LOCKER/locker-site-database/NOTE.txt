@@ -1,0 +1,10 @@
+https://data.gov.hk/en-data/dataset/hk-ogcio-st_div_02-als
+https://www.als.ogcio.gov.hk/lookup
+
+https://data.gov.hk/en-data/dataset/hk-ogcio-st_div_02-als/resource/010cd27a-0688-4dfe-aee9-163714dca9a4
+http://www.xml.gov.hk/en/approved/structured_address_v1_0.htm
+
+https://www.als.ogcio.gov.hk/docs/AddressLookupResult.xsd
+
+
+http://www.freeformatter.com/json-formatter.html#ad-output

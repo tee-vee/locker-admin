@@ -1,0 +1,784 @@
+2017-01-06 21:44:39,416 [INFO] org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:578) Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@d282e0: startup date [Fri Jan 06 21:44:39 CST 2017]; root of context hierarchy
+2017-01-06 21:44:39,993 [WARN] org.springframework.context.annotation.ConfigurationClassEnhancer$BeanMethodInterceptor.intercept(ConfigurationClassEnhancer.java:347) @Bean method SpringConfig.propertyConfigInDev is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details.
+2017-01-06 21:44:40,982 [DEBUG] com.locision.elocker.sdk.core.SpringConfig.macAddress(SpringConfig.java:43) Current IP address: 192.168.1.149
+2017-01-06 21:44:41,154 [DEBUG] com.locision.elocker.sdk.core.SpringConfig.macAddress(SpringConfig.java:54) Current MAC address : 00-07-32-31-09-B2
+2017-01-06 21:44:41,419 [DEBUG] com.locision.elocker.sdk.notification.NotificationServiceImpl.start(NotificationServiceImpl.java:50) Starting server at 8081.
+2017-01-06 21:44:41,840 [DEBUG] com.locision.elocker.sdk.core.tcp.server.LockerServer.start(LockerServer.java:49) Starting server at 8080.
+2017-01-06 21:44:41,887 [INFO] org.springframework.scheduling.concurrent.ExecutorConfigurationSupport.initialize(ExecutorConfigurationSupport.java:165) Initializing ExecutorService  'taskScheduler'
+2017-01-06 21:44:42,074 [INFO] org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(ScriptUtils.java:444) Executing SQL script from class path resource [sql/tables.sql]
+2017-01-06 21:44:42,698 [INFO] org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(ScriptUtils.java:510) Executed SQL script from class path resource [sql/tables.sql] in 624 ms.
+2017-01-06 21:44:42,698 [INFO] com.locision.elocker.sdk.core.SpringListener.updateDatabaseStructure(SpringListener.java:231) create table complete...
+2017-01-06 21:44:42,745 [INFO] com.locision.elocker.sdk.core.SpringListener.updateDatabaseStructure(SpringListener.java:234) create table skip update ....
+2017-01-06 21:44:45,537 [DEBUG] com.locision.elocker.sdk.core.rest.service.LockerCloudServiceWrapper.doExecute(LockerCloudServiceWrapper.java:98) the response code is 404
+2017-01-06 21:44:45,537 [ERROR] com.locision.elocker.sdk.core.rest.service.LockerCloudServiceWrapper.doExecute(LockerCloudServiceWrapper.java:104) The response is error, and the error body is {"code": 404, "errorMessage": "Locker with MAC 00-07-32-31-09-b2 NotFound !"}
+
+2017-01-06 21:44:45,537 [WARN] com.locision.elocker.sdk.core.service.impl.LockerServiceImpl.initLockerState(LockerServiceImpl.java:226) WARNING!!!!! Locker Authorization is empty
+2017-01-06 21:44:45,537 [WARN] com.locision.elocker.sdk.core.service.impl.LockerServiceImpl.initLockerState(LockerServiceImpl.java:232) WARNING!!!!! Locker Information is empty
+2017-01-06 21:44:45,537 [WARN] com.locision.elocker.sdk.core.service.impl.LockerServiceImpl.initLockerState(LockerServiceImpl.java:236) WARNING!!!!! Locker Certificate is empty
+2017-01-06 21:47:52,657 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:47:52,658 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:47:52,696 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 21:47:52,697 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:47:52,746 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:47:59,799 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:customer/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:47:59,800 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:customer/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:47:59,819 [INFO] org.springframework.aop.framework.CglibAopProxy.doValidateClass(CglibAopProxy.java:265) Unable to proxy method [public final com.locision.elocker.sdk.core.model.Response com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(java.lang.String,java.lang.Exception)] because it is final: All calls to this method via a proxy will NOT be routed to the target instance.
+2017-01-06 21:47:59,912 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.nio.file.attribute.UserPrincipalNotFoundException
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:34) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:19) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$FastClassBySpringCGLIB$$f8a380ac.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$EnhancerBySpringCGLIB$$c4ad6e4f.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:47:59,948 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:47:59,948 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:47:59,949 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:47:59,950 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:47:59,950 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:48:00,262 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:courier/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:48:00,263 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:courier/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:48:00,269 [INFO] org.springframework.aop.framework.CglibAopProxy.doValidateClass(CglibAopProxy.java:265) Unable to proxy method [public final com.locision.elocker.sdk.core.model.Response com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(java.lang.String,java.lang.Exception)] because it is final: All calls to this method via a proxy will NOT be routed to the target instance.
+2017-01-06 21:48:00,307 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.lang.NullPointerException
+	at com.locision.elocker.sdk.core.service.impl.CourierServiceImpl.courier(CourierServiceImpl.java:57) ~[core.jar:0.2.47]
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:1.8.0_111]
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at java.lang.reflect.Method.invoke(Unknown Source) ~[?:1.8.0_111]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:302) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:190) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor$1.proceedWithInvocation(TransactionInterceptor.java:99) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:281) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:96) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:208) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.sun.proxy.$Proxy52.courier(Unknown Source) ~[?:?]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:29) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:18) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$FastClassBySpringCGLIB$$e548ba9b.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$EnhancerBySpringCGLIB$$f7f5f15e.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:48:00,316 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:00,317 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:00,318 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:48:00,319 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:48:00,319 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:48:00,324 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:00,325 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:00,326 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 21:48:00,326 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:48:00,327 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:48:07,508 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:customer/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:48:07,510 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:customer/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:48:07,513 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.nio.file.attribute.UserPrincipalNotFoundException
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:34) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:19) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$FastClassBySpringCGLIB$$f8a380ac.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$EnhancerBySpringCGLIB$$c4ad6e4f.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:48:07,521 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:07,522 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:07,523 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:48:07,523 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:48:07,524 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:48:07,528 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:courier/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:48:07,529 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:courier/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:48:07,535 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.lang.NullPointerException
+	at com.locision.elocker.sdk.core.service.impl.CourierServiceImpl.courier(CourierServiceImpl.java:57) ~[core.jar:0.2.47]
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:1.8.0_111]
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at java.lang.reflect.Method.invoke(Unknown Source) ~[?:1.8.0_111]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:302) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:190) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor$1.proceedWithInvocation(TransactionInterceptor.java:99) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:281) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:96) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:208) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.sun.proxy.$Proxy52.courier(Unknown Source) ~[?:?]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:29) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:18) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$FastClassBySpringCGLIB$$e548ba9b.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$EnhancerBySpringCGLIB$$f7f5f15e.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:48:07,547 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:07,548 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:07,549 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:48:07,549 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:48:07,550 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:48:07,553 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:07,554 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:48:07,555 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 21:48:07,555 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:48:07,556 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:48:12,477 [WARN] io.netty.util.internal.logging.Slf4JLogger.warn(Slf4JLogger.java:151) An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:48:12,477 [WARN] io.netty.util.internal.logging.Slf4JLogger.warn(Slf4JLogger.java:151) An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:48:12,480 [WARN] com.locision.elocker.sdk.core.tcp.server.LockerServer$1$1.exceptionCaught(LockerServer.java:88) Locker console occur an error
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:48:12,481 [WARN] com.locision.elocker.sdk.notification.NotificationServiceImpl$1$1.exceptionCaught(NotificationServiceImpl.java:97) notification server occur an error
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:17,264 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:17,266 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:17,266 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 21:52:17,266 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:17,267 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:22,717 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:customer/login {"requestId": "uuid", "data": { "username": "78999999", "password": "999999"  } }
+2017-01-06 21:52:22,718 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:customer/login, parameterStr is:{"requestId": "uuid", "data": { "username": "78999999", "password": "999999"  } }
+2017-01-06 21:52:22,725 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.nio.file.attribute.UserPrincipalNotFoundException
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:34) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:19) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$FastClassBySpringCGLIB$$f8a380ac.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$EnhancerBySpringCGLIB$$c4ad6e4f.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:22,732 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:22,733 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:22,734 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:52:22,734 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:22,736 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:22,941 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:courier/login {"requestId": "uuid", "data": { "username": "78999999", "password": "999999"  } }
+2017-01-06 21:52:22,942 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:courier/login, parameterStr is:{"requestId": "uuid", "data": { "username": "78999999", "password": "999999"  } }
+2017-01-06 21:52:22,946 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.lang.NullPointerException
+	at com.locision.elocker.sdk.core.service.impl.CourierServiceImpl.courier(CourierServiceImpl.java:57) ~[core.jar:0.2.47]
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:1.8.0_111]
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at java.lang.reflect.Method.invoke(Unknown Source) ~[?:1.8.0_111]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:302) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:190) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor$1.proceedWithInvocation(TransactionInterceptor.java:99) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:281) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:96) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:208) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.sun.proxy.$Proxy52.courier(Unknown Source) ~[?:?]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:29) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:18) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$FastClassBySpringCGLIB$$e548ba9b.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$EnhancerBySpringCGLIB$$f7f5f15e.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:22,955 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:22,956 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:22,956 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:52:22,956 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:22,957 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:22,959 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:22,960 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:22,961 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 21:52:22,961 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:22,961 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:30,882 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:customer/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:52:30,883 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:customer/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:52:30,889 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.nio.file.attribute.UserPrincipalNotFoundException
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:34) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:19) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$FastClassBySpringCGLIB$$f8a380ac.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$EnhancerBySpringCGLIB$$c4ad6e4f.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:30,892 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:30,892 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:30,893 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:52:30,893 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:30,894 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:30,897 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:courier/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:52:30,898 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:courier/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 21:52:30,902 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.lang.NullPointerException
+	at com.locision.elocker.sdk.core.service.impl.CourierServiceImpl.courier(CourierServiceImpl.java:57) ~[core.jar:0.2.47]
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:1.8.0_111]
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at java.lang.reflect.Method.invoke(Unknown Source) ~[?:1.8.0_111]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:302) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:190) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor$1.proceedWithInvocation(TransactionInterceptor.java:99) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:281) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:96) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:208) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.sun.proxy.$Proxy52.courier(Unknown Source) ~[?:?]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:29) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:18) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$FastClassBySpringCGLIB$$e548ba9b.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$EnhancerBySpringCGLIB$$f7f5f15e.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:30,915 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:30,916 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:30,916 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 21:52:30,917 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:30,917 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:30,920 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:30,921 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 21:52:30,922 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 21:52:30,923 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 21:52:30,923 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 21:52:41,531 [WARN] io.netty.util.internal.logging.Slf4JLogger.warn(Slf4JLogger.java:151) An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:41,531 [WARN] io.netty.util.internal.logging.Slf4JLogger.warn(Slf4JLogger.java:151) An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:41,533 [WARN] com.locision.elocker.sdk.notification.NotificationServiceImpl$1$1.exceptionCaught(NotificationServiceImpl.java:97) notification server occur an error
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:52:41,532 [WARN] com.locision.elocker.sdk.core.tcp.server.LockerServer$1$1.exceptionCaught(LockerServer.java:88) Locker console occur an error
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 21:59:34,470 [INFO] org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:578) Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@d282e0: startup date [Fri Jan 06 21:59:34 CST 2017]; root of context hierarchy
+2017-01-06 21:59:35,827 [WARN] org.springframework.context.annotation.ConfigurationClassEnhancer$BeanMethodInterceptor.intercept(ConfigurationClassEnhancer.java:347) @Bean method SpringConfig.propertyConfigInDev is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details.
+2017-01-06 21:59:37,824 [DEBUG] com.locision.elocker.sdk.core.SpringConfig.macAddress(SpringConfig.java:43) Current IP address: 192.168.1.149
+2017-01-06 21:59:37,918 [DEBUG] com.locision.elocker.sdk.core.SpringConfig.macAddress(SpringConfig.java:54) Current MAC address : 00-07-32-31-09-B2
+2017-01-06 21:59:38,261 [DEBUG] com.locision.elocker.sdk.notification.NotificationServiceImpl.start(NotificationServiceImpl.java:50) Starting server at 8081.
+2017-01-06 21:59:38,807 [DEBUG] com.locision.elocker.sdk.core.tcp.server.LockerServer.start(LockerServer.java:49) Starting server at 8080.
+2017-01-06 21:59:38,901 [INFO] org.springframework.scheduling.concurrent.ExecutorConfigurationSupport.initialize(ExecutorConfigurationSupport.java:165) Initializing ExecutorService  'taskScheduler'
+2017-01-06 21:59:39,275 [INFO] org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(ScriptUtils.java:444) Executing SQL script from class path resource [sql/tables.sql]
+2017-01-06 21:59:39,291 [INFO] org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(ScriptUtils.java:510) Executed SQL script from class path resource [sql/tables.sql] in 16 ms.
+2017-01-06 21:59:39,291 [INFO] com.locision.elocker.sdk.core.SpringListener.updateDatabaseStructure(SpringListener.java:231) create table complete...
+2017-01-06 21:59:39,322 [INFO] com.locision.elocker.sdk.core.SpringListener.updateDatabaseStructure(SpringListener.java:238) it is the latest version
+2017-01-06 21:59:42,005 [DEBUG] com.locision.elocker.sdk.core.rest.service.LockerCloudServiceWrapper.doExecute(LockerCloudServiceWrapper.java:98) the response code is 404
+2017-01-06 21:59:42,005 [ERROR] com.locision.elocker.sdk.core.rest.service.LockerCloudServiceWrapper.doExecute(LockerCloudServiceWrapper.java:104) The response is error, and the error body is {"code": 404, "errorMessage": "Locker with MAC 00-07-32-31-09-b2 NotFound !"}
+
+2017-01-06 21:59:42,021 [WARN] com.locision.elocker.sdk.core.service.impl.LockerServiceImpl.initLockerState(LockerServiceImpl.java:226) WARNING!!!!! Locker Authorization is empty
+2017-01-06 21:59:42,021 [WARN] com.locision.elocker.sdk.core.service.impl.LockerServiceImpl.initLockerState(LockerServiceImpl.java:232) WARNING!!!!! Locker Information is empty
+2017-01-06 21:59:42,021 [WARN] com.locision.elocker.sdk.core.service.impl.LockerServiceImpl.initLockerState(LockerServiceImpl.java:236) WARNING!!!!! Locker Certificate is empty
+2017-01-06 22:32:55,513 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:32:55,541 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:32:55,569 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 22:32:55,569 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 22:32:55,595 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 22:32:59,935 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:customer/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 22:32:59,936 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:customer/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 22:32:59,953 [INFO] org.springframework.aop.framework.CglibAopProxy.doValidateClass(CglibAopProxy.java:265) Unable to proxy method [public final com.locision.elocker.sdk.core.model.Response com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(java.lang.String,java.lang.Exception)] because it is final: All calls to this method via a proxy will NOT be routed to the target instance.
+2017-01-06 22:33:00,077 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.nio.file.attribute.UserPrincipalNotFoundException
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:34) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin.authorizationUser(CustomerLogin.java:19) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$FastClassBySpringCGLIB$$f8a380ac.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CustomerLogin$$EnhancerBySpringCGLIB$$2acd0b75.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 22:33:00,128 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:33:00,128 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:33:00,129 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 22:33:00,129 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 22:33:00,130 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 22:33:00,404 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:courier/login {"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 22:33:00,405 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:courier/login, parameterStr is:{"requestId": "uuid", "data": { "username": "99999999", "password": "999999"  } }
+2017-01-06 22:33:00,413 [INFO] org.springframework.aop.framework.CglibAopProxy.doValidateClass(CglibAopProxy.java:265) Unable to proxy method [public final com.locision.elocker.sdk.core.model.Response com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(java.lang.String,java.lang.Exception)] because it is final: All calls to this method via a proxy will NOT be routed to the target instance.
+2017-01-06 22:33:00,454 [ERROR] com.locision.elocker.sdk.core.tcp.server.BaseJsonProcess.handleError(BaseJsonProcess.java:28) null
+java.lang.NullPointerException
+	at com.locision.elocker.sdk.core.service.impl.CourierServiceImpl.courier(CourierServiceImpl.java:57) ~[core.jar:0.2.47]
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:1.8.0_111]
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_111]
+	at java.lang.reflect.Method.invoke(Unknown Source) ~[?:1.8.0_111]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:302) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:190) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor$1.proceedWithInvocation(TransactionInterceptor.java:99) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:281) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:96) ~[spring-tx-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:208) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.sun.proxy.$Proxy52.courier(Unknown Source) ~[?:?]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:29) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin.authorizationUser(CourierLogin.java:18) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$FastClassBySpringCGLIB$$e548ba9b.invoke(<generated>) ~[core.jar:0.2.47]
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204) ~[spring-core-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:720) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:157) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.adapter.AfterReturningAdviceInterceptor.invoke(AfterReturningAdviceInterceptor.java:52) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:168) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:655) ~[spring-aop-4.2.5.RELEASE.jar:4.2.5.RELEASE]
+	at com.locision.elocker.sdk.core.commands.CourierLogin$$EnhancerBySpringCGLIB$$5e158e84.authorizationUser(<generated>) ~[core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:118) [core.jar:0.2.47]
+	at com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:29) [core.jar:0.2.47]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:265) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:308) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:294) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:846) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:131) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 22:33:00,462 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/disable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:33:00,463 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/disable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:33:00,463 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030303030303030c6' to scanner
+2017-01-06 22:33:00,464 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 22:33:00,464 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 22:33:00,472 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:80) the command content is:scanner/enable {"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:33:00,473 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:98) receive a command. Command Name is:scanner/enable, parameterStr is:{"requestId": "uuid", "data": "scanner" }
+2017-01-06 22:33:00,473 [DEBUG] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:134) send command '7e00000b3131323030313030303030c7' to scanner
+2017-01-06 22:33:00,474 [WARN] com.locision.elocker.sdk.hardware.ScannerManagerImpl.sendCommand(ScannerManagerImpl.java:149) client is not ready..please init
+2017-01-06 22:33:00,475 [DEBUG] com.locision.elocker.sdk.core.tcp.server.InvokeProcessHandler.decode(InvokeProcessHandler.java:133) JSON Str:{"code":200,"data":"done","requestId":"uuid","result":true}
+2017-01-06 22:33:47,913 [WARN] io.netty.util.internal.logging.Slf4JLogger.warn(Slf4JLogger.java:151) An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 22:33:47,913 [WARN] io.netty.util.internal.logging.Slf4JLogger.warn(Slf4JLogger.java:151) An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 22:33:47,918 [WARN] com.locision.elocker.sdk.core.tcp.server.LockerServer$1$1.exceptionCaught(LockerServer.java:88) Locker console occur an error
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]
+2017-01-06 22:33:47,919 [WARN] com.locision.elocker.sdk.notification.NotificationServiceImpl$1$1.exceptionCaught(NotificationServiceImpl.java:97) notification server occur an error
+java.io.IOException: 远程主机强迫关闭了一个现有的连接。
+	at sun.nio.ch.SocketDispatcher.read0(Native Method) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketDispatcher.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.IOUtil.read(Unknown Source) ~[?:1.8.0_111]
+	at sun.nio.ch.SocketChannelImpl.read(Unknown Source) ~[?:1.8.0_111]
+	at io.netty.buffer.UnpooledUnsafeDirectByteBuf.setBytes(UnpooledUnsafeDirectByteBuf.java:447) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:880) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:242) ~[netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:119) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:511) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:468) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:382) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:354) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$2.run(SingleThreadEventExecutor.java:112) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:137) [netty-all-4.0.32.Final.jar:4.0.32.Final]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_111]

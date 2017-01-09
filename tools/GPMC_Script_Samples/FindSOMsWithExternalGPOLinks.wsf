@@ -1,0 +1,185 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:       FindSOMsWithExternalGPOLinks.wsf
+// Author:      mtreit@microsoft.com
+// Created:     11/9/2001
+//
+// Purpose:     Finds all SOMs in the specified domain that link to GPOs
+//              in a different domain
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szDomainName = ArgumentList.Item("Domain");
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Get the LDAP-style path for the domain
+var szDomainLDAPPath = GPMDomain.GetSOM("").Path;
+
+WScript.Echo("== Searching the domain and all OUs for GPO links to another domain ==");
+
+// First print out external links for the domain root
+PrintExternalGPOLinks(szDomainLDAPPath);
+
+// Now do the same for each OU in the domain
+ProcessOUs(szDomainName);
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes an LDAP path and prints any external GPO links for that path
+function PrintExternalGPOLinks(szLDAPPath)
+{
+        var SOM = GPMDomain.GetSOM(szLDAPPath);
+        var GPOLinkList = SOM.GetGPOLinks();
+        var e = new Enumerator(GPOLinkList);
+        
+        var GPOLink;
+        for (; !e.atEnd(); e.moveNext())
+        {
+                GPOLink = e.item();
+                if (GPOLink.GPODomain.toLowerCase() != szDomainName.toLowerCase())
+                {
+                        WScript.Echo("===========================================================");
+                        WScript.Echo("SOM:\t\t" + szLDAPPath);
+                        WScript.Echo("GPO:\t\t" + GPOLink.GPOID);
+                        WScript.Echo("GPO Domain:\t" + GPOLink.GPODomain);
+                        WScript.Echo("===========================================================\n");
+                }
+        }
+}
+
+// Takes an LDAP path to a container in the domain and processes all
+// childs OUs for that container
+//
+function ProcessOUs(szLDAPPath)
+{
+        // Define ADS related values - see IADS.h
+        var ADS_SCOPE_BASE = 0;
+        var ADS_SCOPE_ONELEVEL = 1;
+        var ADS_SCOPE_SUBTREE = 2;
+        var ADSIPROP_CHASE_REFERRALS            =       0x9;
+        var ADS_CHASE_REFERRALS_NEVER           =       0;
+        var ADS_CHASE_REFERRALS_SUBORDINATE     =       0x20;
+        var ADS_CHASE_REFERRALS_EXTERNAL        =       0x40;
+        var ADS_CHASE_REFERRALS_ALWAYS          =       ADS_CHASE_REFERRALS_SUBORDINATE | ADS_CHASE_REFERRALS_EXTERNAL;
+
+        var ADSObject = GetObject("LDAP://" + szLDAPPath);
+        
+        // Create the necessary ADO objects to query the DS
+        var ADOConnection = new ActiveXObject("ADODB.Connection");
+        ADOConnection.Provider = "ADsDSOObject";    
+        ADOConnection.Open("Active Directory Provider");    
+
+        var ADOCommand =  new ActiveXObject("ADODB.Command");
+        ADOCommand.ActiveConnection = ADOConnection;
+
+        // Get a collection of all child OU's for the current object
+        var szSQL = "select AdsPath from '" + EscapeString(ADSObject.ADsPath) + "'";
+        szSQL += " where objectCategory='organizationalUnit'";
+
+        // Execute the search
+        ADOCommand.CommandText = szSQL;
+        ADOCommand.Properties("Page Size") = 1000;
+        ADOCommand.Properties("Timeout") = 500;
+        ADOCommand.Properties("SearchScope") = ADS_SCOPE_SUBTREE;
+        ADOCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL; // Needed when querying a different domain
+        ADOCommand.Properties("Cache Results") = false;
+
+        try
+        {
+                var rs = ADOCommand.Execute();
+        }
+        catch (err)
+        {
+                WScript.Echo("There was an error executing the DS query " + szSQL);
+                WScript.Echo("The error was:");
+                WScript.Echo(ErrCode(err.number) + " - " + err.description);
+                return null;
+        }
+
+        while (rs.eof != true)
+        {
+                var CurrentObject = GetObject(rs.fields(0));
+
+                // Print out any external links for this OU
+                PrintExternalGPOLinks(CurrentObject.distinguishedName);
+                rs.MoveNext();
+        }       
+
+        ADOConnection.Close();
+        
+}
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+        var szDomainName = "";
+
+        // Check if this is cscript. If not, print an error and bail out
+        if (WScript.FullName.toLowerCase().search("wscript") > 0)
+        {
+                WScript.Echo("You must use cscript.exe to execute this script.");
+                WScript.Quit();
+        }
+
+        var Result = new ActiveXObject("Scripting.Dictionary");
+
+        if (Arguments.Named.Exists("Domain"))
+        {
+                szDomainName = Arguments.Named("Domain");
+        }
+
+        // Get the current domain if none was specified
+        if (szDomainName == "")
+        {
+                szDomainName = GetDNSDomainForCurrentUser();
+        }
+
+        Result.add("Domain", szDomainName);
+        
+        return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Finds any GPO links for the domain and it's OUs that point to GPOs in a different domain.
+</description>
+
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: FindSOMsWithExternalGPOLinks.wsf
+</example>
+
+</runtime>
+
+</job>

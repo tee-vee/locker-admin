@@ -1,0 +1,179 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		RestoreGPO.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		1/7/2002
+'//
+'// Purpose:		Takes a backup location and ID and restore the backed-up
+'//			GPO
+'// Revisions:	Ported from JScript -> VBScript by dtsaltas (October 24, 2002)
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM       = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList
+Set ArgumentList     = ProcessCommandLineArguments()
+Dim szDomainName     : szDomainName     = ArgumentList.Item("Domain")
+Dim szDCName         : szDCName         = ArgumentList.Item("DCName")
+Dim szBackupLocation : szBackupLocation = ArgumentList.Item("BackupLocation")
+Dim szBackupID       : szBackupID       = ArgumentList.Item("BackupID")
+
+' Validate the path given
+Dim bValidPath	: bValidPath = ValidatePath(szBackupLocation)
+
+If bValidPath = false Then
+	WScript.Echo "The path '" & szBackupLocation & "' could not be found."
+	WScript.Echo "Verify the path exists."
+	WScript.Quit
+End If
+
+' Initialize the Domain object
+Dim GPMDomain
+Set GPMDomain = GPM.GetDomain(szDomainName, szDCName, Constants.UseAnyDC)
+
+' Get the backup specified
+Dim GPMBackup
+Set GPMBackup = GetBackup(szBackupLocation, szBackupID)
+
+If GPMBackup Is Nothing Then
+	WScript.Echo "The restore operation could not be performed."
+	WScript.Quit(-1)
+End If
+
+WScript.Echo "Backup found:"
+WScript.Echo vbTab & "ID:" & vbTab & vbTab & GPMBackup.ID
+WScript.Echo vbTab & "Timestamp:"  & vbTab & GPMBackup.TimeStamp
+WScript.Echo vbTab & "GPO ID:"     & vbTab & vbTab & GPMBackup.GPOID
+WScript.Echo vbTab & "GPO Name:"   & vbTab & GPMBackup.GPODisplayName
+WScript.Echo vbTab & "Comment:"    & vbTab & GPMBackup.Comment
+
+' Now restore the backup
+WScript.Echo vbCrLf
+WScript.Echo "Restoring GPO " & GPMBackup.GPODisplayName & " from " & szBackupLocation & "\\" & GPMBackup.ID & " in domain " & szDomainName & "."
+
+On Error Resume Next
+
+' Do the restore
+Dim GPMResult
+Set GPMResult = GPMDomain.RestoreGPO(GPMBackup, Constants.DoNotValidateDC)
+	
+' Call the OverallStatus method on the GPMResult. This will throw an exception if there
+' were any errors during the actual operation.
+	
+GPMResult.OverallStatus()
+
+If Err.Number <> 0 Then
+
+	' If we were able to get a GPMResult object, print any status message errors
+	If Not IsNull(GPMResult) Then
+		PrintStatusMessages GPMResult
+	End If
+
+	WScript.Echo vbCrLf
+	WScript.Echo "Error restoring GPO " & GPMBackup.GPODisplayName
+	WScript.Echo ErrCode(Err.Number) & " - " & Err.Description
+	WScript.Quit(-1)
+End If
+
+Dim GPMGPO
+Set GPMGPO = GPMResult.Result
+
+'Print any status message warnings
+PrintStatusMessages GPMResult 
+
+WScript.Echo vbCrLf
+WScript.Echo "GPO '" & GPMGPO.DisplayName & "' has been restored."
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szBackupLocation : szBackupLocation = ""
+	Dim szBackupID       : szBackupID       = ""
+	Dim szDomainName     : szDomainName     = ""
+	Dim szDCName         : szDCName         = ""
+	
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length < 2 Then
+		WScript.Echo "Invalid Number of arguements"
+		WScript.Arguments.ShowUsage
+		WScript.Quit(-1)
+	End If
+	
+	Dim Result
+	Set Result = CreateObject("Scripting.Dictionary")
+
+	szBackupLocation = WScript.Arguments(0)
+	szBackupID =       WScript.Arguments(1)
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+	   szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	If WScript.Arguments.Named.Exists("DC") Then
+	   szDCName = WScript.Arguments.Named("DC")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+	   szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "BackupLocation" , szBackupLocation
+	Result.Add "BackupID"       , szBackupID
+	Result.Add "Domain"         , szDomainName
+	Result.Add "DCName"         , szDCName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Takes a backed-up GPO and restores it.
+</description>
+
+<unnamed name="BackupLocation" helpstring="File system location where the backup is located" type="string" required="true" />
+<unnamed name="BackupID" helpstring="The GPO name or backup ID (GUID) of the backup to use" type="string" required="true" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+<named name="DC" helpstring="Netbios name of domain controller to use" type="string" required="false" />
+
+<example>
+Example: RestoreGPO.wsf c:\GPOBackups MyGPO /domain:test.mycompany.com
+</example>
+
+</runtime>
+
+</job>

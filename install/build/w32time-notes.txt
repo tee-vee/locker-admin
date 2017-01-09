@@ -1,0 +1,36 @@
+https://www.basics.net/category/windows/
+
+Workaround
+
+To start the Windows Time service at system startup, use any of the following methods.
+
+Method 1
+
+Run the following command to delete the trigger event that's registered as the default setting and to change the Startup Type setting for the Windows Time service from Manual to Automatic:
+
+sc triggerinfo w32time delete
+ 
+
+Method 2
+
+Run the following command to define a trigger event that suits your environment. In this example, the command determines whether an IP address is given to a host, and then it starts or stops the service.
+
+sc triggerinfo w32time start/networkon stop/networkoff
+ 
+
+Method 3
+
+Change the Startup Type of the Windows Time service from Manual to Automatic (Delayed Start).
+
+Note If the Startup Type of the Windows Time service is set to Automatic (Delayed Start), the Windows Time service may be started by the "Time Synchronization before the Service Control Manager starts the Windows Time service" task. (This depends on the startup timing of the Windows operating system in question.)
+
+In this situation, the service triggers an automatic stop after the success of the Time Synchronization task. Therefore, if you use Method 3, you must disable the "Time Synchronization to avoid the task to start the Windows Time service" task. To do this, follow these steps:
+
+Start the Task Scheduler.
+Under Task Scheduler Library / Microsoft / Windows / Time Synchronization, click Synchronize Time.
+Right-click, and then click Disabled on the shortcut menu.
+More information
+
+The Windows Time service on a workgroup computer is not started automatically at system startup by the Trigger-Start service. However, the Windows Time service is started by the Time Synchronization setting that's registered on the Task Scheduler Library at 01:00 a.m. every Sunday for Time Synchronization. Therefore, the default setting can be kept as is.
+
+But if you run your workgroup computer as a time server, you must use one of the above 3 workarounds as the time service needs to be running all the time fot the time server to be contactable.

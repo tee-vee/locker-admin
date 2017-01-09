@@ -1,0 +1,232 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:	FindGPOsBySecurityGroup.wsf
+'// Author:	mtreit@microsoft.com
+'// Created:	10/11/2001
+'// Purpose:	Finds all GPOs on which the specified security
+'//		principal has a certain set of permissions.
+'// Revision:	Ported from JScript->VBScript by dtsaltas (December 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList   : Set ArgumentList = ProcessCommandLineArguments()
+Dim szGroupName    : szGroupName      = ArgumentList.Item("Group")
+Dim szPermission   : szPermission     = ArgumentList.Item("Permission")
+Dim bEffective     : bEffective       = ArgumentList.Item("Effective")
+Dim bNoPermission  : bNoPermission    = ArgumentList.Item("NoPermission")
+Dim szDomainName   : szDomainName     = ArgumentList.Item("Domain")
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Determine the actual permission level to query for
+Dim iPerm
+Select Case LCase(szPermission)
+
+	Case "read"
+	iPerm = Constants.PermGPORead
+	
+	Case "edit"
+	iPerm = Constants.PermGPOEdit
+	
+	Case "apply"
+	iPerm = Constants.PermGPOApply
+
+	Case "fulledit"
+	iPerm = Constants.PermGPOEditSecurityAndDelete
+	
+	Case Else
+	WScript.Echo "The specified permission type " & WScript.Arguments.Named("Permission") & " is not recognized."
+	WScript.Echo "Please specify either 'read', 'edit', 'fulledit' or 'apply'"
+	WScript.Quit()
+
+End Select
+
+Dim szEffective : szEffective = ""
+If bEffective = True Then
+	szEffective = " effective"
+End If
+
+Dim szMissing : szMissing = ""
+
+If bNoPermission = True Then
+	szMissing = " missing"
+End If
+
+Select Case iPerm
+
+	Case Constants.PermGPOApply
+	WScript.Echo "Searching for all GPOs with" & szEffective & " Read and Apply permissions" & szMissing & " for " & szGroupName & vbCrLf
+	
+	Case Constants.PermGPORead
+	WScript.Echo "Searching for all GPOs with" & szEffective & " Read permissions" & szMissing & " for " & szGroupName & vbCrLf
+
+	
+	Case Constants.PermGPOEdit
+	WScript.Echo "Searching for all GPOs with" & szEffective & " Edit permissions" & szMissing & " for " & szGroupName & vbCrLf
+
+	
+	Case Constants.PermGPOEditSecurityAndDelete
+	WScript.Echo "Searching for all GPOs with" & szEffective & " Edit, Change Security and Delete permissions" & szMissing & " for " & szGroupName & vbCrLf
+
+End Select
+
+' Process the security group and domain specified
+OutputGPOsWithPermission szGroupName, iPerm, bEffective, bNoPermission
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Take a security group and permission level and prints out
+' the list of GPOs that match
+Function OutputGPOsWithPermission(szGroupName, perm, bEffective, bNoPermission)
+
+	Dim SearchScope
+	If bEffective = True Then
+		SearchScope = Constants.SearchPropertyGPOEffectivePermissions
+	
+	Else
+		SearchScope = Constants.SearchPropertyGPOPermissions
+	End If
+
+	' Initialize our permission objects to search for. 
+	On Error Resume Next
+        Err.Clear
+	Dim GPMPermission
+	Set GPMPermission = GPM.CreatePermission(szGroupName, perm, False)
+	
+	If Err.Number <> 0 Then
+		WScript.Echo "Attempt to query for group " & szGroupName & " failed."
+		WScript.Echo "The group may not exist."
+		Exit Function
+	End If
+       	On Error Goto 0
+
+	' Set the operator to search for
+	Dim op
+
+	If bNoPermission = True Then
+	 	op = Constants.SearchOpNotContains
+	End If
+
+	If bNoPermission = False Then
+		op = Constants.SearchOpContains
+	End If
+	
+	' Now build a SearchCriteria object
+	Dim GPMSearchCriteria
+	Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+	GPMSearchCriteria.Add SearchScope, op, GPMPermission
+
+	' Search for the GPOs that will apply to the specified security group
+	Dim GPOList
+	Set GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria)
+	WScript.Echo "== " & GPOList.Count & " GPOs found =="
+	WScript.Echo vbCtrl
+
+	' Now print out the list of GPOs found
+	For Each objGPO in GPOList
+		WScript.Echo objGPO.DisplayName
+		WScript.Echo objGPO.ID & vbCrLf
+	Next
+
+End Function
+
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szGroupName   : szGroupName   = ""
+	Dim szPermission  : szPermission  = ""
+	Dim bEffective    : bEffective    = False
+	Dim bNoPermission : bNoPermission = False
+	Dim szDomainName  : szDomainName  = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length < 2 OR Not WScript.Arguments.Named.Exists("Permission") Then
+		WScript.Arguments.ShowUsage()
+		WScript.Quit
+	End If
+
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	szGroupName  = WScript.Arguments(0)
+	szPermission = WScript.Arguments.Named("Permission")
+
+	If WScript.Arguments.Named.Exists("Effective") Then
+		bEffective = True
+	End If
+
+	If WScript.Arguments.Named.Exists("None") Then
+		bNoPermission = True
+	End If
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Group"        , szGroupName
+	Result.Add "Permission"   , szPermission
+	Result.Add "Effective"    , bEffective
+	Result.Add "NoPermission" , bNoPermission
+	Result.Add "Domain"       , szDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Prints a list of all GPOs on which a given security principal has the specified permission level
+</description>
+
+<unnamed name="GroupName" helpstring="The security principal to search on" type="string" required="true" />
+<named name="Permission" helpstring="The permission level to find. Can be 'Read', 'Apply', 'Edit', 'FullEdit' or 'None'" type="string" required="true" />
+<named name="Effective" helpstring="Display effective permissions, taking into account group membership" type="simple" required="false" />
+<named name="None" helpstring="Display the GPOs where the security principal does not have the specified permission level" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: FindGPOsBySecurityGroup.wsf "Policy Admins" /Permission:Edit /Effective
+</example>
+
+</runtime>
+
+</job>

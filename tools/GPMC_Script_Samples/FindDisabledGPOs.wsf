@@ -1,0 +1,130 @@
+'////////////////////////////////////////////////////////////////////////////
+'//Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		FindDisabledGPOs.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		11/7/2001
+'//
+'// Purpose:		Finds all GPOs in the domain that are disabled or partially
+'//			disabled and prints them out
+'//			options.
+'// Revision:   	Ported from JScript->VBScript by dtsaltas (December 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList : Set ArgumentList = ProcessCommandLineArguments()
+Dim szDomainName : szDomainName     = ArgumentList.Item("Domain")
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Get all GPOs in the domain
+Dim GPMSearchCriteria
+Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+Dim GPOList
+Set GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria)
+
+
+' Print out the GPOs that are totally disabled
+WScript.Echo vbCrLf & "== GPOs that are completely disabled =="
+
+For Each objGPO in GPOList 
+	If objGPO.IsUserEnabled = False AND objGPO.IsComputerEnabled = False Then
+		WScript.Echo objGPO.ID & " - " & objGPO.DisplayName
+	End If
+Next
+
+
+' Print out the GPOs where the computer side is disabled
+WScript.Echo vbCrLf & "== GPOs with the computer settings disabled =="
+
+For Each objGPO in GPOList
+	If objGPO.IsUserEnabled = True AND objGPO.IsComputerEnabled = False Then
+		WScript.Echo objGPO.ID & " - " & objGPO.DisplayName
+	End If
+Next
+
+' Print out the GPOs where the user side is disabled
+WScript.Echo vbCrLf & "== GPOs with the user settings disabled =="
+
+For Each objGPO in GPOList
+	If objGPO.IsUserEnabled = False AND objGPO.IsComputerEnabled = True Then
+		WScript.Echo objGPO.ID & " - " & objGPO.DisplayName
+	End If
+Next
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim strDomainName : strDomainName = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+	
+	
+	If WScript.Arguments.Named.Exists("Domain") Then
+	
+		strDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+
+	' Get the current domain if none was specified
+	If strDomainName = "" Then
+	
+		strDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Domain", strDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Searches for all disabled GPOs in a given domain.
+</description>
+
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: FindDisabledGPOs.wsf /domain:Test.MyDomain.com
+</example>
+
+</runtime>
+
+</job>

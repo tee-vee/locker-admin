@@ -1,0 +1,222 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	FindGPOsByPolicyExtension.wsf
+// Author:	mtreit@microsoft.com
+// Created:	11/12/2001
+//
+// Purpose:	Finds all GPOs in the domain have a specific policy
+//		extension (i.e., Software Installation, Folder Redirection)
+//		configured.
+////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szExtension = ArgumentList.Item("Extension");
+var szDomainName = ArgumentList.Item("Domain");
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Now query for GPOs with the specified extension
+FindGPOsByCSE(szExtension);
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes a CSE name or ID and finds all GPOs in the domain
+// with that CSE defined
+function FindGPOsByCSE(szExtension)
+{
+	// First make sure we have the GUID for the CSE
+	szCSEID = GetCSEGuid(szExtension);
+	if (!szCSEID)
+	{
+		WScript.Echo("The Client Side Extension " + szExtension + " is not recognized.");
+		return;
+	}
+	
+	// Get the name as well
+	var szCSEName = GetCSEName(szCSEID);
+	
+	// Now we have the ID, so search for all GPOs that have set this CSE
+	
+	// First search for user policies
+	var GPMSearchCriteria = GPM.CreateSearchCriteria();
+	GPMSearchCriteria.Add(Constants.SearchPropertyGPOUserExtensions, Constants.SearchOpContains, szCSEID);
+	
+	GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria);
+	e = new Enumerator(GPOList);
+	
+	WScript.Echo("== GPOs with " + szCSEName + " policies defined for Users ==");
+	for (; !e.atEnd(); e.moveNext())
+	{
+		GPO = e.item();
+		WScript.Echo(GPO.ID + " - " + GPO.DisplayName);
+	}
+
+	// Reset the search criteria and search for Computer settings
+	GPMSearchCriteria = GPM.CreateSearchCriteria();
+	GPMSearchCriteria.Add(Constants.SearchPropertyGPOComputerExtensions, Constants.SearchOpContains, szCSEID);
+	
+	GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria);
+	e = new Enumerator(GPOList);
+	
+	WScript.Echo("\n== GPOs with " + szCSEName + " policies defined for Computers ==");
+	for (; !e.atEnd(); e.moveNext())
+	{
+		GPO = e.item();
+		WScript.Echo(GPO.ID + " - " + GPO.DisplayName);
+	}
+	
+	
+}
+
+// Takes a CSE Name or GUID and returns the GUID for that CSE
+// Used to handle the case where we don't know if the name
+// or GUID was passed in 
+function GetCSEGuid(szCSE)
+{
+	var CSEList = GPM.GetClientSideExtensions();
+	var e = new Enumerator(CSEList);
+	var CSE;
+	for (; !e.atEnd(); e.moveNext())
+	{
+		CSE = e.item();
+		if (	CSE.DisplayName.toLowerCase() == szCSE.toLowerCase() ||
+			CSE.ID.toLowerCase() == szCSE.toLowerCase() )
+		{
+			// We found a match, so return the ID
+			return CSE.ID;
+		}
+	}
+	
+	// We didn't find a match
+	return false;
+}
+
+// Takes a CSE GUID and returns the name for that CSE
+function GetCSEName(szCSEID)
+{
+	var CSEList = GPM.GetClientSideExtensions();
+	var e = new Enumerator(CSEList);
+	var CSE;
+	for (; !e.atEnd(); e.moveNext())
+	{
+		CSE = e.item();
+		if (CSE.ID.toLowerCase() == szCSEID.toLowerCase())
+		{
+			// We found a match, so return the Name
+			return CSE.DisplayName;
+		}
+	}
+	
+	// We didn't find a match
+	return false;
+}
+
+// Prints the list of CSEs available on the current machine
+function PrintCSEList()
+{
+	var GPM = new ActiveXObject("gpmgmt.GPM");	
+	var CSEList = GPM.GetClientSideExtensions();
+	var e = new Enumerator(CSEList);
+	var CSE;
+	for (; !e.atEnd(); e.moveNext())
+	{
+		CSE = e.item();
+		WScript.Echo(CSE.ID + " - " + CSE.DisplayName);
+	}
+
+}
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szExtension = "";
+	var szDomainName = "";
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	if (Arguments.Named.Exists("PrintCSEList"))
+	{
+		WScript.Echo("\nThe following client side extensions are registered locally:");
+		PrintCSEList();
+		WScript.Quit();
+	}
+
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	szExtension = Arguments(0);
+
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	Result.add("Extension", szExtension);
+	Result.add("Domain", szDomainName);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Searches for all GPOs in the specified domain that have defined settings for the specified policy extension.
+</description>
+
+<unnamed name="ExtensionID" helpstring="The GUID or friendly name of the Client Side Extension (CSE) to query for" type="string" required="true" />
+<named name="PrintCSEList" helpstring="Use this option to print the list of available CSEs" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Examples: FindGPOsByPolicyExtension.wsf "Software Installation"
+          FindGPOsByPolicyExtension.wsf /PrintCSEList
+</example>
+
+</runtime>
+
+</job>

@@ -1,0 +1,12 @@
+# Derek Yuen <derekyuen@locision.com>
+.DS_Store
+.dropbox
+docs/
+*.swp
+*.dll
+*.exe
+*.jar
+*.chm
+*.msc
+*.hlp
+*.sys

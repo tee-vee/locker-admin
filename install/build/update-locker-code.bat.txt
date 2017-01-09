@@ -1,0 +1,12 @@
+REM 
+REM Derek Yuen <derekyuen@locision.com>
+REM 2016-11-25 
+REM
+REM update-locker-code.bat
+REM 
+
+echo "UPDATING LOCKER-CONSOLE"
+REM Backup first!
+copy 
+
+

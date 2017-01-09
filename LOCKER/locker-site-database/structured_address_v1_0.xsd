@@ -1,0 +1,1683 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:cct="http://www.xml.gov.hk/schemas/cct">
+	<xs:import namespace="http://www.xml.gov.hk/schemas/cct" 
+		schemaLocation="http://www.xml.gov.hk/schemas/cct/cct.xsd"/>
+	<xs:complexType name="StructuredAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000046, Dictionary Entry Name = Structured Address. Details,
+         Contain necessary information about a structured (possibly validated) address within Hong Kong, optionally together with validation result of the address.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Address" type="AddressDetails.V1.0.CT"/>
+			<xs:element name="ValidationInformation" type="ValidationInformationDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="AddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000049, Dictionary Entry Name = Address. Details,
+         Specified an postal address</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:annotation><xs:documentation>xs:choice</xs:documentation></xs:annotation>
+			<xs:element name="PremisesAddress" type="PremisesAddressDetails.V1.0.CT"/>
+			<xs:element name="PostBoxAddress" type="PostBoxAddressDetails.V1.0.CT"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="PremisesAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000052, Dictionary Entry Name = Premises Address. Details,
+         Reference to an address which can be occupied by persons or organizations</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EngPremisesAddress" type="EngPremisesAddressDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiPremisesAddress" type="ChinPremisesAddressDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingCsuInformation" type="BuildingCSUInformationDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngPremisesAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000056, Dictionary Entry Name = Eng Premises Address. Details,
+         A structured postal address in English referring to a location that can be occupied by persons or organizations within Hong Kong</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Eng3dAddress" type="Eng3DAddressDetails.V1.0.CT" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="EngBlock" type="EngBlockDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingName" type="EngPremisesAddressBuildingNameText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="EngEstate" type="EngEstateDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="EngVillage" type="EngVillageDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="EngStreet" type="EngStreetDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="EngLot" type="EngLotDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="EngDistrict" type="EngDistrictDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="Region" type="EngPremisesAddressRegionCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngPremisesAddressBuildingNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000059, Dictionary Entry Name = Eng Premises Address. Building Name. Text,
+         Full building name in English</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="195"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngPremisesAddressRegionCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000065, Dictionary Entry Name = Eng Premises Address. Region. Code,
+         Region that the address reference to, where 
+HK = Hong Kong Island, 
+KLN = Kowloon, 
+NT = New Territories</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="3"/>
+				<xs:enumeration value="HK"/>
+				<xs:enumeration value="KLN"/>
+				<xs:enumeration value="NT"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Eng3DAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000066, Dictionary Entry Name = Eng 3D Address. Details,
+         Floor and Unit information of the concerned address in English.  If multiple floors and/or units are concerned in a single address, each concerned floor and unit pair should be recorded as one Eng 3D Address element.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EngUnit" type="EngUnitDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="EngFloor" type="EngFloorDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngUnitDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000069, Dictionary Entry Name = Eng Unit. Details,
+         Unit information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="UnitDescriptor" type="EngUnitUnitDescriptorText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="UnitNo" type="EngUnitUnitNoText.V1.0.CT"/>
+			<xs:element name="UnitPortion" type="EngUnitUnitPortionCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngUnitUnitDescriptorText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000070, Dictionary Entry Name = Eng Unit. Unit Descriptor. Text,
+         Unit descriptor in English (e.g. 'FLAT', 'SHOP')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="16"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngUnitUnitNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000071, Dictionary Entry Name = Eng Unit. Unit No. Text,
+         Unit number (including any non-numeric parts) (e.g. 'A1', '3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="23"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngUnitUnitPortionCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000072, Dictionary Entry Name = Eng Unit. Unit Portion. Code,
+         Indicate the concerned portion of a Unit in English, where: 
+CE = Central, 
+E = East, 
+FR = Front, 
+LF = Left, 
+MD = Middle, 
+N = North, 
+NE = North-East, 
+NW = North-West, 
+RG = Right, 
+RR = Rear, 
+S = South, 
+SE = South-East, 
+SW = South-West, 
+W = West, 
+PN = (Portion), 
+PT = (Part), 
+RF = &amp; Roof
+Used when the address refers to part of a Unit only</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="2"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngFloorDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000073, Dictionary Entry Name = Eng Floor. Details,
+         Floor information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:annotation><xs:documentation>xs:choice</xs:documentation></xs:annotation>
+			<xs:element name="FloorNum" type="EngFloorFloorNumNumeric.V1.0.CT"/>
+			<xs:element name="FloorDescription" type="EngFloorFloorDescriptionText.V1.0.CT"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="EngFloorFloorNumNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000074, Dictionary Entry Name = Eng Floor. Floor Num. Numeric,
+         Floor number, used only when the floor information is a numeric value.  Floor description in English as in full postal address can be generated by appending '/F' to FloorNum.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="3"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngFloorFloorDescriptionText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000075, Dictionary Entry Name = Eng Floor. Floor Description. Text,
+         English floor description, used only when the floor information contains non-numeric part
+e.g. 'CONCOURSE', 'LEVEL 1', 'UPPER GROUND', '12A/F'</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="20"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngBlockDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000076, Dictionary Entry Name = Eng Block. Details,
+         Block information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="BlockDescriptor" type="EngBlockBlockDescriptorText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BlockNo" type="EngBlockBlockNoText.V1.0.CT"/>
+			<xs:element name="BlockDescriptorPrecedenceIndicator" type="EngBlockBlockDescriptorPrecedenceIndicator.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngBlockBlockDescriptorText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000077, Dictionary Entry Name = Eng Block. Block Descriptor. Text,
+         Block descriptor in English (e.g. 'Building', 'House', 'Block', 'BLK')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="35"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngBlockBlockNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000078, Dictionary Entry Name = Eng Block. Block No. Text,
+         Block number in English or numeric values (e.g. '1', 'A', 'EAST')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="15"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngBlockBlockDescriptorPrecedenceIndicator.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000079, Dictionary Entry Name = Eng Block. Block Descriptor Precedence. Indicator,
+         An indicator showing the ordering of block descriptor and block number in full English address when both are not Null, where 
+Y = block description precedes block number (e.g. in the cases of 'BLOCK A' and 'BLOCK 1'), 
+N = block number precedes block description (e.g. in the cases of 'NORTH BLOCK' and 'WEST TOWER')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Indicator.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="Y"/>
+				<xs:enumeration value="N"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngEstateDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000080, Dictionary Entry Name = Eng Estate. Details,
+         Estate name and related information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EstateName" type="EngEstateEstateNameText.V1.0.CT"/>
+			<xs:element name="EngPhase" type="EngPhaseDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngEstateEstateNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000081, Dictionary Entry Name = Eng Estate. Estate Name. Text,
+         The estate name of the address in English</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="80"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngPhaseDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000083, Dictionary Entry Name = Eng Phase. Details,
+         Phase name and phase number information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="PhaseName" type="EngPhasePhaseNameText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="PhaseNo" type="EngPhasePhaseNoNumeric.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngPhasePhaseNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000084, Dictionary Entry Name = Eng Phase. Phase Name. Text,
+         The phase name in English of the concerned address</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="80"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngPhasePhaseNoNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000085, Dictionary Entry Name = Eng Phase. Phase No. Numeric,
+         The phase number of the concerned address</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="2"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngVillageDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000086, Dictionary Entry Name = Eng Village. Details,
+         Village name and building number information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="VillageName" type="EngVillageVillageNameText.V1.0.CT"/>
+			<xs:element name="BuildingNoFrom" type="EngVillageBuildingNoFromText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoTo" type="EngVillageBuildingNoToText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoOddEvenIndicator" type="EngVillageBuildingNoOddEvenIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoUnofficialIndicator" type="EngVillageBuildingNoUnofficialIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoConfirmationCode" type="EngVillageBuildingNoConfirmationCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngVillageVillageNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000087, Dictionary Entry Name = Eng Village. Village Name. Text,
+         Full village/place name of the address in English</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="67"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngVillageBuildingNoFromText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000088, Dictionary Entry Name = Eng Village. Building No From. Text,
+         Starting building number of the address, or the full building number when a single building number value is concerned, non-numeric part is included (e.g. '12A' in '12A-14B', and '3B' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngVillageBuildingNoToText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000089, Dictionary Entry Name = Eng Village. Building No To. Text,
+         Ending building number of the address, non-numeric part is included (e.g. '12B' in '12A-14B', and '3C' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngVillageBuildingNoOddEvenIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000090, Dictionary Entry Name = Eng Village. Building No Odd Even Indicator. Code,
+         Indicator showing the building numbers concerned within the range, where 
+O = Odd numbers within the range, 
+E = Even numbers within the range, 
+B = Both even and odd numbers within the range</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="O"/>
+				<xs:enumeration value="E"/>
+				<xs:enumeration value="B"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngVillageBuildingNoUnofficialIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000091, Dictionary Entry Name = Eng Village. Building No Unofficial Indicator. Code,
+         Indicator showing the unofficial part(s) of address, where 
+1 = Unofficial building number or no building number, 
+2 = Unofficial building number and village name</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="1"/>
+				<xs:enumeration value="2"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngVillageBuildingNoConfirmationCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000092, Dictionary Entry Name = Eng Village. Building No Confirmation. Code,
+         Indicator showing whether the assigned building number is confirmed, where 
+C = Confirmed building number, 
+P = Provisional building number, 
+A = Not yet allocated but action to be taken, 
+B = Use existing old number but action to be taken, 
+X = Not applicable.
+When this code is C or P, the 'Building No From' must not be Null</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="C"/>
+				<xs:enumeration value="P"/>
+				<xs:enumeration value="A"/>
+				<xs:enumeration value="B"/>
+				<xs:enumeration value="X"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStreetDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000093, Dictionary Entry Name = Eng Street. Details,
+         Street name and building number information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="StreetName" type="EngStreetStreetNameText.V1.0.CT"/>
+			<xs:element name="BuildingNoFrom" type="EngStreetBuildingNoFromText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoTo" type="EngStreetBuildingNoToText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoOddEvenIndicator" type="EngStreetBuildingNoOddEvenIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoUnofficialIndicator" type="EngStreetBuildingNoUnofficialIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoConfirmationCode" type="EngStreetBuildingNoConfirmationCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngStreetStreetNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000094, Dictionary Entry Name = Eng Street. Street Name. Text,
+         Full street name of the address in English</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="67"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStreetBuildingNoFromText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000095, Dictionary Entry Name = Eng Street. Building No From. Text,
+         Starting building number of the address, or the full building number when a single building number value is concerned, non-numeric part is included (e.g. '12A' in '12A-14B', and '3B' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStreetBuildingNoToText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000096, Dictionary Entry Name = Eng Street. Building No To. Text,
+         Ending building number of the address, non-numeric part is included (e.g. '12B' in '12A-14B', and '3C' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStreetBuildingNoOddEvenIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000097, Dictionary Entry Name = Eng Street. Building No Odd Even Indicator. Code,
+         Indicator showing the building numbers concerned within the range, where 
+O = Odd numbers within the range, 
+E = Even numbers within the range, 
+B = Both even and odd numbers within the range</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="O"/>
+				<xs:enumeration value="E"/>
+				<xs:enumeration value="B"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStreetBuildingNoUnofficialIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000098, Dictionary Entry Name = Eng Street. Building No Unofficial Indicator. Code,
+         Indicator showing the unofficial part(s) of address, where 
+1 = Unofficial building number or no building number, 
+2 = Unofficial building number and building name</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="1"/>
+				<xs:enumeration value="2"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStreetBuildingNoConfirmationCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000099, Dictionary Entry Name = Eng Street. Building No Confirmation. Code,
+         Indicator showing whether the assigned building number is confirmed, where 
+C = Confirmed building number, 
+P = Provisional building number, 
+A = Not yet allocated but action to be taken, 
+B = Use existing old number but action to be taken, 
+X = Not applicable.
+When this code is C or P, the 'Building No From' must not be Null</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="C"/>
+				<xs:enumeration value="P"/>
+				<xs:enumeration value="A"/>
+				<xs:enumeration value="B"/>
+				<xs:enumeration value="X"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngLotDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000100, Dictionary Entry Name = Eng Lot. Details,
+         Lot information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:annotation><xs:documentation>xs:choice</xs:documentation></xs:annotation>
+			<xs:element name="EngStructuredLot" type="EngStructuredLotDetails.V1.0.CT" maxOccurs="unbounded"/>
+			<xs:element name="FreeTextLotLines" type="EngLotFreeTextLotLinesText.V1.0.CT" maxOccurs="5"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="EngLotFreeTextLotLinesText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000102, Dictionary Entry Name = Eng Lot. Free Text Lot Lines. Text,
+         English lot information represented in free-text format, which is represented in 1 to 5 lines with at most 40 characters in each line.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="40"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000103, Dictionary Entry Name = Eng Structured Lot. Details,
+         English designation of a lot in structured format</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="DdType" type="EngStructuredLotDDTypeText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="DdNo" type="EngStructuredLotDDNoText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotType" type="EngStructuredLotLotTypeText.V1.0.CT"/>
+			<xs:element name="LotNo" type="EngStructuredLotLotNoText.V1.0.CT"/>
+			<xs:element name="LotSection1" type="EngStructuredLotLotSection1Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSubsection1" type="EngStructuredLotLotSubsection1Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSection2" type="EngStructuredLotLotSection2Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSubsection2" type="EngStructuredLotLotSubsection2Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSection3" type="EngStructuredLotLotSection3Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSubsection3" type="EngStructuredLotLotSubsection3Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSection4" type="EngStructuredLotLotSection4Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotExtendPortionCode" type="EngStructuredLotLotExtendPortionCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotDDTypeText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000104, Dictionary Entry Name = Eng Structured Lot. DD Type. Text,
+         DD type of the lot information in English</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="5"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotDDNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000105, Dictionary Entry Name = Eng Structured Lot. DD No. Text,
+         DD number values of the lot information</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotTypeText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000106, Dictionary Entry Name = Eng Structured Lot. Lot Type. Text,
+         Lot type of the lot information in English abbreviation</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="15"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000107, Dictionary Entry Name = Eng Structured Lot. Lot No. Text,
+         Lot number (including both numeric and alphabetical part) of the lot information</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="13"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSection1Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000108, Dictionary Entry Name = Eng Structured Lot. Lot Section 1. Text,
+         The first section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSubsection1Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000109, Dictionary Entry Name = Eng Structured Lot. Lot Subsection 1. Text,
+         The first subsection number (e.g. '1', '2') appeared in a lot designation.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSection2Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000110, Dictionary Entry Name = Eng Structured Lot. Lot Section 2. Text,
+         The second section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSubsection2Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000111, Dictionary Entry Name = Eng Structured Lot. Lot Subsection 2. Text,
+         The second subsection number (e.g. '1', '2') appeared in a lot designation.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="3"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSection3Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000112, Dictionary Entry Name = Eng Structured Lot. Lot Section 3. Text,
+         The third section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSubsection3Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000113, Dictionary Entry Name = Eng Structured Lot. Lot Subsection 3. Text,
+         The third subsection number (e.g. '1', '2') appeared in a lot designation.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="3"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotSection4Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000114, Dictionary Entry Name = Eng Structured Lot. Lot Section 4. Text,
+         The fourth section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngStructuredLotLotExtendPortionCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000115, Dictionary Entry Name = Eng Structured Lot. Lot Extend Portion. Code,
+         Lot extend portion code, where 
+1 = and the first extension thereto, 
+2 = and the second extension thereto, 
+3 = and the third extension thereto, 
+4 = and the fourth extension thereto, 
+5 = and the fifth extension thereto, 
+6 = and the sixth extension thereto, 
+7 = and the seventh extension thereto, 
+8 = and the eighth extension thereto, 
+9 = and the extension thereto</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="1"/>
+				<xs:enumeration value="2"/>
+				<xs:enumeration value="3"/>
+				<xs:enumeration value="4"/>
+				<xs:enumeration value="5"/>
+				<xs:enumeration value="6"/>
+				<xs:enumeration value="7"/>
+				<xs:enumeration value="8"/>
+				<xs:enumeration value="9"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngDistrictDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000116, Dictionary Entry Name = Eng District. Details,
+         District and/or sub-district information of the concerned address in English</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="DcDistrict" type="EngDistrictDCDistrictCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="Sub-district" type="EngDistrictSub-districtText.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngDistrictDCDistrictCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000117, Dictionary Entry Name = Eng District. DC District. Code,
+         Code of the District Council where the concerned address locates</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="3"/>
+				<xs:attribute name="agencyId" default="http://www.xml.gov.hk">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="http://www.xml.gov.hk"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="agencyName" default="http://www.xml.gov.hk">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="http://www.xml.gov.hk"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="codeListId" default="http://www.xml.gov.hk/codelists/district_council_code_eng.xml">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="http://www.xml.gov.hk/codelists/district_council_code_eng.xml"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="codeListName" default="English District Council Code">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="English District Council Code"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="codeListVersion" default="0.1">
+					<xs:simpleType>
+						<xs:restriction base="xs:token">
+							<xs:enumeration value="0.1"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngDistrictSub-districtText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000118, Dictionary Entry Name = Eng District. Sub-district. Text,
+         Name of the sub-district in English where the concerned address locates.  Sub-districts are the names that are commonly used by the general public in writing their addresses (e.g. 'HAPPY VALLEY', 'TSIM SHA TSUI')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="40"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPremisesAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000119, Dictionary Entry Name = Chin Premises Address. Details,
+         A structured postal address in Chinese referring to a location that can be occupied by persons or organizations within Hong Kong</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Region" type="ChinPremisesAddressRegionText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiDistrict" type="ChinDistrictDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiLot" type="ChinLotDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiStreet" type="ChinStreetDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiVillage" type="ChinVillageDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiEstate" type="ChinEstateDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiBlock" type="ChinBlockDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingName" type="ChinPremisesAddressBuildingNameText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="Chi3dAddress" type="Chin3DAddressDetails.V1.0.CT" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinPremisesAddressRegionText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000120, Dictionary Entry Name = Chin Premises Address. Region. Text,
+         Region that the address reference to (e.g. '香港', '九龍', '新界')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="3"/>
+				<xs:enumeration value="香港"/>
+				<xs:enumeration value="九龍"/>
+				<xs:enumeration value="新界"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPremisesAddressBuildingNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000127, Dictionary Entry Name = Chin Premises Address. Building Name. Text,
+         Full building name in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="85"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinDistrictDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000129, Dictionary Entry Name = Chin District. Details,
+         District and/or sub-district information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="DcDistrict" type="ChinDistrictDCDistrictCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="Sub-district" type="ChinDistrictSub-districtText.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinDistrictDCDistrictCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000130, Dictionary Entry Name = Chin District. DC District. Code,
+         Code of the District Council where the concerned address locates</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="3"/>
+				<xs:attribute name="agencyId" default="http://www.xml.gov.hk">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="http://www.xml.gov.hk"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="agencyName" default="http://www.xml.gov.hk">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="http://www.xml.gov.hk"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="codeListId" default="http://www.xml.gov.hk/codelists/district_council_code_chi.xml">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="http://www.xml.gov.hk/codelists/district_council_code_chi.xml"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="codeListName" default="Chinese District Council Code">
+					<xs:simpleType>
+						<xs:restriction base="xs:normalizedString">
+							<xs:enumeration value="Chinese District Council Code"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="codeListVersion" default="0.1">
+					<xs:simpleType>
+						<xs:restriction base="xs:token">
+							<xs:enumeration value="0.1"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinDistrictSub-districtText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000131, Dictionary Entry Name = Chin District. Sub-district. Text,
+         Name of the sub-district in Chinese where the concerned address locates.  Sub-districts are the names that are commonly used by the general public in writing their addresses (e.g. '跑馬地', '尖沙咀')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="40"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinLotDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000132, Dictionary Entry Name = Chin Lot. Details,
+         Lot information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:annotation><xs:documentation>xs:choice</xs:documentation></xs:annotation>
+			<xs:element name="ChiStructuredLot" type="ChinStructuredLotDetails.V1.0.CT" maxOccurs="unbounded"/>
+			<xs:element name="FreeTextLotLines" type="ChinLotFreeTextLotLinesText.V1.0.CT" maxOccurs="5"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="ChinLotFreeTextLotLinesText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000134, Dictionary Entry Name = Chin Lot. Free Text Lot Lines. Text,
+         Chinese lot information represented in free-text format, which is represented in 1 to 5 lines with at most 35 characters in each line.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="35"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000135, Dictionary Entry Name = Chin Structured Lot. Details,
+         Chinese designation of a lot in structured format</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="DdType" type="ChinStructuredLotDDTypeText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="DdNo" type="ChinStructuredLotDDNoText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotType" type="ChinStructuredLotLotTypeText.V1.0.CT"/>
+			<xs:element name="LotNo" type="ChinStructuredLotLotNoText.V1.0.CT"/>
+			<xs:element name="LotSection1" type="ChinStructuredLotLotSection1Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSubsection1" type="ChinStructuredLotLotSubsection1Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSection2" type="ChinStructuredLotLotSection2Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSubsection2" type="ChinStructuredLotLotSubsection2Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSection3" type="ChinStructuredLotLotSection3Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSubsection3" type="ChinStructuredLotLotSubsection3Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotSection4" type="ChinStructuredLotLotSection4Text.V1.0.CT" minOccurs="0"/>
+			<xs:element name="LotExtendPortionCode" type="ChinStructuredLotLotExtendPortionCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotDDTypeText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000136, Dictionary Entry Name = Chin Structured Lot. DD Type. Text,
+         DD type of the lot information in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotDDNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000137, Dictionary Entry Name = Chin Structured Lot. DD No. Text,
+         DD number values of the lot information</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotTypeText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000138, Dictionary Entry Name = Chin Structured Lot. Lot Type. Text,
+         Lot type of the lot information in Chinese abbreviation</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="8"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000139, Dictionary Entry Name = Chin Structured Lot. Lot No. Text,
+         Lot number (including both numeric and alphabetical part) of the lot information</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="13"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSection1Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000140, Dictionary Entry Name = Chin Structured Lot. Lot Section 1. Text,
+         The first section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSubsection1Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000141, Dictionary Entry Name = Chin Structured Lot. Lot Subsection 1. Text,
+         The first subsection number (e.g. '1', '2') appeared in a lot designation.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSection2Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000142, Dictionary Entry Name = Chin Structured Lot. Lot Section 2. Text,
+         The second section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSubsection2Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000143, Dictionary Entry Name = Chin Structured Lot. Lot Subsection 2. Text,
+         The second subsection number (e.g. '1', '2') appeared in a lot designation.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="3"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSection3Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000144, Dictionary Entry Name = Chin Structured Lot. Lot Section 3. Text,
+         The third section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSubsection3Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000145, Dictionary Entry Name = Chin Structured Lot. Lot Subsection 3. Text,
+         The third subsection number (e.g. '1', '2') appeared in a lot designation.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="3"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotSection4Text.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000146, Dictionary Entry Name = Chin Structured Lot. Lot Section 4. Text,
+         The fourth section letter (e.g. 'A', 'B', 'AA', 'C-F') appeared in a lot designation. Special values for non-section letters are enclosed in brackets, where: 
+(PE) = PRAYA EXTENSION TO, 
+(PR) = PRAYA EXCLAMATION TO, 
+(RP) = THE REMAINING PORTION OF, 
+(RC) = THE RECLAMATION TO</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="4"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStructuredLotLotExtendPortionCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000147, Dictionary Entry Name = Chin Structured Lot. Lot Extend Portion. Code,
+         Lot extend portion code, where 
+1 = and the first extension thereto, 
+2 = and the second extension thereto, 
+3 = and the third extension thereto, 
+4 = and the fourth extension thereto, 
+5 = and the fifth extension thereto, 
+6 = and the sixth extension thereto, 
+7 = and the seventh extension thereto, 
+8 = and the eighth extension thereto, 
+9 = and the extension thereto</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="1"/>
+				<xs:enumeration value="2"/>
+				<xs:enumeration value="3"/>
+				<xs:enumeration value="4"/>
+				<xs:enumeration value="5"/>
+				<xs:enumeration value="6"/>
+				<xs:enumeration value="7"/>
+				<xs:enumeration value="8"/>
+				<xs:enumeration value="9"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000148, Dictionary Entry Name = Chin Street. Details,
+         Street name and building number information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="StreetName" type="ChinStreetStreetNameText.V1.0.CT"/>
+			<xs:element name="BuildingNoFrom" type="ChinStreetBuildingNoFromText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoTo" type="ChinStreetBuildingNoToText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoOddEvenIndicator" type="ChinStreetBuildingNoOddEvenIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoUnofficialIndicator" type="ChinStreetBuildingNoUnofficialIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoConfirmationCode" type="ChinStreetBuildingNoConfirmationCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetStreetNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000149, Dictionary Entry Name = Chin Street. Street Name. Text,
+         Full street name of the address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="24"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetBuildingNoFromText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000150, Dictionary Entry Name = Chin Street. Building No From. Text,
+         Starting building number of the address, or the full building number when a single building number value is concerned, non-numeric part is included (e.g. '12A' in '12A-14B', and '3B' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetBuildingNoToText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000151, Dictionary Entry Name = Chin Street. Building No To. Text,
+         Ending building number of the address, non-numeric part is included (e.g. '12B' in '12A-14B', and '3C' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetBuildingNoOddEvenIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000152, Dictionary Entry Name = Chin Street. Building No Odd Even Indicator. Code,
+         Indicator showing the building numbers concerned within the range, where 
+O = Odd numbers within the range, 
+E = Even numbers within the range, 
+B = Both even and odd numbers within the range</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="O"/>
+				<xs:enumeration value="E"/>
+				<xs:enumeration value="B"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetBuildingNoUnofficialIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000153, Dictionary Entry Name = Chin Street. Building No Unofficial Indicator. Code,
+         Indicator showing the unofficial part(s) of address, where 
+1 = Unofficial building number, or no building number, 
+2 = Unofficial building number and building name</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="1"/>
+				<xs:enumeration value="2"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinStreetBuildingNoConfirmationCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000154, Dictionary Entry Name = Chin Street. Building No Confirmation. Code,
+         Indicator showing whether the assigned building number is confirmed, where 
+C = Confirmed building number, 
+P = Provisional building number, 
+A = Not yet allocated but action to be taken, 
+B = Use existing old number but action to be taken, 
+X = Not applicable.
+When this code is C or P, the 'Building No From' must not be Null</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="C"/>
+				<xs:enumeration value="P"/>
+				<xs:enumeration value="A"/>
+				<xs:enumeration value="B"/>
+				<xs:enumeration value="X"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000155, Dictionary Entry Name = Chin Village. Details,
+         Village name and building number information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="VillageName" type="ChinVillageVillageNameText.V1.0.CT"/>
+			<xs:element name="BuildingNoFrom" type="ChinVillageBuildingNoFromText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoTo" type="ChinVillageBuildingNoToText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoOddEvenIndicator" type="ChinVillageBuildingNoOddEvenIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoUnofficialIndicator" type="ChinVillageBuildingNoUnofficialIndicatorCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BuildingNoConfirmationCode" type="ChinVillageBuildingNoConfirmationCode.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageVillageNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000156, Dictionary Entry Name = Chin Village. Village Name. Text,
+         Full village/place name of the address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="24"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageBuildingNoFromText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000157, Dictionary Entry Name = Chin Village. Building No From. Text,
+         Starting building number of the address, or the full building number when a single building number value is concerned, non-numeric part is included (e.g. '12A' in '12A-14B', and '3B' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageBuildingNoToText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000158, Dictionary Entry Name = Chin Village. Building No To. Text,
+         Ending building number of the address, non-numeric part is included (e.g. '12B' in '12A-14B', and '3C' in '3B/3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[A-Z]{0,2}[0-9]{0,4}[A-Z]{0,2}"/>
+				<xs:maxLength value="7"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageBuildingNoOddEvenIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000159, Dictionary Entry Name = Chin Village. Building No Odd Even Indicator. Code,
+         Indicator showing the building numbers concerned within the range, where 
+O = Odd numbers within the range, 
+E = Even numbers within the range, 
+B = Both even and odd numbers within the range</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="O"/>
+				<xs:enumeration value="E"/>
+				<xs:enumeration value="B"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageBuildingNoUnofficialIndicatorCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000160, Dictionary Entry Name = Chin Village. Building No Unofficial Indicator. Code,
+         Indicator showing the unofficial part(s) of address, where 
+1 = Unofficial building number, or no building number, 
+2 = Unofficial building number and village name</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="1"/>
+				<xs:enumeration value="2"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinVillageBuildingNoConfirmationCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000161, Dictionary Entry Name = Chin Village. Building No Confirmation. Code,
+         Indicator showing whether the assigned building number is confirmed, where 
+C = Confirmed building number, 
+P = Provisional building number, 
+A = Not yet allocated but action to be taken, 
+B = Use existing old number but action to be taken, 
+X = Not applicable.
+When this code is C or P, the 'Building No From' must not be Null</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="C"/>
+				<xs:enumeration value="P"/>
+				<xs:enumeration value="A"/>
+				<xs:enumeration value="B"/>
+				<xs:enumeration value="X"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinEstateDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000162, Dictionary Entry Name = Chin Estate. Details,
+         Estate name and related information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EstateName" type="ChinEstateEstateNameText.V1.0.CT"/>
+			<xs:element name="ChiPhase" type="ChinPhaseDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinEstateEstateNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000163, Dictionary Entry Name = Chin Estate. Estate Name. Text,
+         The estate name of the address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="25"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPhaseDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000165, Dictionary Entry Name = Chin Phase. Details,
+         Phase name and phase number information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="PhaseName" type="ChinPhasePhaseNameText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="PhaseNo" type="ChinPhasePhaseNoNumeric.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinPhasePhaseNameText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000166, Dictionary Entry Name = Chin Phase. Phase Name. Text,
+         The phase name in Chinese of the concerned address</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="25"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPhasePhaseNoNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000167, Dictionary Entry Name = Chin Phase. Phase No. Numeric,
+         The phase number of the concerned address</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="2"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinBlockDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000168, Dictionary Entry Name = Chin Block. Details,
+         Block information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="BlockDescriptor" type="ChinBlockBlockDescriptorText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="BlockNo" type="ChinBlockBlockNoText.V1.0.CT"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinBlockBlockDescriptorText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000169, Dictionary Entry Name = Chin Block. Block Descriptor. Text,
+         Block descriptor in Chinese (e.g. '座', '洋房')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="14"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinBlockBlockNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000170, Dictionary Entry Name = Chin Block. Block No. Text,
+         Block number in Chinese or numeric values (e.g. '1','一', '東')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="5"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Chin3DAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000171, Dictionary Entry Name = Chin 3D Address. Details,
+         Floor and Unit information of the concerned address in Chinese.  If multiple floors and/or units are concerned in the address, each concerned floor and unit pair should be recorded as one Chi 3D Address element.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ChiFloor" type="ChinFloorDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiUnit" type="ChinUnitDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinFloorDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000174, Dictionary Entry Name = Chin Floor. Details,
+         Floor information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:annotation><xs:documentation>xs:choice</xs:documentation></xs:annotation>
+			<xs:element name="FloorNum" type="ChinFloorFloorNumText.V1.0.CT"/>
+			<xs:element name="FloorDescription" type="ChinFloorFloorDescriptionText.V1.0.CT"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="ChinFloorFloorNumText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000175, Dictionary Entry Name = Chin Floor. Floor Num. Text,
+         Floor number, used only when the floor information is a numeric value (including a numeric value in Chinese characters) e.g. '3', '三'. Floor description in Chinese as in full postal address can be generated by appending '樓' to FloorNum.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="3"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinFloorFloorDescriptionText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000176, Dictionary Entry Name = Chin Floor. Floor Description. Text,
+         Chinese floor description, used only when the floor information contains non-numeric part 
+e.g. '大堂', '地下上層', '地庫2樓'</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="10"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinUnitDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000177, Dictionary Entry Name = Chin Unit. Details,
+         Unit information of the concerned address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="UnitDescriptor" type="ChinUnitUnitDescriptorText.V1.0.CT" minOccurs="0"/>
+			<xs:element name="UnitNo" type="ChinUnitUnitNoText.V1.0.CT"/>
+			<xs:element name="UnitPortion" type="ChinUnitUnitPortionText.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinUnitUnitDescriptorText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000178, Dictionary Entry Name = Chin Unit. Unit Descriptor. Text,
+         Unit descriptor in Chinese (e.g. '室', '舖')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="15"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinUnitUnitNoText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000179, Dictionary Entry Name = Chin Unit. Unit No. Text,
+         Unit number (including any non-numeric parts) (e.g. 'A1', '3C')</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="23"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinUnitUnitPortionText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000180, Dictionary Entry Name = Chin Unit. Unit Portion. Text,
+         Indicate the concerned portion of a Unit in Chinese (e.g. '前座', '後座'). Used when the address refers to part of a Unit only</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="6"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BuildingCSUInformationDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000181, Dictionary Entry Name = Building CSU Information. Details,
+         Information related to the building of the concerned address, including an common identifier and the status of the building</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="CsuId" type="BuildingCSUInformationCSUIDText.V1.0.CT"/>
+			<xs:element name="Status" type="BuildingCSUInformationStatusCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="StatusDate" type="BuildingCSUInformationStatusDate.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="BuildingCSUInformationCSUIDText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000182, Dictionary Entry Name = Building CSU Information. CSU ID. Text,
+         Building CSU ID, a unique and persistent identifier for on-ground buildings, formed by concatenating Geo Ref No, Polygon Type and Record Creation Date</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:pattern value="[0-9]{10}[P,T]{1}[0-9]{8}"/>
+				<xs:length value="19"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BuildingCSUInformationStatusCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000183, Dictionary Entry Name = Building CSU Information. Status. Code,
+         Status of the concerned building, where P = Proposed, A = Active, D = Demolished</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="1"/>
+				<xs:enumeration value="P"/>
+				<xs:enumeration value="A"/>
+				<xs:enumeration value="D"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BuildingCSUInformationStatusDate.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000184, Dictionary Entry Name = Building CSU Information. Status. Date,
+         The date when the status of the concerned building (i.e. value of the Status element) was last obtained</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Date.CT"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="PostBoxAddressDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000185, Dictionary Entry Name = Post Box Address. Details,
+         Reference to an address of a Post Office Box</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EngPostBox" type="EngPostBoxDetails.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ChiPostBox" type="ChinPostBoxDetails.V1.0.CT" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngPostBoxDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000188, Dictionary Entry Name = Eng Post Box. Details,
+         Entity for showing Post Office Box address</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="PoBoxNo" type="EngPostBoxPOBoxNoNumeric.V1.0.CT"/>
+			<xs:element name="PostOffice" type="EngPostBoxPostOfficeText.V1.0.CT"/>
+			<xs:element name="PostOfficeRegion" type="EngPostBoxPostOfficeRegionText.V1.0.CT"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EngPostBoxPOBoxNoNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000189, Dictionary Entry Name = Eng Post Box. PO Box No. Numeric,
+         Post Office box number of a Post Box Address</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="6"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngPostBoxPostOfficeText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000190, Dictionary Entry Name = Eng Post Box. Post Office. Text,
+         Name of the post office in English that the Post Office Box locates in.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="50"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="EngPostBoxPostOfficeRegionText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000191, Dictionary Entry Name = Eng Post Box. Post Office Region. Text,
+         Name of the region in English that the concerned Post office locates in.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="30"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPostBoxDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000192, Dictionary Entry Name = Chin Post Box. Details,
+         Entity for showing Post Office Box address in Chinese</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="PoBoxNo" type="ChinPostBoxPOBoxNoNumeric.V1.0.CT"/>
+			<xs:element name="PostOffice" type="ChinPostBoxPostOfficeText.V1.0.CT"/>
+			<xs:element name="PostOfficeRegion" type="ChinPostBoxPostOfficeRegionText.V1.0.CT"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ChinPostBoxPOBoxNoNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000193, Dictionary Entry Name = Chin Post Box. PO Box No. Numeric,
+         Post Office box number of a Post Box Address</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="6"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPostBoxPostOfficeText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000194, Dictionary Entry Name = Chin Post Box. Post Office. Text,
+         Name of the post office in Chinese that the Post Office Box locates in.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="15"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ChinPostBoxPostOfficeRegionText.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000195, Dictionary Entry Name = Chin Post Box. Post Office Region. Text,
+         Name of the region in Chinese that the concerned Post office locates in.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Text.CT">
+				<xs:maxLength value="5"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ValidationInformationDetails.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000196, Dictionary Entry Name = Validation Information. Details,
+         Validation result of the address.  This element is present only when the address has ever been validated against an instance of the Common Address Database of the Government.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="LevelPassed" type="ValidationInformationLevelPassedCode.V1.0.CT" minOccurs="0"/>
+			<xs:element name="ValidationTime" type="ValidationInformationValidationTimeDateTime.V1.0.CT" minOccurs="0"/>
+			<xs:element name="Premises2dAddressId" type="ValidationInformationPremises2DAddressIDNumeric.V1.0.CT" minOccurs="0"/>
+			<xs:element name="UnitId" type="ValidationInformationUnitIDNumeric.V1.0.CT" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ValidationInformationLevelPassedCode.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000197, Dictionary Entry Name = Validation Information. Level Passed. Code,
+         The level of validation passed for the concerned address.  This can be:
+2D = Validation up to 2D level (Without floor and unit information), 
+Floor = Validation up to floor level, 
+Unit = Validation up to unit level (Fully validated),
+Fail = The concerned address cannot be validated</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Code.CT">
+				<xs:maxLength value="5"/>
+				<xs:enumeration value="2D"/>
+				<xs:enumeration value="Floor"/>
+				<xs:enumeration value="Unit"/>
+				<xs:enumeration value="Fail"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ValidationInformationValidationTimeDateTime.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000198, Dictionary Entry Name = Validation Information. Validation Time. Date Time,
+         Date and time when the concerned address is validated</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:DateTime.CT"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ValidationInformationPremises2DAddressIDNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000199, Dictionary Entry Name = Validation Information. Premises 2D Address ID. Numeric,
+         Unique identifier of the corresponding 2D Address record in the Common Address Database of the Government</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="9"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ValidationInformationUnitIDNumeric.V1.0.CT">
+		<xs:annotation>
+			<xs:documentation>UID = COM000200, Dictionary Entry Name = Validation Information. Unit ID. Numeric,
+         Unique identifier of the corresponding Unit record in the Common Address Database of the Government</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:restriction base="cct:Numeric.CT">
+				<xs:totalDigits value="9"/>
+				<xs:fractionDigits value="0"/>
+			</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:annotation>
+		<xs:documentation>Document root elements</xs:documentation>
+	</xs:annotation>
+	<xs:element name="StructuredAddress" type="StructuredAddressDetails.V1.0.CT"/>
+</xs:schema>

@@ -1,0 +1,1540 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	CreateXMLFromEnvironmentFrom.wsf
+// Author:	mtreit@microsoft.com
+// Created:	1/10/2001
+//
+// Purpose:	Reads a live policy environment (OUs, GPOs, GPO links, etc)
+//		and creates an XML file representing that environment.
+//		Used in conjunction with CreateEnvironmentFromXML.wsf
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+<script language="JScript">
+
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+// Define ADS related values - see IADS.h
+var ADS_SCOPE_BASE			=	0;
+var ADS_SCOPE_ONELEVEL			=	1;
+var ADS_SCOPE_SUBTREE			=	2;
+var ADSIPROP_CHASE_REFERRALS		=	0x9;
+var ADS_CHASE_REFERRALS_NEVER		=	0;
+var ADS_CHASE_REFERRALS_SUBORDINATE	=	0x20;
+var ADS_CHASE_REFERRALS_EXTERNAL	=	0x40;
+var ADS_CHASE_REFERRALS_ALWAYS		=	ADS_CHASE_REFERRALS_SUBORDINATE | ADS_CHASE_REFERRALS_EXTERNAL;
+var ADS_GROUP_TYPE_GLOBAL_GROUP		=	0x2;
+var ADS_GROUP_TYPE_DOMAIN_LOCAL_GROUP	=	0x4;
+var ADS_GROUP_TYPE_LOCAL_GROUP		=	0x4;
+var ADS_GROUP_TYPE_UNIVERSAL_GROUP	=	0x8;
+var ADS_GROUP_TYPE_SECURITY_ENABLED	=	0x80000000;
+
+var DefaultPolicyGUID = "{31B2F340-016D-11D2-945F-00C04FB984F9}";
+var DefaultDCPolicyGUID = "{6AC1786C-016F-11D2-945F-00C04fB984F9}";
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szDomainName = ArgumentList.Item("Domain");
+var szDCName = ArgumentList.Item("DC");
+var szXMLFileName = ArgumentList.Item("XML");
+var bAllGPOs = ArgumentList.Item("AllGPOs");
+var bExcludePermissions = ArgumentList.Item("ExcludePermissions");
+var bGetAllGroups = ArgumentList.Item("GetAllGroups");
+var bGetUsers = ArgumentList.Item("GetUsers");
+var TemplatePath = ArgumentList.Item("TemplatePath");
+var szStartingOU = ArgumentList.Item("StartingOU");
+
+var aGPOList = new Array();
+var bExcludeSettings = false;
+
+if (TemplatePath == "")
+{
+	bExcludeSettings = true;
+	WScript.Echo("\n*** No template path was specified, so GPO settings will not be included. ***\n");
+}
+
+if (szDomainName == "")
+{
+	szDomainName = getCurrentDomainName();
+}
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, szDCName, Constants.UseAnyDC);
+
+// Create a global ADO connection for use by our functions
+var ADOConnection = new ActiveXObject("ADODB.Connection");
+ADOConnection.Provider = "ADsDSOObject";    
+ADOConnection.Open("Active Directory Provider");    
+
+var szNodeString = "";
+var szBannerHeading = "===================================================";
+
+WScript.Echo(szBannerHeading);
+WScript.Echo("Processing Environment");
+WScript.Echo("Output XML:\t" + szXMLFileName);
+WScript.Echo("Domain:\t\t" + GPMDomain.Domain);
+WScript.Echo("DC:\t\t" + GPMDomain.DomainController);
+WScript.Echo(szBannerHeading + "\n");
+
+// Create and initialize the global XML file
+var xmlDoc = new ActiveXObject("MSXML.DOMDocument");
+var xmlDoc2 = new ActiveXObject("MSXML.DOMDocument");
+xmlDoc.preserveWhiteSpace = false;
+var pi = xmlDoc.createProcessingInstruction("xml", "version=\"1.0\"");
+var RootNode = xmlDoc.createElement("DomainRoot");
+xmlDoc.appendChild(pi);
+xmlDoc.appendChild(RootNode);
+
+// Try saving the empty XML file, to ensure a valid file system location was specified
+try
+{
+	xmlDoc.save(szXMLFileName);
+}
+catch (err)
+{
+	WScript.Echo("The XML file '" + szXMLFileName + "' could not be saved.");
+	WScript.Echo("Verify the path specified exists and can be accessed.");
+	WScript.Quit();
+}
+
+// Process the environment
+CreateXMLFromEnvironment();
+
+// Re-format the XML file with indenting
+var szXSLString = GetPrettyPrintingStylesheet();
+ApplyStylesheetFromString(xmlDoc, szXSLString);
+
+// Save the XML file
+xmlDoc.save(szXMLFileName);
+
+WScript.Echo("\nDone. Saved XML to " + szXMLFileName + ".");
+
+// Cleanup
+ADOConnection.Close();
+
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Creates an XML file representing a policy environment
+function CreateXMLFromEnvironment()
+{
+	if (szStartingOU == "")
+	{
+		// Process the domain root - this is the entrypoint to process the OU tree
+		ProcessDomainRoot();
+	}
+	else
+	{
+		ProcessStartingOU(szStartingOU);
+	}
+
+	// Process all GPOs in the domain
+	ProcessGPOs();
+	
+	// Process WMI Filters
+	ProcessWMIFilters();
+}
+
+// Process all GPO links for the domain root
+function ProcessDomainRoot()
+{
+	// Get an object from ADSI representing the root of the domain
+	var DomainRoot = GetObject("LDAP://" + szDomainName);
+	
+	var node = xmlDoc.documentElement;
+
+	// Process the OU tree
+	ProcessOUTree(node, DomainRoot,0);
+}
+
+// Start processing at a particular OU, instead of the entire domain
+function ProcessStartingOU(szLDAPPath)
+{
+	WScript.Echo(szLDAPPath);
+	try
+	{
+		var OURoot = GetObject("LDAP://" + szLDAPPath);
+	}
+	catch (err)
+	{
+		WScript.Echo("Error binding to " + "LDAP://" + szLDAPPath);
+		WScript.Quit();
+	}
+	
+	var node = xmlDoc.documentElement;
+
+	// Process the OU tree
+	ProcessOUTree(node, OURoot,1);
+	
+}
+
+// Processes an OU tree
+function ProcessOUTree(node, ADSObject, nodeCount)
+{
+	if (nodeCount > 0)
+	{
+		WScript.Echo("Processing OU " + ADSObject.ou);
+		var NewOUNode = xmlDoc.createElement("OU");
+		NewOUNode = AddXMLAttribute(NewOUNode, "Name", ADSObject.ou);
+
+		if (ADSObject.description != null)
+		{
+			NewOUNode = AddXMLAttribute(NewOUNode, "Description", ADSObject.description);
+		}
+		
+		node.appendChild(NewOUNode);
+	}
+	else
+	{
+		// This is the root node, which represents the domain level
+		WScript.Echo("Processing domain " + ADSObject.dc);
+		var NewOUNode = xmlDoc.documentElement;
+	}
+
+	// Set properties
+	var szInheritanceBlocked = "false";
+	var GPMSOM = GPMDomain.GetSOM(ADSObject.distinguishedName);
+
+	if (GPMSOM.GPOInheritanceBlocked == true)
+	{
+		szInheritanceBlocked = "true";
+	}
+
+	NewOUNode = AddXMLAttribute(NewOUNode, "BlockInheritance", szInheritanceBlocked);
+
+	// Process SOM permissions
+	if (!bExcludePermissions)
+	{
+		NewOUNode = AddSOMPermissionsXML(NewOUNode, GPMSOM);
+	}
+
+	// Process GPO links
+	var GPOLinks = GPMSOM.GetGPOLinks();
+	var e = new Enumerator(GPOLinks);
+	var GPOLink, szName, NewLinkNode, szLinkEnforced, szLinkEnabled;
+	for (; ! e.atEnd(); e.moveNext())
+	{
+		szLinkEnabled = "true";
+		szLinkEnforced = "false";
+		
+		// Get the GPO link info
+		GPOLink = e.item();
+
+		if (GPOLink.Enabled == false)
+		{
+			szLinkEnabled = "false";
+		}
+
+		if (GPOLink.Enforced == true)
+		{
+			szLinkEnforced = "true";
+		}		
+
+		try
+		{
+			GPO = GPMDomain.GetGPO(GPOLink.GPOID);
+			szName = GPO.DisplayName;
+			aGPOList = aGPOList.concat(GPO);
+		}
+		catch(err)
+		{
+			// Could not find the GPO - might be an orphaned link or
+			// we might not have read access
+			continue;
+		}
+
+		// Now we have the name and link, so add the data to the SOM node
+		NewLinkNode = xmlDoc.createElement("GPOLink");
+		NewLinkNode = AddXMLAttribute(NewLinkNode, "GPOName", szName);
+		NewLinkNode = AddXMLAttribute(NewLinkNode, "Enabled", szLinkEnabled);
+		NewLinkNode = AddXMLAttribute(NewLinkNode, "Enforced", szLinkEnforced);
+		NewOUNode.appendChild(NewLinkNode);
+	}
+
+	// Process security groups and users
+	if (nodeCount > 0)
+	{
+		var LocalGroups = GetAllSecurityGroupsInContainer(ADSObject.ADsPath, "local");
+		var GlobalGroups = GetAllSecurityGroupsInContainer(ADSObject.ADsPath, "global");
+		var UniversalGroups = GetAllSecurityGroupsInContainer(ADSObject.ADsPath, "universal");
+		AddSecurityGroupsXML(NewOUNode, LocalGroups);
+		AddSecurityGroupsXML(NewOUNode, GlobalGroups);
+		AddSecurityGroupsXML(NewOUNode, UniversalGroups);
+		
+		if (bGetUsers == true)
+		{
+			var Users = GetAllUsersInContainer(ADSObject.ADsPath);
+			AddUsersXML(NewOUNode, Users);
+		}
+	}
+	else
+	{
+		// This is the domain level.
+		if (bGetAllGroups == true)
+		{
+			// First handle groups in the "Users" container
+			// Note: Users from this container are not included, as this would also get built-in users like 
+			//"Administrator", which we would not want to delete when doing an /undo operation.
+			var szUsersContainerPath = "LDAP://" + szDomainName + "/cn=Users," + ADSObject.distinguishedName;
+			var LocalGroups = GetAllSecurityGroupsInContainer(szUsersContainerPath, "local");
+			var GlobalGroups = GetAllSecurityGroupsInContainer(szUsersContainerPath, "global");
+			var UniversalGroups = GetAllSecurityGroupsInContainer(szUsersContainerPath, "universal");
+			
+			var Users = new Array();
+			
+			if (LocalGroups.length > 0 || GlobalGroups.length > 0 || UniversalGroups.length > 0)
+			{
+				// Some groups were found, so add a 'Users' node to the XML
+				var UsersNode = xmlDoc.createElement("Users");
+				
+				// Add the groups
+				AddSecurityGroupsXML(UsersNode, LocalGroups);
+				AddSecurityGroupsXML(UsersNode, GlobalGroups);
+				AddSecurityGroupsXML(UsersNode, UniversalGroups);
+
+				// Append the new node to the domain level
+				node.appendChild(UsersNode);
+			}
+			
+			// Now handle groups and users at the domain level itself
+			LocalGroups = GetAllSecurityGroupsInContainer(ADSObject.ADsPath, "local");
+			GlobalGroups = GetAllSecurityGroupsInContainer(ADSObject.ADsPath, "global");
+			UniversalGroups = GetAllSecurityGroupsInContainer(ADSObject.ADsPath, "universal");
+		
+			AddSecurityGroupsXML(node, LocalGroups);
+			AddSecurityGroupsXML(node, GlobalGroups);
+			AddSecurityGroupsXML(node, UniversalGroups);
+			
+			if (bGetUsers == true)
+			{
+				Users = GetAllUsersInContainer(ADSObject.ADsPath);
+				AddUsersXML(node, Users);
+			}
+		}
+		else
+		{
+			// Consider adding support here to only get groups that are used by policy
+		}
+		
+	}
+	
+	
+	
+	// Increment the node count to indicate we are done with the domain level
+	nodeCount++;
+	
+	// Now process child nodes
+	var ADOCommand =  new ActiveXObject("ADODB.Command");
+	ADOCommand.ActiveConnection = ADOConnection;
+
+	// Get a collection of all child OU's for the current object
+	var szSQL = "select AdsPath from '" + EscapeString(ADSObject.ADsPath) + "'";
+	szSQL += " where objectCategory='organizationalUnit'";
+
+	// Execute the search
+	ADOCommand.CommandText = szSQL;
+	ADOCommand.Properties("Page Size") = 1000;
+	ADOCommand.Properties("Timeout") = 500;
+	ADOCommand.Properties("SearchScope") = ADS_SCOPE_ONELEVEL;
+	ADOCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL; // Needed when querying a different domain
+	ADOCommand.Properties("Cache Results") = false;
+
+	try
+	{
+		var rs = ADOCommand.Execute();
+	}
+	catch (err)
+	{
+		WScript.Echo("There was an error executing the DS query " + szSQL);
+		WScript.Echo("The error was:");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return null;
+	}
+
+	if (rs.eof == true)
+	{
+		return;
+	}
+		
+	// Now walk the list and recursively process each child
+	while (rs.eof != true)
+	{
+		var CurrentObject = GetObject(rs.fields(0));
+		ProcessOUTree(NewOUNode, CurrentObject, nodeCount);
+		rs.MoveNext();
+	}	
+
+}
+
+// Takes an XML node and array of paths to security groups and adds the 
+// XML to represent those groups. 
+function AddSecurityGroupsXML(node, aGroupPaths)
+{
+	// Define a value to use as a cutoff when enumerating group membership
+	// This is used to stop enumerating groups with large membership, for performance
+	// reasons. Adjust this if perf is not a big deal.
+	var iMemberCutoff = 100;
+	
+	// Start processing the list of groups
+	var e = new Enumerator(aGroupPaths);
+	var szGroupType, szGroupName, e2, NewGroupNode, NewMemberNode, szDescription;
+	var Group;
+	for (; !e.atEnd(); e.moveNext())
+	{
+		szGroupType = "";
+		Group = GetObject(e.item());
+		szGroupName = Group.sAMAccountName;
+		szDescription = Group.description;
+		
+		WScript.Echo("Processing group " + szGroupName);
+
+		// Get the group type
+		if ((Group.groupType & ADS_GROUP_TYPE_GLOBAL_GROUP) != 0)
+		{
+			szGroupType = "DomainGlobal";
+		}
+
+		if ((Group.groupType & ADS_GROUP_TYPE_DOMAIN_LOCAL_GROUP) != 0)
+		{
+			szGroupType = "DomainLocal";
+		}
+
+		if ((Group.groupType & ADS_GROUP_TYPE_UNIVERSAL_GROUP) != 0)
+		{
+			szGroupType = "Universal";
+		}
+		
+		// If the group type is not recognized, skip it
+		if (szGroupType == "")
+		{
+			continue;
+		}
+
+		// Add the XML node for this group
+		NewGroupNode = xmlDoc.createElement("SecurityGroup");
+		NewGroupNode = AddXMLAttribute(NewGroupNode, "Name", szGroupName);
+		NewGroupNode = AddXMLAttribute(NewGroupNode, "Type", szGroupType);
+
+		if (szDescription != null)
+		{
+			NewGroupNode = AddXMLAttribute(NewGroupNode, "Description", szDescription);
+		}
+
+		// Get member groups
+		var e2 = new Enumerator(Group.members());
+		var Member, szMemberGroupType = "";
+		var i = 0;
+		
+		for (; !e2.atEnd(); e2.moveNext())
+		{
+			i++;
+			// Check if we have processed a lot of members and bail out if so
+			// (Done for perf reasons)
+			if (i > iMemberCutoff )
+			{
+				WScript.Echo("\nGroup " + szGroupName + " contains more than " + iMemberCutoff + " members.");
+				WScript.Echo("Any users or groups contained as members after the first 100 will not be added to the XML file.\n");
+				break;
+			}
+			
+			Member = e2.item();
+
+			if (Member.Class.toLowerCase() != "group" && Member.Class.toLowerCase() != "user")
+			{
+				continue;
+			}
+
+			if (Member.Class.toLowerCase() == "group")
+			{
+
+				// Check if it's a distribution group, in which case we will
+				// ignore it.
+				//
+				if ((Member.groupType & ADS_GROUP_TYPE_SECURITY_ENABLED) == 0)
+				{
+					WScript.Echo("\tSkipping member '" + Member.sAMAccountName + "' because it appears to be a distribution group.");
+					continue;
+				}
+
+				// Get the group type
+				if ((Member.groupType & ADS_GROUP_TYPE_GLOBAL_GROUP) != 0)
+				{
+					szMemberGroupType = "Global";
+				}
+
+				if ((Member.groupType & ADS_GROUP_TYPE_DOMAIN_LOCAL_GROUP) != 0)
+				{
+					szMemberGroupType = "DomainLocal";
+				}
+
+				if ((Member.groupType & ADS_GROUP_TYPE_UNIVERSAL_GROUP) != 0)
+				{
+					szMemberGroupType = "Universal";
+				}
+			
+				// If the group type is not recognized, skip it
+				if (szMemberGroupType == "")
+				{
+					continue;
+				}
+			}
+			else
+			{
+				if (bGetUsers == false)
+				{
+					continue;
+				}
+			}
+
+			WScript.Echo("\tAdding member " + Member.sAMAccountName);
+			
+			// Add a member node for the member group
+			NewMemberNode = xmlDoc.createElement("Member");
+			NewMemberNode = AddXMLAttribute(NewMemberNode, "Name", Member.sAMAccountName);
+			
+			// Append it to the group node
+			NewGroupNode.appendChild(NewMemberNode);
+		
+		}
+		// Add the new group node to the OU node
+		node.appendChild(NewGroupNode);
+	}
+}
+
+// Searches for all user objects in a particular DS location
+function GetAllUsersInContainer(szLDAPPath)
+{
+
+	var aUsers = new Array();
+
+	// Create the ADO objects and open the connection
+	var ADOConnection = new ActiveXObject("ADODB.Connection");
+    	var ADOCommand =  new ActiveXObject("ADODB.Command");
+	ADOConnection.Provider = "ADsDSOObject";    
+	ADOConnection.Open("Active Directory Provider");    
+	ADOCommand.ActiveConnection = ADOConnection;
+
+	// Build the query
+	var szDomainLDAPPath = szLDAPPath;
+
+	var szSQL = "select AdsPath from '" + EscapeString(szDomainLDAPPath) + "'";
+	szSQL += " where objectCategory='user'";
+
+	// Execute the search
+	ADOCommand.CommandText = szSQL;
+	ADOCommand.Properties("Page Size") = 1000;
+	ADOCommand.Properties("Timeout") = 500;
+	ADOCommand.Properties("SearchScope") = ADS_SCOPE_ONELEVEL;
+	ADOCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL; // Needed when querying a different domain
+	ADOCommand.Properties("Cache Results") = false;
+
+	try
+	{
+		var rs = ADOCommand.Execute();
+	}
+	catch (err)
+	{
+		WScript.Echo("There was an error executing the DS query " + szSQL);
+		WScript.Echo("The error was:");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return null;
+	}
+
+	var Count = 0, RunningTotal = 0, Cutoff = 1000;
+	while (rs.eof != true)
+	{
+		Count++;
+		aUsers = aUsers.concat(rs.Fields(0).value);
+		rs.moveNext();
+		
+		if (Count == Cutoff)
+		{
+			RunningTotal += Count;
+			WScript.Echo(RunningTotal + " user paths processed.");
+			Count = 0;
+		}
+	}
+	
+	aUsers.sort();
+	return aUsers;
+}
+
+// Takes an XML node and array of paths to users and adds the 
+// XML to represent those users. 
+function AddUsersXML(node, aUserPaths)
+{
+	// Start processing the list of users
+	var e = new Enumerator(aUserPaths);
+	var szUserAlias, szName, szDescription;
+	var User;
+	for (; !e.atEnd(); e.moveNext())
+	{
+		User = GetObject(e.item());
+		
+		try
+		{
+			szUserAlias = User.Get("samAccountName");
+		}
+		catch (err)
+		{
+			// Error getting the samAccountName. Probably a Contact object, so ignore it.
+			continue;
+		}
+
+		szName = User.Get("name");
+		szDescription = User.description;
+		
+		WScript.Echo("Processing user " + szUserAlias);
+		
+		
+		// Add the XML node for this user
+		NewUserNode = xmlDoc.createElement("User");
+		NewUserNode = AddXMLAttribute(NewUserNode, "Name", szUserAlias);
+		NewUserNode = AddXMLAttribute(NewUserNode, "FullName", szName);
+
+		if (szDescription != null)
+		{
+			NewUserNode = AddXMLAttribute(NewUserNode, "Description", szDescription);
+		}
+
+		// Add the new group node to the OU node
+		try
+		{
+			node.appendChild(NewUserNode);
+		}
+		catch (err)
+		{
+			WScript.Echo("Error appending user node. XML for user:");
+			WSCript.Echo(NewUserNode.xml);
+			WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		}
+	}
+}
+
+// Create WMIFilter nodes for each WMI Filter
+function ProcessWMIFilters()
+{
+	var RootNode = xmlDoc.documentElement;
+
+	var GPMSearchCriteria = GPM.CreateSearchCriteria();
+	var WMIFilterList = GPMDomain.SearchWMIFilters(GPMSearchCriteria);
+	var WMIFilter, szName, szDescription, QueryList;
+
+	var e = new Enumerator(WMIFilterList);
+
+	// Walk the list of WMI filters and build the XML tags
+	for (; !e.atEnd(); e.moveNext())
+	{
+		WMIFilter = e.item();
+		szFilterName = WMIFilter.Name;
+		szDescription = WMIFilter.Description;
+		QueryList = WMIFilter.GetQueryList();
+
+		// QueryList is a VB-style safe array, so convert it
+		// to a JScript-style array
+		//
+		QueryList = new VBArray(QueryList).toArray();
+		
+		WScript.Echo("Processing WMI Filter " + szFilterName);
+
+		// Set the values to set in the tag attributes
+		szFilterName = WMIFilter.Name;
+		
+		FilterNode = xmlDoc.createElement("WMIFilter");
+		FilterNode = AddXMLAttribute(FilterNode, "Name", szFilterName);
+		FilterNode = AddXMLAttribute(FilterNode, "Description", szDescription);
+
+		// Iterate through the query list and add nodes for each query
+		var QueryNode;
+		var szQueryString = "";
+		
+		for (var i = 0; i < QueryList.length; i++)
+		{
+			szQueryString = QueryList[i];
+			
+			QueryNode = xmlDoc.createElement("Query");
+			QueryNode.text = szQueryString;
+			
+			FilterNode.appendChild(QueryNode);
+		}		
+		
+		// Add the new element to the XML document
+		RootNode.appendChild(FilterNode);
+	}
+}
+
+
+// Create GPO nodes for each GPO and also create templates for each GPO
+function ProcessGPOs()
+{
+	if (bAllGPOs == true)
+	{
+		// Get a list of all GPOs in the domain
+		var GPMSearchCriteria = GPM.CreateSearchCriteria();
+		var GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria);
+		var e = new Enumerator(GPOList);
+	}
+	else
+	{
+		var e = new Enumerator(aGPOList);
+	}
+
+	var GPO, GPONode, szGPOName, szEnabled, szTemplatePath, szTemplate, szEnabled, szWMIFilter;
+	var RootNode = xmlDoc.documentElement;
+	var szBackupComment = "Backup auto-created by CreateXMLFromEnvironment script";
+
+	// Walk the list of GPOs and build the XML tags
+	for (; !e.atEnd(); e.moveNext())
+	{
+		GPO = e.item();
+		
+		try
+		{
+			WScript.Echo("Processing GPO " + GPO.DisplayName);
+		}
+		catch (err)
+		{
+			WScript.Echo("\n**** GPO " + GPO.ID + " does not have a valid display name and will be skipped. ****\n");
+			continue;
+		}
+
+		// Set the values to set in the tag attributes
+		szGPOName = GPO.DisplayName;
+		szEnabled = GetGPOStatus(GPO);
+		szTemplatePath = TemplatePath;
+		szTemplate = GPO.ID;
+		szWMIFilter = "";
+
+		try
+		{
+			szWMIFilter = GPO.GetWMIFilter().Name;
+		}
+		catch (err)
+		{
+		}
+		
+		GPONode = xmlDoc.createElement("GPO");
+		GPONode = AddXMLAttribute(GPONode, "Name", szGPOName);
+		GPONode = AddXMLAttribute(GPONode, "Enabled", szEnabled);
+
+		if (szWMIFilter != "")
+		{
+			GPONode = AddXMLAttribute(GPONode, "WMIFilter", szWMIFilter);
+		}
+		
+		if (bExcludeSettings == false)
+		{
+			GPONode = AddXMLAttribute(GPONode, "TemplatePath", szTemplatePath);
+			GPONode = AddXMLAttribute(GPONode, "Template", szTemplate);
+			
+			// Backup the GPO
+			BackupGPO(GPO, szTemplatePath, szBackupComment);
+		}
+		
+		if (!bExcludePermissions)
+		{
+			// Track the permissions set on the GPOs
+			GPONode = AddGPOPermissionsXML(GPONode, GPO);
+		}
+		
+		// Add the new element to the XML document
+		RootNode.appendChild(GPONode);
+	}
+}
+
+// Takes an XML node and a GPMGPO object and builds the XML to represent
+// the security permissions explicitly set for that GPO. Denied permissions
+// are ignored.
+function AddGPOPermissionsXML(node, GPO)
+{
+	// Get the set of permissions for this GPO
+	var GPMSecInfo = GPO.GetSecurityInfo();
+
+	// Setup the XML nodes to hold the various permissions
+	var ApplyNode = xmlDoc.createElement("ApplyPermissions");
+	ApplyNode = AddXMLAttribute(ApplyNode, "Exclusive", "True");
+
+	var ReadNode = xmlDoc.createElement("ReadPermissions");
+	ReadNode = AddXMLAttribute(ReadNode, "Exclusive", "True");
+
+	var EditNode = xmlDoc.createElement("EditPermissions");
+	EditNode = AddXMLAttribute(EditNode, "Exclusive", "True");
+
+	var EditSecurityNode = xmlDoc.createElement("EditSecurityPermissions");
+	EditSecurityNode = AddXMLAttribute(EditSecurityNode, "Exclusive", "True");
+	
+	var e = new Enumerator(GPMSecInfo);
+	var GPMPermission, PermNode;
+	var bFoundCustom = false;
+
+	for (; !e.atEnd(); e.moveNext())
+	{
+		GPMPermission = e.item();
+
+		// Handle apply permissions
+		if (GPMPermission.Permission == Constants.PermGPOApply && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (PermNode.text != "")
+			{
+				ApplyNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle read-only permissions
+		if (GPMPermission.Permission == Constants.PermGPORead && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (PermNode.text != "")
+			{
+				ReadNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle edit permissions
+		if (GPMPermission.Permission == Constants.PermGPOEdit && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+			
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+			
+			if (PermNode.text != "")
+			{
+				EditNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle full edit permissions
+		if (GPMPermission.Permission == Constants.PermGPOEditSecurityAndDelete && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+			
+			if (PermNode.text != "")
+			{
+				EditSecurityNode.appendChild(PermNode);
+			}
+		}
+
+		// Give a warning if custom permissions were definied
+		if (GPMPermission.Permission == Constants.PermGPOCustom)
+		{
+			try
+			{
+				WScript.Echo("** " + GPMPermission.Trustee.TrusteeName + " has custom permissions. These will be dropped. **");
+			}
+			catch (err)
+			{
+				// Probably an orphaned SID
+				WScript.Echo("** " + GPMPermission.Trustee.TrusteeSid + " has custom permissions. These will be dropped. **");
+			}
+			
+			bFoundCustom = true;
+		}
+
+
+	}
+
+	if (ApplyNode.hasChildNodes == true)
+	{
+		node.appendChild(ApplyNode);
+	}
+
+	if (ReadNode.hasChildNodes == true)
+	{
+		node.appendChild(ReadNode);
+	}
+
+	if (EditNode.hasChildNodes == true)
+	{
+		node.appendChild(EditNode);
+	}
+
+	if (EditSecurityNode.hasChildNodes == true)
+	{
+		node.appendChild(EditSecurityNode);
+	}
+
+	if (bFoundCustom == true)
+	{
+		WScript.Echo("\nWarning: Some security permissions for GPO " + GPO.ID + " were not recorded.");
+	}
+	
+	return node;
+}
+
+// Takes an XML node and a GPMSOM object and builds the XML to represent
+// the security permissions explicitly set for that GPO. Denied permissions
+// are ignored.
+function AddSOMPermissionsXML(node, SOM)
+{
+	// Get the set of permissions for this GPO
+	var GPMSecInfo = SOM.GetSecurityInfo();
+
+	// Setup the XML nodes to hold the various permissions
+	var LinkGPOsNode = xmlDoc.createElement("LinkGPOPermissions");
+	LinkGPOsNode = AddXMLAttribute(LinkGPOsNode, "Exclusive", "True");
+
+	var RSoPLoggingNode = xmlDoc.createElement("RSoPLoggingPermissions");
+	RSoPLoggingNode = AddXMLAttribute(RSoPLoggingNode, "Exclusive", "True");
+
+	var RSoPPlanningNode = xmlDoc.createElement("RSoPPlanningPermissions");
+	RSoPPlanningNode = AddXMLAttribute(RSoPPlanningNode, "Exclusive", "True");
+
+	var GPOCreationNode = xmlDoc.createElement("GPOCreationPermissions");
+	GPOCreationNode = AddXMLAttribute(GPOCreationNode, "Exclusive", "True");
+
+	var WMIFilterCreationNode = xmlDoc.createElement("WMIFilterCreationPermissions");
+	WMIFilterCreationNode = AddXMLAttribute(WMIFilterCreationNode, "Exclusive", "True");
+
+	var WMIFilterFullControlNode = xmlDoc.createElement("WMIFilterFullControlPermissions");
+	WMIFilterFullControlNode = AddXMLAttribute(WMIFilterFullControlNode, "Exclusive", "True");
+	
+	var e = new Enumerator(GPMSecInfo);
+	var GPMPermission, PermNode;
+	var bFoundCustom = false;
+
+	for (; !e.atEnd(); e.moveNext())
+	{
+		GPMPermission = e.item();
+
+		// Handle link GPOs permissions
+		if (GPMPermission.Permission == Constants.PermSOMLink && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (GPMPermission.Inheritable)
+			{
+				PermNode = AddXMLAttribute(PermNode, "Inheritable", "True");
+			}
+
+			if (PermNode.text != "")
+			{
+				LinkGPOsNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle RSoP Logging permissions
+		if (GPMPermission.Permission == Constants.PermSOMLogging && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (GPMPermission.Inheritable)
+			{
+				PermNode = AddXMLAttribute(PermNode, "Inheritable", "True");
+			}
+
+			if (PermNode.text != "")
+			{
+				RSoPLoggingNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle RSoP Planning permissions
+		if (GPMPermission.Permission == Constants.PermSOMPlanning && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+			
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (GPMPermission.Inheritable)
+			{
+				PermNode = AddXMLAttribute(PermNode, "Inheritable", "True");
+			}
+			
+			if (PermNode.text != "")
+			{
+				RSoPPlanningNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle GPO creation permissions (only applies to domains)
+		if (GPMPermission.Permission == Constants.PermSOMGPOCreate && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+			
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (GPMPermission.Inheritable)
+			{
+				PermNode = AddXMLAttribute(PermNode, "Inheritable", "True");
+			}
+			
+			if (PermNode.text != "")
+			{
+				GPOCreationNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle WMI Filter creation permissions (only applies to domains)
+		if (GPMPermission.Permission == Constants.PermSOMWMICreate && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+			
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (GPMPermission.Inheritable)
+			{
+				PermNode = AddXMLAttribute(PermNode, "Inheritable", "True");
+			}
+			
+			if (PermNode.text != "")
+			{
+				WMIFilterCreationNode.appendChild(PermNode);
+			}
+		}
+
+		// Handle WMI Filter Full Control permissions (only applies to domains)
+		if (GPMPermission.Permission == Constants.PermSOMWMIFullControl && GPMPermission.Denied == false)
+		{
+			PermNode = xmlDoc.createElement("Permission");
+			
+			try
+			{
+				PermNode.text = GPMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				// Probably the trustee does not exist. Just skip it.
+				continue;
+			}
+
+			if (GPMPermission.Inheritable)
+			{
+				PermNode = AddXMLAttribute(PermNode, "Inheritable", "True");
+			}
+			
+			if (PermNode.text != "")
+			{
+				WMIFilterFullControlNode.appendChild(PermNode);
+			}
+		}
+
+	}
+
+	if (LinkGPOsNode.hasChildNodes == true)
+	{
+		node.appendChild(LinkGPOsNode);
+	}
+
+	if (RSoPLoggingNode.hasChildNodes == true)
+	{
+		node.appendChild(RSoPLoggingNode);
+	}
+
+	if (RSoPPlanningNode.hasChildNodes == true)
+	{
+		node.appendChild(RSoPPlanningNode);
+	}
+
+	if (GPOCreationNode.hasChildNodes == true)
+	{
+		node.appendChild(GPOCreationNode);
+	}
+
+	if (WMIFilterCreationNode.hasChildNodes == true)
+	{
+		node.appendChild(WMIFilterCreationNode);
+	}
+
+	if (WMIFilterFullControlNode.hasChildNodes == true)
+	{
+		node.appendChild(WMIFilterFullControlNode);
+	}
+
+	return node;
+}
+
+// Determine the GPO status and return an appropriate string value
+function GetGPOStatus(GPO)
+{
+	var szEnabled = "True";
+
+	if (GPO.IsComputerEnabled() == false && GPO.IsUserEnabled() == false)
+	{
+		szEnabled = "False";
+	}
+	
+	if (GPO.IsComputerEnabled() == true && GPO.IsUserEnabled() == false)
+	{
+		szEnabled = "Machine";
+	}
+	
+	if (GPO.IsComputerEnabled() == false && GPO.IsUserEnabled() == true)
+	{
+		szEnabled = "User";
+	}
+	
+	return szEnabled;
+}
+
+// Adds an attribute to an XML node
+function AddXMLAttribute(node, szName, value)
+{
+	var attribute = xmlDoc.createAttribute(szName);
+	node.setAttributeNode(attribute);
+	node.setAttribute(szName, value);
+	return node;
+}
+
+// Takes a GPO, domain and file system location and backs up the specified GPO
+// to that location
+function BackupGPO(GPMGPO, szBackupLocation, szComment)
+{
+	// Perform the backup
+	try
+	{
+		var GPMResult = GPMGPO.Backup(szBackupLocation, szComment);
+
+		// Call the OverallStatus method on the GPMResult. This will throw an exception if there
+		// were any errors during the actual operation.
+		GPMResult.OverallStatus();
+	}
+	catch (err)
+	{
+		// If we were able to get a GPMResult object, print any status message errors
+		if (GPMResult)
+		{
+			PrintStatusMessages(GPMResult);
+		}
+
+		WScript.Echo("The backup attempt failed.");
+		WScript.Echo("Attempted to backup GPO '" + GPMGPO.DisplayName + "' to location " + szBackupLocation);
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return;
+	}
+	
+	var GPMBackup = GPMResult.Result;
+	
+	// Print any status message warnings
+	PrintStatusMessages(GPMResult);
+	
+	WScript.Echo("\nDone.");
+	WScript.Echo("\nBacked up GPO " + GPMBackup.GPODisplayName + " with the following properties:");
+	WScript.Echo("\nGPO ID:\t\t" + GPMBackup.GPOID);
+	WScript.Echo("Timestamp:\t" + GPMBackup.TimeStamp);
+	WScript.Echo("Backup ID:\t" + GPMBackup.ID);
+	WScript.Echo("");
+}
+
+
+function ApplyStylesheetFromString(xmlDoc, szXslString)
+{
+	var result;
+	var xmlStylesheet = new ActiveXObject("Microsoft.XMLDOM");
+
+	xmlDoc.async = false;
+	xmlStylesheet.async = false;
+
+	try
+	{
+		xmlStylesheet.loadXML(szXslString);
+	}
+	catch (err)
+	{
+		WScript.Echo("Error getting stylesheet. Output will not be re-formatted.");
+		return;
+	}
+
+	var szXML = xmlDoc.transformNode(xmlStylesheet);
+	xmlDoc.loadXML(szXML);
+	return xmlDoc;
+}
+
+// Returns an XSL stylesheet used for pretty-printing. If we didn't apply this
+// stylesheet, the XML file would not be very human-readable in notepad.
+function GetPrettyPrintingStylesheet()
+{
+	var szDefinition = "";
+	szDefinition += "<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">";
+	szDefinition += "\n<xsl:output method=\"xml\" indent=\"yes\"/>";
+	szDefinition += "\n<xsl:template match=\"*\">";
+	szDefinition += "\n<xsl:copy>";
+	szDefinition += "\n<xsl:copy-of select=\"@*\"/>";
+	szDefinition += "\n<xsl:apply-templates/>";
+	szDefinition += "\n</xsl:copy>";
+	szDefinition += "\n</xsl:template>";
+	szDefinition += "\n<xsl:template match=\"comment()|processing-instruction()\">";
+	szDefinition += "\n<xsl:copy/>";
+	szDefinition += "\n</xsl:template>";
+	szDefinition += "\n</xsl:stylesheet>";
+
+	return szDefinition;
+
+}
+
+// Searches for all security groups in a particular DS location
+function GetAllSecurityGroupsInContainer(szLDAPPath, szType)
+{
+	var Group = null;
+	var GroupFlags;
+	var aGroups = new Array();
+
+	switch (szType.toLowerCase())
+	{
+		case "global":
+		GroupFlags = ADS_GROUP_TYPE_GLOBAL_GROUP | ADS_GROUP_TYPE_SECURITY_ENABLED;
+		break;
+		
+		case "local":
+		GroupFlags = ADS_GROUP_TYPE_DOMAIN_LOCAL_GROUP | ADS_GROUP_TYPE_SECURITY_ENABLED;
+		break;
+
+		case "universal":
+		GroupFlags = ADS_GROUP_TYPE_UNIVERSAL_GROUP | ADS_GROUP_TYPE_SECURITY_ENABLED;
+		break;
+	}
+	
+	// Create the ADO objects and open the connection
+	var ADOConnection = new ActiveXObject("ADODB.Connection");
+    	var ADOCommand =  new ActiveXObject("ADODB.Command");
+	ADOConnection.Provider = "ADsDSOObject";    
+	ADOConnection.Open("Active Directory Provider");    
+	ADOCommand.ActiveConnection = ADOConnection;
+
+
+	// Build the query
+	var szDomainLDAPPath = szLDAPPath;
+
+	var szSQL = "select AdsPath from '" + EscapeString(szDomainLDAPPath) + "'";
+	szSQL += " where objectCategory='group' AND GroupType=" + GroupFlags;
+
+	// Execute the search
+	ADOCommand.CommandText = szSQL;
+	ADOCommand.Properties("Page Size") = 1000;
+	ADOCommand.Properties("Timeout") = 500;
+	ADOCommand.Properties("SearchScope") = ADS_SCOPE_ONELEVEL;
+	ADOCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL; // Needed when querying a different domain
+	ADOCommand.Properties("Cache Results") = false;
+
+	try
+	{
+		var rs = ADOCommand.Execute();
+	}
+	catch (err)
+	{
+		WScript.Echo("There was an error executing the DS query " + szSQL);
+		WScript.Echo("The error was:");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return null;
+	}
+
+	while (rs.eof != true)
+	{
+		aGroups = aGroups.concat(rs.Fields(0).value);
+		rs.moveNext();
+	}
+	
+	aGroups.sort();
+	return aGroups;
+}
+
+// Escapes certain characters in a string so they will work with SQL statements
+function EscapeString(str)
+{
+	var result;
+
+	// Handle single quotes
+	var re = new RegExp("'");
+	result = str.replace(re, "''");
+	return result;
+}
+
+// Prints any status messages for a GPO operation, such as backup or import
+function PrintStatusMessages(GPMResult)
+{
+	var GPMStatus = GPMResult.Status;
+
+	if (GPMStatus.Count == 0)
+	{
+		// No messages, so just return
+		return;
+	}
+
+	WScript.Echo("");
+	var e = new Enumerator(GPMStatus);
+	for (; !e.atEnd(); e.moveNext())
+	{
+		WScript.Echo(e.item().Message);
+	}
+}
+
+// Returns the DNS domain name for the current user, using ADSI
+function GetDNSDomainForCurrentUser()
+{
+
+	var ADS_NAME_INITTYPE_DOMAIN = 1;
+	var ADS_NAME_INITTYPE_SERVER = 2;
+	var ADS_NAME_INITTYPE_GC = 3;
+ 
+	var ADS_NAME_TYPE_1779 = 1;                      // "CN=Jane Doe,CN=users, DC=Microsoft, DC=com"
+	var ADS_NAME_TYPE_CANONICAL = 2;                 // "Microsoft.com/Users/Jane Doe".
+	var ADS_NAME_TYPE_NT4 = 3;                       // "Microsoft\JaneDoe"
+	var ADS_NAME_TYPE_DISPLAY = 4;                   // "Jane Doe"
+	var ADS_NAME_TYPE_DOMAIN_SIMPLE = 5;             // "JaneDoe@Microsoft.com"
+	var ADS_NAME_TYPE_ENTERPRISE_SIMPLE = 6;         // "JaneDoe@Microsoft.com"
+	var ADS_NAME_TYPE_GUID = 7;                      // {95ee9fff-3436-11d1-b2b0-d15ae3ac8436}
+	var ADS_NAME_TYPE_UNKNOWN = 8;                   // The system will try to make the best guess
+	var ADS_NAME_TYPE_USER_PRINCIPAL_NAME = 9;       // "JaneDoe@Fabrikam.com"
+	var ADS_NAME_TYPE_CANONICAL_EX = 10;             // "Microsoft.com/Users Jane Doe"
+	var ADS_NAME_TYPE_SERVICE_PRINCIPAL_NAME = 11;   // "www/www.microsoft.com@microsoft.com"
+	var ADS_NAME_TYPE_SID_OR_SID_HISTORY_NAME = 12;  // "O:AOG:DAD:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
+ 
+
+	var objWshNetwork = new ActiveXObject("Wscript.Network");
+	var objectNameTranslate = new ActiveXObject("NameTranslate");
+	var arrNamePart;
+	var strNTPath = "";
+	var strTranslatedName = "";
+	var strResult = "";
+
+	strUser = objWshNetwork.UserName;
+	strDomain = objWshNetwork.UserDomain;
+	strNTPath = strDomain + "\\" + strUser;
+
+	objectNameTranslate.Init(ADS_NAME_INITTYPE_DOMAIN, strDomain);
+	objectNameTranslate.Set(ADS_NAME_TYPE_NT4, strNTPath);
+	strTranslatedName = objectNameTranslate.Get(ADS_NAME_TYPE_CANONICAL);
+
+	arrNamePart = strTranslatedName.split("/");
+	strResult = arrNamePart[0];
+
+	return strResult;
+}
+
+// Returns the hexadecimal string for a number, converting negative decimal
+// values to the appropriate winerror style hex values
+//
+function ErrCode(i)
+{
+	var result;
+
+	if (i < 0)
+	{
+		// Get the winerror-style representation of the hex value
+		result = 0xFFFFFFFF + i + 1;
+	}
+	else
+	{
+		result = i;
+	}
+
+	return "0x" + result.toString(16); // base 16
+}
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szDomainName = "";
+	var szDCName = "";
+	var szXMLFileName = "";
+	var bExcludeSettings = false;
+	var bAllGPOs = true;
+	var bExcludePermissions = false;
+	var bGetAllGroups = false;
+	var bGetUsers = false;
+	var TemplatePath = "";
+	var szStartingOU = "";
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	szXMLFileName = Arguments(0);
+	
+	if ( Arguments.Named.Exists("dc") )
+	{
+		szDCName = Arguments.Named("dc");
+	}
+
+	if ( Arguments.Named.Exists("ExcludeSettings") )
+	{
+		bExcludeSettings = true;
+	}
+
+	if ( Arguments.Named.Exists("ExcludePermissions") )
+	{
+		bExcludePermissions = true;
+	}
+
+	if ( Arguments.Named.Exists("TemplatePath") )
+	{
+		TemplatePath = Arguments.Named("TemplatePath");
+	}
+
+	if ( Arguments.Named.Exists("StartingOU") )
+	{
+		szStartingOU = Arguments.Named("StartingOU");
+		bAllGPOs = false;
+	}
+
+	if ( Arguments.Named.Exists("IncludeAllGroups") )
+	{
+		bGetAllGroups = true;
+	}
+
+	if ( Arguments.Named.Exists("IncludeUsers") )
+	{
+		bGetUsers = true;
+	}
+
+	Result.add("Domain", szDomainName);
+	Result.add("DC", szDCName);
+	Result.add("XML", szXMLFileName);
+	Result.add("AllGPOs", bAllGPOs);
+	Result.add("ExcludePermissions", bExcludePermissions);
+	Result.add("GetAllGroups", bGetAllGroups);
+	Result.add("GetUsers", bGetUsers);
+	Result.add("TemplatePath", TemplatePath);
+	Result.add("StartingOU", szStartingOU);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Reads a live policy environment (OUs, GPOs, GPO links, etc) and creates an XML file representing that environment.
+Used in conjunction with CreateEnvironmentFromXML.wsf
+</description>
+
+<unnamed name="OutputFile" helpstring="The name of the XML file to create" type="string" required="true" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+<named name="DC" helpstring="The domain controller to use" type="string" required="false" />
+<named name="TemplatePath" helpstring="The location to store the GPO templates (backups) containing the policy settings" type="string" required="false" />
+<named name="StartingOU" helpstring="DN path to the OU to start at, instead of processing the entire domain" type="string" required="false" />
+<named name="ExcludePermissions" helpstring="Do not include policy-related permissions in the XML file" type="simple" required="false" />
+<named name="IncludeAllGroups" helpstring="Includes groups from the 'Users' container and the domain root, instead of just OUs" type="simple" required="false" />
+<named name="IncludeUsers" helpstring="Includes user accounts as well as groups" type="simple" required="false" />
+
+<example>
+Examples:
+CreateXMLFromEnvironment.wsf TestDomain.xml /TemplatePath:c:\templates /domain:testdomain.mycompany.com
+
+CreateXMLFromEnvironment.wsf PolicyTestOU.xml /TemplatePath:c:\templates /StartingOU:"OU=Policy Test,DC=testdomain,DC=mycompany,DC=com"
+</example>
+
+</runtime>
+
+</job>

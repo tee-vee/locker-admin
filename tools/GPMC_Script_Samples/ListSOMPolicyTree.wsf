@@ -1,0 +1,300 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		ListSOMPolicyTree.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		10/11/2001
+'// Purpose:		Prints all SOMs in the domain and the list
+'//			of GPOs linked to each
+'// Revisions:		Ported from JScript->VBScript by dtsaltas (October 21,2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+' Define ADS related values - see IADS.h
+ADS_SCOPE_BASE 			= 0
+ADS_SCOPE_ONELEVEL 		= 1
+ADS_SCOPE_SUBTREE 		= 2
+ADSIPROP_CHASE_REFERRALS	= &H9
+ADS_CHASE_REFERRALS_NEVER	= 0
+ADS_CHASE_REFERRALS_SUBORDINATE	= &H20
+ADS_CHASE_REFERRALS_EXTERNAL	= &H40
+ADS_CHASE_REFERRALS_ALWAYS	= ADS_CHASE_REFERRALS_SUBORDINATE OR ADS_CHASE_REFERRALS_EXTERNAL
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList  : Set ArgumentList = ProcessCommandLineArguments()
+Dim strDomainName : strDomainName = ArgumentList.Item("Domain")
+
+' Initialize the Domain object
+Dim GPMDomain
+Set GPMDomain = GPM.GetDomain(strDomainName, "", Constants.UseAnyDC)
+
+' Create a global ADO connection for use by our functions
+Dim objConnection
+Set objConnection = CreateObject("ADODB.Connection")
+objConnection.Provider = "ADsDSOObject"    
+objConnection.Open("Active Directory Provider")  
+
+' List all GPOs in the specified domain
+ListSOMGPOs()
+
+' Cleanup
+objConnection.Close()
+Set objConnection = Nothing
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+
+' Prints out all SOMs in the domain and the GPOs linked to them
+Function ListSOMGPOs()
+	' Get the forest name for querying sites
+	strForestName = GetForestLDAPPath(strDomainName)
+
+	' Get an object from ADSI representing the root of the domain
+	strLDAPSuffix = GPMDomain.GetSOM("").Path
+	Set objDomainRoot = GetObject("LDAP://" & strDomainName)
+	
+	WScript.Echo "=== GPO Links for domain " & strDomainName & " ==="
+          
+       
+	' Print the domain tree
+	PrintTree objDomainRoot,-1
+	
+	WScript.Echo vbCrLf
+	WScript.Echo "=== GPO Links for sites in forest " & strForestName & " ==="
+ 
+	' Print the Sites tree
+	strSitesLDAPPath = "LDAP://CN=Sites,CN=Configuration," & strForestName
+        
+	On Error Resume Next
+	Set objSitesRoot = GetObject(strSitesLDAPPath)
+	If Err.Number <> 0 Then
+		Exit Function   
+	End If
+	
+	For Each objSiteRoot in objSitesRoot
+		If Left(objSiteRoot.objectCategory,7) = "CN=Site" Then
+			PrintTree objSiteRoot,0
+		End If
+	Next
+
+End Function
+
+
+
+' Prints out the tree of objects
+Function PrintTree(ADSObject, ByVal currentTab)
+	currentTab = currentTab + 1
+
+	' Build the tab characters to use for indenting
+	Dim i
+	Dim strTab : strTab = ""
+
+        For i=1 To currentTab
+		strTab = strTab & "   "
+        Next
+
+	WScript.Echo strTab & ADSObject.Name
+	PrintGPOs ADSObject, strTab
+	
+	Dim objCommand : Set objCommand =  CreateObject("ADODB.Command")
+	objCommand.ActiveConnection = objConnection
+
+	' Get a collection of all child OU's for the current object
+	Dim strSQL
+        strSQL = "SELECT AdsPath FROM '" & EscapeString(ADSObject.ADsPath) & "' " &_
+	         "WHERE objectCategory = 'organizationalUnit'"
+
+	' Execute the search
+	objCommand.CommandText = strSQL
+	objCommand.Properties("Page Size")       = 1000
+	objCommand.Properties("Timeout")         = 500
+	objCommand.Properties("SearchScope")     = ADS_SCOPE_ONELEVEL
+	objCommand.Properties("Chase Referrals") = ADS_CHASE_REFERRALS_EXTERNAL ' Needed when querying a different domain
+	objCommand.Properties("Cache Results")   = False
+
+        On Error Resume Next
+	Set objRS = objCommand.Execute()
+	
+	If Err.Number <> 0 Then
+		WScript.Echo "There was an error executing the DS query " & strSQL
+		WScript.Echo "The error was:"
+		WScript.Echo Err.Number & " - " & Err.Description
+		PrintTree = vbNull
+	End If
+
+	If objRS.EOF Then
+		Exit Function
+	End If
+		
+	' Now walk the list and recursively process each child
+	While Not objRS.EOF
+		Set objCurrent = GetObject(objRS.Fields(0))
+		PrintTree objCurrent, currentTab
+		objRS.MoveNext()
+	Wend
+
+End Function
+
+
+
+Function PrintGPOs(SOM, ByVal strTab)
+	Dim GPMSOM
+	strTab = strTab & "      "
+		
+	' We don't know if it's a site or an OU so try both
+	
+	On Error Resume Next
+	Set GPMSOM = GPMDomain.GetSOM(SOM.distinguishedName)
+	If Err.Number <> 0 Then
+		GPMSOM = Null
+		Err.Clear
+        End If
+	
+	If IsNull(GPMSOM) Then
+		' Try it as a site
+		Dim adSys
+		Set adSys = CreateObject("ADSystemInfo")
+		Dim strForestName 
+
+		strForestName = adSys.ForestDNSName
+	
+		Dim SitesContainer
+		Set SitesContainer = GPM.GetSitesContainer(strForestName, strDomainName, "",0)
+		If Err.Number <> 0 Then
+			WScript.Echo "ERR: the call to GPM.GetSitesContainer() failed"
+			WScript.Echo Err.Number & " - " & Err.Description
+			Exit Function
+		End If
+
+		' The .cn property of a site will give us just the name
+		On Error Resume Next
+		Set GPMSOM = SitesContainer.GetSite(SOM.cn)
+		If Err.Number <> 0 Then
+			Exit Function
+		End If
+        End If
+	
+	' Determine the type and name of the SOM
+	var strType
+	Select Case GPMSOM.Type
+		case Constants.SOMSite
+		strType = "site"
+		
+		case Constants.SOMOU
+		strType = "OU"
+		
+		case Constants.SOMDomain
+		strType = "domain"
+	End Select
+
+	strName = GPMSOM.Name
+	
+	' Get the GPO links
+	
+        Dim GPOLinks
+        On Error Resume Next 		
+	Set GPOLinks = GPMSOM.GetGPOLinks()
+
+        If Err.Number <> 0 Then
+		WScript.Echo "Error getting the GPO links."
+		Exit Function
+	End If
+        
+
+	Dim GPOLink
+        Dim LinkSOM
+	Dim strGPOName
+        Dim iLinkOrder : iLinkOrder = 0
+
+	For Each GPOLink in GPOLinks
+		iLinkOrder = iLinkOrder + 1
+		On Error Resume Next
+		Set GPO = GPMDomain.GetGPO(GPOLink.GPOID)
+		strGPOName = GPO.DisplayName
+                
+                If Err.Number <> 0 Then
+			' See if it failed because it's from a different domain
+			If LCase(GPOLink.GPODomain) <> LCase(GPMDomain.Domain) Then
+				strGPOName = "[Link to GPO in external domain]"
+			Else
+				' Could not find the GPO - might be an orphaned link or
+				' we might not have read access
+				strGPOName = "[Inaccessible]"
+			End If
+		End If
+
+		' See if this is an inherited link
+		Set LinkSOM = GPOLink.SOM
+		
+		WScript.Echo strTab & "GPO=" & strGPOName
+        Next
+	
+End Function
+
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim DomainName : DomainName = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+       	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+	
+	Dim Result
+        Set Result = CreateObject("Scripting.Dictionary")
+
+	If WScript.Arguments.Named.Exists("Domain") Then	
+		strDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If strDomainName = "" Then
+		strDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Domain", strDomainName
+	
+	Set ProcessCommandLineArguments =  Result
+
+End Function
+
+</script>
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Prints out all SOMs (Domain, OUs and Sites) in a domain and the GPOs linked to each.
+</description>
+
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: ListSOMPolicyTree.wsf /domain:test.mydomain.com
+</example>
+
+</runtime>
+
+</job>

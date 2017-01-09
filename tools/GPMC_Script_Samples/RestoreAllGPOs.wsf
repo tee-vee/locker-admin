@@ -1,0 +1,177 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	RestoreAllGPOs.wsf
+// Author:	mtreit@microsoft.com
+// Created:	1/7/2002
+//
+// Purpose:	Takes a backup location and restores the most recent
+//		backup for each GPO backed-up at that location
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szBackupLocation = ArgumentList.Item("BackupLocation");
+var szDomainName = ArgumentList.Item("Domain");
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Get the backup location specified
+var GPMBackupDir = GPM.GetBackupDir(szBackupLocation);
+
+// Get the most recent backups for each GPO in the backup location
+var GPMSearchCriteria = GPM.CreateSearchCriteria();
+GPMSearchCriteria.Add(Constants.SearchPropertyBackupMostRecent, Constants.SearchOpEquals, true);
+var BackupList = GPMBackupDir.SearchBackups(GPMSearchCriteria);
+
+// See if any backups were found
+if (BackupList.Count == 0)
+{
+	WScript.Echo("No backups found at location " + GPMBackupDir.BackupDirectory + ".");
+	WScript.Quit();
+}
+else
+{
+	WScript.Echo(BackupList.Count + " backups found at location " + GPMBackupDir.BackupDirectory + ".");
+}
+
+// Iterate over the list of backups and process each
+var GPMBackup, GPMGPO;
+var iSuccessCount = 0, iFailureCount = 0;
+var bNewGPOCreated = false;
+for (var e = new Enumerator(BackupList); !e.atEnd(); e.moveNext())
+{
+	GPMBackup = e.item();
+	WScript.Echo("\nProcessing backed up GPO '" + GPMBackup.GPODisplayName + "'");
+	
+	// See if the domain matches - if it doesn't the restore will fail so we 
+	// will skip any GPOs from a different domain.
+	//
+	if (GPMBackup.GPODomain.toLowerCase() != GPMDomain.Domain.toLowerCase())
+	{
+		WScript.Echo("Skipping backup for GPO '" + GPMBackup.GPODisplayName + "' because it is from a different domain.");
+		continue;
+	}
+
+	// Import the settings from the backup into the new GPO
+	try
+	{
+		// Do the restore
+		var GPMResult = GPMDomain.RestoreGPO(GPMBackup, Constants.DoNotValidateDC);
+		
+		// Call the OverallStatus method on the GPMResult. This will throw an exception if there
+		// were any errors during the actual operation.
+		//
+		GPMResult.OverallStatus();
+	}
+	catch (err)
+	{
+		// If we were able to get a GPMResult object, print any status message errors
+		if (GPMResult)
+		{
+			PrintStatusMessages(GPMResult);
+		}
+
+		
+		WScript.Echo("\nError restoring GPO " + GPMBackup.GPODisplayName);
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		iFailureCount++;
+		continue;
+	}
+
+	// Print any status message warnings
+	PrintStatusMessages(GPMResult);
+
+	iSuccessCount++;
+	WScript.Echo("The restore operation completed successfully.");
+}
+
+WScript.Echo("\nRestore succeeded for " + iSuccessCount + " GPOs.");
+WScript.Echo("Restore failed for " + iFailureCount + " GPOs.");
+
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szBackupLocation = "";
+	var szDomainName = "";
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	szBackupLocation = Arguments(0);
+
+	// Get the domain to use, if specified
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	Result.add("Domain", szDomainName);
+	Result.add("BackupLocation", szBackupLocation);
+
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+For all GPOs in a backup location, restores the most recent backup of each
+</description>
+
+<unnamed name="BackupLocation" helpstring="File system location containing the GPO backups" type="string" required="true" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: RestoreAllGPOs.wsf c:\GPO-Backups
+</example>
+
+</runtime>
+
+</job>

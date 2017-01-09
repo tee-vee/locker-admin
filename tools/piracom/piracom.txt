@@ -1,0 +1,121 @@
+==============================
+ Pira CZ Remote COM Port 
+==============================
+
+
+1. When to use this utility?
+2. Settings
+3. IP Address Access Control
+4. About
+5. History
+
+
+1. When to use this utility?
+=============================
+
+This application allows to control almost any RS232 device via ethernet. The RS232 device is connected to COM port of remote PC and you may control the device from your local PC.
+On the remote PC this application is running. It provides a brigde between the COM port and the ethernet.
+On the local PC typically virtual COM port + control application is running. This application is tested with HW Virtual Serial Port produced by HW-Group as a freeware.
+Visit the web page for more information.
+
+
+2. Settings
+============
+
+Note: Default values should work in most cases (excl. Baudrate which must be set).
+
+COM Port - Physical local COM port where the remotelly controlled device is connected. "Null" option is also provided (no COM port opened, application used as a TCP/IP dataloger or dummy server only).
+Baudrate - Baudrate of the remotelly controlled device.
+Tx Buffer Size - COM port TX line buffer size. Set higher value if you send large amount of data to the COM port or if Buffer Overflow (B/O) error is reported.
+Min. Delay - Min. time between characters needed to consider data as separate packets. If the Av. Length indicates 1, try to set higher value. If the control application indicates time out problem or the response is slow, try to set lower value.
+Max. Length - Max. buffer size for one packet. 
+Port - Network port on which the application listens to a client.
+TDMA - Has effect only if more than one client is connected and active. Switches the RX line only to the last client TXing data and divides the access requests from different clients by the time specified.
+     (None): No control, immediate access for all clients, all clients receive all RX data.
+     Strictly 1: Only the first client in the list can access the COM port, dynamically allocated.
+     Strictly 1i: The same as previous + waiting clients are informed about the actual access permission.
+                  Suitable for terminal control.
+     RDS: Automatic value set depending on the content transferred, reserved for multiple access to the PIRA32 RDS encoder.
+
+Log to File
+Allows to log selected items into a file specified.
+
+Run - Opens the connection and runs the communication.
+Stop - Stops the communication and closes the COM port.
+Hide - Hides the application to tray.
+Exit - Exits the application. All settings will be saved in Windows registry.
+Info - Displays this file.
+
+Note: Place the application into a folder where write access is enabled.
+
+Note: Multiple instances of the application are possible if each application is placed in another folder.
+
+
+3. IP Address Access Control
+=============================
+
+Text files named 'piracom.ban' and 'piracom.vip' placed in the application folder can control access from network. The BAN file contains list of "banned" IP addresses (no access is possible from these locations). The VIP file has higher priority and contains list of exceptions from the BAN rules.
+
+Each IP address is located at extra line in the files. Wildcard '*' is supported. For example:
+
+piracom.ban:
+81.171.106.32
+216.92.*
+72.168.68.13* 
+
+piracom.vip:
+216.92.0.1 
+
+
+4. About
+=========
+
+The software is provided as is, without warranty of any kind. The author shall not be liable for damages of any kind. Use of the software indicates you agree to this. You are prohibited from renting, modifying or reverse engineering of the software.
+
+(C) 2010 Jan Kolar - Pira CZ
+
+http://pira.cz/eng/ :: mail@pira.cz :: Any reports are welcome!
+
+Revision 2010-04-11
+
+
+5. History
+===========
+
+1.0  - First release.
+
+1.0a - Start-up bug fixed.
+
+1.1  - Baudrate bug fixed, extended statistics added.
+
+1.1a - Stop button closes the TCP/IP connection - port change bug fixed.
+
+1.2  - Working directory bug fixed, TX buffer size control and Flow control added, improved logging and statistics.
+
+1.2a - Client connection indication improved, data throughput massively increased. Stop button no longer closes the connection, only port change causes the connection close.
+
+1.2b - Multiple access solved.
+
+1.2c - Server port value initialization bug fixed (comming from previous version).
+
+1.3  - Extended security and reliability added - IP address access control, COM port and TCP/IP server auto reconnect. Multiple application instances are possible. Settings stored into ini file instead of Windows registry.
+
+1.3a - Small code and appearance optimization.
+
+1.3b - Auto-connection bug fixed.
+
+1.3c - File logging bug fixed.
+
+1.3d - Client reconnection bug fixed, Strictly 1 access option added.
+
+1.4  - TDMA option 'Strictly 1i' added. Disconnection logging bug fixed. Error 10053 should no longer lock the communication.
+
+1.4a - The application can be correctly closed even if the ini file is read only.
+
+1.4b - Number of COM ports extended to 256.
+
+1.4c - Error 10054 should no longer lock the communication (this bug was comming probably from previous version).
+
+1.4d - TDMA adapted to actual PIRA32 firmware. Log file showed in the application window.
+
+1.4e - "Null" COM port option added.

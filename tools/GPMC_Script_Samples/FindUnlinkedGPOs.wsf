@@ -1,0 +1,127 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		FindUnlinkedGPOs.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		11/8/2001
+'//
+'// Purpose:		Finds all GPOs in the domain that are not linked anywhere
+'//			in that domain
+'// Revision:		Ported from JScript->VBScript by dtsaltas (December 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+
+Dim ArgumentList : Set ArgumentList = ProcessCommandLineArguments()
+Dim szDomainName : szDomainName     = ArgumentList.Item("Domain")
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Get all GPOs in the domain
+Dim GPMSearchCriteria
+Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+
+Dim GPOList, bNoUnlinked
+bNoUnlinked = True
+
+Set GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria)
+
+' Print out the GPOs that are unlinked
+
+WScript.Echo "== GPOs that are not linked anywhere in " & szDomainName & " =="
+
+WScript.Echo vbCRLF
+WScript.Echo "NOTE: links to sites, as well as external domains, will not be checked."
+WScript.Echo vbCRLF
+
+For Each objGPO in GPOList
+
+	' Search for SOMs where this GPO is linked
+	Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+	GPMSearchCriteria.Add Constants.SearchPropertySOMLinks, Constants.SearchOpContains, objGPO
+	Set SOMList = GPMDomain.SearchSOMs(GPMSearchCriteria)
+
+	If SOMList.Count = 0 Then
+		' No SOMs were found, so this GPO is not linked anywhere
+		bNoUnlinked = False
+		WScript.Echo objGPO.ID & " - " & objGPO.DisplayName
+	End If
+Next
+
+If bNoUnlinked = True Then
+	WScript.Echo "No unlinked GPOs found."
+End If
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szDomainName : szDomainName = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Domain" , szDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Searches for all GPOs that are not linked anywhere within the specified domain.
+Does not search sites, or domains external to the one where the GPO itself exists.
+</description>
+
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: FindUnlinkedGPOs.wsf /domain:Test.MyDomain.com
+</example>
+
+</runtime>
+
+</job>

@@ -1,0 +1,315 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:	ListAllGPOs.wsf
+'// Author:	mtreit@microsoft.com
+'// Created:	10/11/2001
+'// Purpose:	Lists all GPOs in a domain
+'// Revision:	Ported from JScript->VBScript by dtsaltas [September 15, 2002]
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by all of the functions
+Set GPM = CreateObject("GPMgmt.GPM")
+Set Constants = GPM.GetConstants()
+
+' Define flags needed for querying SecurityDescriptor
+Dim bOwner : bOwner = true
+Dim bGroup : bGroup = false
+Dim bDACL  : bDACL = false
+Dim bSACL  : bSACL = false
+
+' If you don't have write permissions on a GPO, querying for the SACL
+' will fail. The following gives you the necessary flags to only query
+' for the 'owner' part of the security descriptor, which is all we care
+' about in most cases. 'Owner' can be read with read-only rights
+Dim SecurityFlags
+
+SecurityFlags = Constants.SecurityFlags(bOwner, bGroup, bDACL, bSACL)
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList
+Dim szDomainName
+Dim bVerbose
+
+
+Set ArgumentList = ProcessCommandLineArguments
+szDomainName = ArgumentList.Item("Domain")
+bVerbose = ArgumentList.Item("Verbose")
+
+' Initialize the Domain object
+Dim GPMDomain
+Set GPMDomain = GPM.GetDomain(szDomainName,"", Constants.UseAnyDC)
+
+' Print the list OF GPOs in the domain
+ListDomainGPOs(GPMDomain)
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Print information about a GPO
+Function PrintGPOInfo(GPMGPO)
+
+   WScript.Echo "Name:" & vbTab & GPMGPO.DisplayName
+   WScript.Echo "ID:" & vbTab & GPMGPO.ID & vbCrLf
+
+End Function
+
+
+' Print detailed information about a given GPO
+Function PrintDetailedGPOInfo(GPMGPO)
+
+	WScript.Echo "=============================================="
+	WScript.Echo "Name:" & vbTab & GPMGPO.DisplayName
+	WScript.Echo "ID:"   & vbTab & GPMGPO.ID
+
+	' Print the GPO details
+	PrintGPODetails GPMGPO
+
+	' Print apply rights
+	PrintGPOPermissions GPMGPO, Constants.PermGPOApply
+
+	' Print edit rights
+	PrintGPOPermissions GPMGPO, Constants.PermGPOEdit
+	
+	' Print edit, modify security and delete rights
+	PrintGPOPermissions GPMGPO, Constants.PermGPOEditSecurityAndDelete	
+	
+	' Print read rights
+	PrintGPOPermissions GPMGPO, Constants.PermGPORead
+	
+	' Print custom rights
+	PrintGPOPermissions GPMGPO, Constants.PermGPOCustom
+	
+	' Print the list of links
+	PrintGPOLinks GPMGPO
+
+	WScript.Echo vbCrLf
+	WScript.Echo "==============================================" & vbCrLf
+
+End Function
+
+' Print detailed information about a GPO
+Function PrintGPODetails(GPMGPO)
+
+	Dim strCreated : strCreated = GPMGPO.CreationTime
+	Dim strChanged : strChanged = GPMGPO.ModificationTime
+	Dim strOwner   : strOwner   = GPMGPO.GetSecurityDescriptor(SecurityFlags).Owner
+
+	WScript.Echo vbCrLf
+	WScript.Echo "-- Details --"
+	WScript.Echo "Created:" & vbTab & strCreated
+	WScript.Echo "Changed:" & vbTab & strChanged
+	WScript.Echo "Owner:"   & vbTab & vbTab & strOwner
+	
+	WScript.Echo vbCrLf
+	WScript.Echo "User Enabled:" & vbTab & GPMGPO.IsUserEnabled
+	WScript.Echo "Mach Enabled:" & vbTab & GPMGPO.IsComputerEnabled
+
+	WScript.Echo vbCrLf
+	WScript.Echo "-- Version Numbers --"
+	'[todo] - variant types of the following not supported in VBScript
+	WScript.Echo "User DS:"     & vbTab & CLng(GPMGPO.UserDSVersionNumber)
+	WScript.Echo "User Sysvol:" & vbTab & CLng(GPMGPO.UserSysvolVersionNumber)
+	WScript.Echo "Mach DS:"     & vbTab & CLng(GPMGPO.ComputerDSVersionNumber)
+	WScript.Echo "Mach Sysvol:" & vbTab & CLng(GPMGPO.ComputerSysvolVersionNumber)
+
+End Function
+
+' Print the list of trustees with a particular set of permissions on a GPO
+Function PrintGPOPermissions(GPMGPO, PermissionType)
+
+	' Print out a header identifying the type of rights being listed
+	Dim strHeader : strHeader = ""
+	Select Case PermissionType
+
+		Case Constants.PermGPOApply
+		   strHeader = vbCrLf & "-- Who this GPO applies to --"
+		
+
+		Case Constants.PermGPOEdit:
+		   strHeader = vbCrLf & "-- Who can edit this GPO --"
+		
+
+		Case Constants.PermGPOEditSecurityAndDelete:
+		   strHeader = vbCrLf & "-- Who can edit settings, modify security and delete this GPO --"
+		
+		
+		Case Constants.PermGPORead:
+		   strHeader = vbCrLf & "-- Who only has Read access --"
+		
+		
+		Case Constants.PermGPOCustom:
+		   strHeader = vbCrLf & "-- Who has custom permissions --"
+		
+	End Select
+
+	WScript.Echo strHeader
+
+	' Get the list of security settings on this GPO
+	Dim GPMSecurityInfo
+	Set GPMSecurityInfo = GPMGPO.GetSecurityInfo()
+
+	' Print out the groups who have the specified permission
+
+	Dim GPOPermission 
+	Dim strTrusteeName
+
+	For Each GPOPermission in GPMSecurityInfo
+
+		strTrusteeName = ""
+		If GPOPermission.Permission = PermissionType Then
+		   On Error Resume Next
+		      strTrusteeName = GPOPermission.Trustee.TrusteeName
+		   If Err.Number <> 0 Then
+		      strTrusteeName =  GPOPermission.Trustee.TrusteeSid
+		   End If
+			WScript.Echo strTrusteeName
+                End If
+	Next
+End Function
+
+' Print all places a given GPO is linked
+Function PrintGPOLinks(GPMGPO)
+
+	' Search for all SOM links for this GPO
+	Dim objGPMSearchCriteria
+	Set objGPMSearchCriteria = GPM.CreateSearchCriteria()
+	objGPMSearchCriteria.Add Constants.SearchPropertySOMLinks, Constants.SearchOpContains, GPMGPO
+
+	WScript.Echo vbCrLf & "-- Where this GPO is linked --"
+
+	On Error Resume Next
+	Dim SOMList : Set SOMList = GPMDomain.SearchSOMs(objGPMSearchCriteria)
+  	If Err.Number <> 0 Then
+	   WScript.Echo Err.Number '[todo] port ErrCode function....use here??
+	   WScript.Echo Err.Description
+        End If
+
+	If SOMList.Count = 0 Then
+		WScript.Echo "No links found for this GPO."
+		Exit Function
+	End If
+
+	' Print out all links that were found
+
+	Dim SOM 
+        Dim strSOMType
+	For Each SOM in SOMList
+		Select Case SOM.Type
+			Case Constants.SOMSite
+			   strSOMType = "Site"
+			
+			Case Constants.SOMDomain
+			   strSOMType = "Domain"
+
+			case Constants.SOMOU
+			   strSOMType = "OU"
+		End Select
+
+		WScript.Echo SOM.Name & " (" & strSOMType & ")"
+	Next
+
+End Function
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments
+	Dim szDomainName : szDomainName = ""
+	Dim bVerbose     : bVerbose = false
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	Dim Result
+        Set Result = CreateObject("Scripting.Dictionary")
+
+	If WScript.Arguments.Length > 0 Then
+		If WScript.Arguments.Named.Exists("V") Then
+			bVerbose = true
+		End If
+		
+		If WScript.Arguments.Named.Exists("Domain") Then
+			szDomainName = WScript.Arguments.Named("Domain")
+		End If
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Verbose", bVerbose
+	Result.Add "Domain", szDomainName
+
+	Set ProcessCommandLineArguments = Result
+End Function
+
+' Print out a list of all GPOs in the domain
+Function ListDomainGPOs(GPMDomain)
+	' Create the search criteria object
+        Dim GPMSearchCriteria
+	Set GPMSearchCriteria = GPM.CreateSearchCriteria
+
+	' Get all of the GPOs by passing in the blank
+	' SearchCriteria
+        Dim GPOList
+	Set GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria)
+
+	' Now print out the list
+	Dim GPMGPO
+
+	If bVerbose = false Then
+		WScript.Echo "** For detailed info use the '/v' switch **" & vbCRLF
+	End If
+
+	WScript.Echo "== Found " & GPOList.Count & " GPOs in " & szDomainName & " ==" & vbCRLF
+
+	' Loop through the list and print info for each GPO
+        For Each GPMGPO in GPOList	
+		If bVerbose = true Then
+			PrintDetailedGPOInfo(GPMGPO)
+                         
+		Else
+			PrintGPOInfo(GPMGPO)
+		End If
+	Next
+End Function
+
+</script>
+
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Prints out data about all GPOs in a domain.
+</description>
+
+<named name="v" helpstring="Verbose mode - displays detailed information about each GPO" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain to query" type="string" required="false" />
+
+<example>
+Example: ListAllGPOs.wsf /v
+</example>
+
+</runtime>
+
+</job>

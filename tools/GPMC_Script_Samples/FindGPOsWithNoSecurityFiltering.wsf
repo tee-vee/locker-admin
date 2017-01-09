@@ -1,0 +1,128 @@
+/////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	FindGPOsWithNoSecurityFiltering.wsf
+// Author:	mtreit@microsoft.com
+// Created:	10/28/2001
+// Purpose:	Finds any GPOs in the specified domain
+//		that do not apply to anyone because
+//		no apply rights are set on the GPO
+/////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szDomainName = ArgumentList.Item("Domain");
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Set the permission we are going to look for
+perm = Constants.PermGPOApply;
+
+// Get a collection with all GPOs in the domain
+var GPMSearchCriteria = GPM.CreateSearchCriteria();
+var GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria);
+
+WScript.Echo("GPOs in " + szDomainName + " that are missing 'Apply' rights:\n");
+
+// Loop through each GPO and check the permissions
+var e = new Enumerator(GPOList);
+var GPO, SecInfo, e2, GPMPermission, bFoundPerm;
+
+for (; !e.atEnd(); e.moveNext())
+{
+	GPO = e.item();
+	bFoundPerm = false;
+	SecInfo = GPO.GetSecurityInfo();
+	e2 = new Enumerator(SecInfo)
+
+	for (; !e2.atEnd(); e2.moveNext())
+	{
+		GPMPermission = e2.item();
+		if (GPMPermission.Permission == perm)
+		{
+			bFoundPerm = true;
+		}
+	}
+	
+	// If the permission was not found, print out the GPO name
+	if (bFoundPerm == false)
+	{
+		WScript.Echo(GPO.ID + " - " + GPO.DisplayName);
+	}
+}
+
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szDomainName = "";
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	Result.add("Domain", szDomainName);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Prints a list of all GPOs in the domain that do not have any 'apply' permissions set.
+These are GPOs that exist but will not actually apply to anyone.
+</description>
+
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: FindGPOsWithNoSecurityFiltering.wsf
+</example>
+
+</runtime>
+
+</job>

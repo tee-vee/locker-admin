@@ -1,0 +1,338 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	DumpSOMInfo.wsf
+// Author:	mtreit@microsoft.com
+// Created:	8/4/2002
+//
+// Purpose:	Takes the name of a Scope of Management (SOM), which is
+//		either a site, domain or OU, and prints policy-related
+//		information about that SOM.
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szSOMName = ArgumentList.Item("SOMName");
+var bShowInheritedLinks = ArgumentList.Item("ShowInheritedLinks");
+var szDomainName = ArgumentList.Item("Domain");
+
+// Get the forest name for querying sites
+var szForestName = GetForestDNSName(szDomainName);
+
+// Initialize the Domain and SitesContainer objects
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+var GPMSitesContainer = GPM.GetSitesContainer(szForestName, szDomainName, "", Constants.UseAnyDC);
+
+// Process the specified SOM
+ProcessSOM(szSOMName, bShowInheritedLinks);
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes the name of a SOM and displays the policy-related info about it
+function ProcessSOM(szSOMName, bShowInheritedLinks)
+{
+	var SOMList = GetSOM(szSOMName, GPMDomain);
+	
+	if (!SOMList)
+	{
+		WScript.Echo("No SOM found with the name '" + szSOMName + "'");
+		return;
+	}
+	
+	if (SOMList.length > 0)
+	{
+		WScript.Echo("*** Multiple SOMs found with name '" + szSOMName + "' ***");
+		WScript.Echo("Will display information for each\n");
+		
+		var GPMSOM;
+		for (var i in SOMList)
+		{
+			GPMSOM = SOMList[i];
+			PrintSOMInfo(GPMSOM, bShowInheritedLinks)
+		}
+	}
+	else
+	{
+		PrintSOMInfo(SOMList, bShowInheritedLinks);
+	}
+
+}
+
+// Prints details about a specific SOM
+function PrintSOMInfo(GPMSOM, bShowInherited)
+{
+	// Determine the type of SOM
+	var szType = "";
+	switch (GPMSOM.Type)
+	{
+		case Constants.SOMSite:
+		szType = "site";
+		break;
+		
+		case Constants.SOMDomain:
+		szType = "domain";
+		break;
+		
+		case Constants.SOMOU:
+		szType = "Organizational Unit";
+		break;
+	}
+
+	WScript.Echo("==============================================");
+	WScript.Echo("Name:\t" + GPMSOM.Name);
+	WScript.Echo("Type:\t" + szType);
+	WScript.Echo("Path:\t" + GPMSOM.Path);
+
+	if (GPMSOM.GPOInheritanceBlocked)
+	{
+		WScript.Echo("");
+		WScript.Echo("*** Blocking GPO inheritance *** ");
+	}
+
+	// Print the GPO links
+	PrintGPOLinks(GPMSOM, bShowInherited);
+
+	// Print the policy permissions
+	PrintSOMPermissions(GPMSOM, Constants.PermSOMLink);
+	
+	// The RSoP logging rights don't apply to sites
+	if (GPMSOM.Type != Constants.SOMSite)
+	{
+		PrintSOMPermissions(GPMSOM, Constants.PermSOMLogging);
+		PrintSOMPermissions(GPMSOM, Constants.PermSOMPlanning);
+	}
+
+	WScript.Echo("");
+	WScript.Echo("==============================================\n");
+
+}
+
+// Print the list of trustees with a particular set of permissions on a GPO
+function PrintSOMPermissions(GPMSOM, PermissionType)
+{
+	// Determine the type of SOM
+	var szType = "";
+	switch (GPMSOM.Type)
+	{
+		case Constants.SOMSite:
+		szType = "site";
+		break;
+		
+		case Constants.SOMDomain:
+		szType = "domain";
+		break;
+		
+		case Constants.SOMOU:
+		szType = "OU";
+		break;
+	}
+
+
+	// Get the list of security settings on this GPO
+	var GPMSecurityInfo = GPMSOM.GetSecurityInfo();
+	
+	// Print out the groups who have the specified permission
+	var e = new Enumerator(GPMSecurityInfo);
+	var GPOPermission, szTrusteeName;
+
+	// Print out a header identifying the type of rights being listed
+	var szHeader = "";
+	switch (PermissionType)
+	{
+		case Constants.PermSOMLink:
+		szHeader = "\n-- Who can link GPOs to this " + szType + " --";
+		break;
+
+		case Constants.PermSOMLogging:
+		szHeader = "\n-- Who can generate RSoP logging data for this " + szType + " --";
+		break;
+
+		case Constants.PermSOMPlanning:
+		szHeader = "\n-- Who can generate RSoP planning data for this " + szType + " --";
+		break;
+	}
+
+	WScript.Echo(szHeader);
+
+	for (;!e.atEnd();e.moveNext())
+	{
+		szTrusteeName = "";
+		SOMPermission = e.item();
+		if (SOMPermission.Permission == PermissionType)
+		{
+			try
+			{
+				szTrusteeName = SOMPermission.Trustee.TrusteeName;
+			}
+			catch (err)
+			{
+				szTrusteeName = SOMPermission.Trustee.TrusteeSid;
+			}
+
+			WScript.Echo(szTrusteeName);
+		}
+	}
+}
+
+
+// Prints the GPOs linked to a SOM
+function PrintGPOLinks(GPMSOM, bShowInherited)
+{
+	var GPOLinks, szHeader;
+	
+	if (bShowInherited)
+	{
+		GPOLinks = GPMSOM.GetInheritedGPOLinks();
+		szHeader = "\n-- Inherited GPO Links --";
+	}
+	else
+	{
+		GPOLinks = GPMSOM.GetGPOLinks();
+		szHeader = "\n-- GPO Links --";
+	}
+	
+	var e = new Enumerator(GPOLinks);
+
+	var szGPOName, szDisabled,szEnforced;
+	var iPosition = 0;
+	var GPMGPOLink;
+	var GPOSourceDomain;	
+
+	WScript.Echo(szHeader);
+	for (; !e.atEnd(); e.moveNext())
+	{
+
+		iPosition++;
+		
+		szGPOName = "";
+		szDisabled = "";
+		szEnforced = "";
+
+		GPMGPOLink = e.item();
+
+		// Get the GPO name
+		if (GPMGPOLink.GPODomain.toLowerCase() != GPMDomain.Domain.toLowerCase())
+		{
+			GPOSourceDomain = GPM.GetDomain(GPMGPOLink.GPODomain, "", Constants.UseAnyDC);
+		}
+		else
+		{
+			GPOSourceDomain = GPMDomain;
+		}
+		
+		try
+		{
+			szGPOName = GPOSourceDomain.GetGPO(GPMGPOLink.GPOID).DisplayName;
+		}
+		catch (err)
+		{
+			szGPOName = "[Unknown]";
+		}
+		
+		// Check if it's enforced
+		if (GPMGPOLink.Enforced)
+		{
+			szEnforced = "    [Enforced]";
+		}
+		
+		if (GPMGPOLink.Enabled == false)
+		{
+			szDisabled = "    [Disabled]";
+		}
+		
+		WScript.Echo(iPosition + "\t" + szGPOName + "" + szEnforced + szDisabled);
+	}
+
+}
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szSOMName = "";
+	var szDomainName = "";
+	var bShowInherited = false;
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	szSOMName = Arguments(0);
+
+	if (Arguments.Named.Exists("ShowInheritedLinks"))
+	{
+		bShowInherited = true;
+	}
+
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	Result.add("SOMName", szSOMName);
+	Result.add("ShowInheritedLinks", bShowInherited);
+	Result.add("Domain", szDomainName);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Takes the name of a Scope of Management (SOM), which is either a site, domain or OU, 
+and prints policy-related information about that SOM.
+</description>
+
+<unnamed name="SOMName" helpstring="The name of the SOM to query" type="string" required="true" />
+<named name="ShowInheritedLinks" helpstring="Show inherited GPO links for the SOM" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Examples: DumpSOMINfo.wsf test.mycompany.com
+          DumpSOMINfo.wsf "Marketing OU" /ShowInheritedLinks
+</example>
+
+</runtime>
+
+</job>

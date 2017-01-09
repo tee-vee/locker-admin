@@ -1,0 +1,231 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		GetReportsForGPO.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		8/29/2002
+'// Purpose:		Generates XML and HTML reports for a given GPO
+'// Revision:		Ported from JScript->VBScript by dtsaltas (December 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList     : Set ArgumentList = ProcessCommandLineArguments()
+Dim szGPOName        : szGPOName        = ArgumentList.Item("GPOName")
+Dim szReportLocation : szReportLocation = ArgumentList.Item("ReportLocation")
+Dim szDomainName     : szDomainName     = ArgumentList.Item("Domain")
+
+' Validate the path given
+Dim bValidPath	: bValidPath = ValidatePath(szReportLocation)
+
+If bValidPath = false Then
+	WScript.Echo "The path '" & szReportLocation & "' could not be found."
+	WScript.Echo "Verify the path exists."
+	WScript.Quit
+End If
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+
+' Generate the reports
+GetGPOReports szGPOName, szReportLocation, GPMDomain
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Generates reports for all GPOs in the specified domain to a given file system location
+Function GetGPOReports(szGPOName, szReportLocation, GPMDomain)
+
+	Dim szReportName : szReportName = ""
+
+	' Get the GPO object requested
+	Dim GPMGPO
+	On Error Resume Next
+
+	Set GPMGPO = GetGPO(szGPOName, GPMDomain)
+	If GPMGPO Is Nothing Then
+		WScript.Echo "Could not find GPO " & szGPOName & " in domain " & GPMDomain.Domain & "."
+		Exit Function
+	End If
+
+	' We could get back a collection of multiple GPOs instead of just one
+	' If so, warn the user
+	
+	On Error Resume Next
+        Err.Clear
+
+	Dim iGPOCount
+        iGPOCount = GPMGPO.Count
+
+        If Err.Number <> 0 Then
+   		iGPOCount = 0
+	End If
+
+        On Error Goto 0
+	If iGPOCount > 0 Then
+		WScript.Echo "There are multiple GPOs with the name '" & szGPOName & "'"
+		WScript.Echo "Please pass in the unique ID (GUID) of the GPO you want to back up."
+		Exit Function
+	End If
+
+	' Generate the XML report
+	On Error Resume Next
+	Err.Clear
+	szReportName = GPMGPO.DisplayName & ".xml"
+		
+	' Get rid of any invalid file name characters
+	szReportName = GetValidFileName(szReportName)
+		
+	WScript.Echo vbCrLf & "Generating XML report for GPO '" & GPMGPO.DisplayName & "'"
+	Set GPMResult = GPMGPO.GenerateReportToFile(Constants.ReportXML, szReportLocation & "\\" & szReportName)
+
+	If Err.Number <> 0 Then
+			WScript.Echo vbCrLf & "The attempt to generate the XML report failed for GPO " & GPMGPO.ID
+			WScript.Echo Hex(Err.Number) & " - " & Err.Description
+			Exit Function
+	Else
+
+		' Call the OverallStatus method on the GPMResult. This will throw an exception if there
+		' were any errors during the actual operation.
+		GPMResult.OverallStatus
+	
+		If Err.Number <> 0 Then
+			' If we were able to get a GPMResult object, print any status message errors
+			WScript.Echo GPMResult = null
+
+			If Not GPMResult Is Nothing Then
+				PrintStatusMessages GPMResult
+			End If
+
+			WScript.Echo vbCrLf & "The attempt to generate the XML report failed for GPO " & GPMGPO.ID
+			WScript.Echo Hex(Err.Number) & " - " & Err.Description
+			Exit Function
+		End If
+	End If
+        On Error Goto 0
+
+	' Print any status message warnings
+	PrintStatusMessages GPMResult
+
+	' Generate the HTML report
+	Err.Clear
+	
+	szReportName = GPMGPO.DisplayName & ".html"
+
+	' Get rid of any invalid file name characters
+	szReportName = GetValidFileName(szReportName)
+
+	WScript.Echo "Generating HTML report for GPO '" & GPMGPO.DisplayName & "'"
+	Set GPMResult = GPMGPO.GenerateReportToFile(Constants.ReportHTML, szReportLocation & "\\" & szReportName)
+
+	If Err.Number <> 0 Then
+			WScript.Echo vbCrLf & "The attempt to generate the HTML report failed for GPO " & GPMGPO.ID
+			WScript.Echo Hex(Err.Number) & " - " & Err.Description
+			Exit Function
+	Else
+		' Call the OverallStatus method on the GPMResult. This will throw an exception if there
+		' were any errors during the actual operation.
+		GPMResult.OverallStatus
+	
+		If Err.Number <> 0 Then
+			' If we were able to get a GPMResult object, print any status message errors
+			If Not GPMResult Is Nothing Then
+				PrintStatusMessages GPMResult
+			End If
+
+			WScript.Echo vbCrLf & "The attempt to generate the HTML report failed for GPO " & GPMGPO.ID
+			WScript.Echo Hex(Err.Number) & " - " & Err.Description
+		End If
+	End If	
+
+	' Print any status message warnings
+	PrintStatusMessages GPMResult
+
+End Function
+
+' Returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szGPOName        : szGPOName        = ""
+	Dim szReportLocation : szReportLocation = ""
+	Dim szDomainName     : szDomainName     = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+
+	If WScript.Arguments.Length < 2 Then
+	
+		WScript.Arguments.ShowUsage
+		WScript.Quit(-1)
+	End If
+	
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	'get the parameters
+	szGPOName        = WScript.Arguments(0)
+	szReportLocation = WScript.Arguments(1)
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+	
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "GPOName"        , szGPOName
+	Result.Add "ReportLocation" , szReportLocation
+	Result.Add "Domain"         , szDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Given a GPO name or GUID, saves XML and HTML reports for that GPO to the specified file system location
+</description>
+
+<unnamed name="GPOName" helpstring="GPO name or ID" type="string" required="true" />
+<unnamed name="ReportLocation" helpstring="File system location to save the reports to" type="string" required="true" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: GetReportsForGPO.wsf TestGPO c:\myGPOReports /domain:mydomain.com
+</example>
+
+</runtime>
+
+</job>

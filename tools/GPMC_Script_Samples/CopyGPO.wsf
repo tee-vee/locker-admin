@@ -1,0 +1,293 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	CopyGPO.wsf
+// Author:	mtreit@microsoft.com
+// Created:	1/10/2002
+//
+// Purpose:	Takes a GPO name or ID and a detination GPO name, and
+//		copies the source GPO to the destination GPO
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szSourceDomainName = ArgumentList.Item("SourceDomain");
+var szTargetDomainName = ArgumentList.Item("TargetDomain");
+var szSourceDC = ArgumentList.Item("SourceDC");
+var szTargetDC = ArgumentList.Item("TargetDC");
+var szSourceGPOName = ArgumentList.Item("SourceGPO");
+var szTargetGPOName = ArgumentList.Item("TargetGPO");
+var szMigrationTable = ArgumentList.Item("MigrationTable");
+var bCopyACL = ArgumentList.Item("CopyACL");
+
+// Get the source domain GPMDomain object
+try
+{
+	var GPMSourceDomain = GPM.GetDomain(szSourceDomainName, szSourceDC, 0);
+}
+catch (err)
+{
+	WScript.Echo("\nCould not resolve domain " + szSourceDomainName + " using DC " + szSourceDC + ".");
+	WScript.Echo("Verify the domain and DC specified exist.\n");
+	WScript.Echo(ErrCode(err.number) + " - " + err.description);
+	WScript.Quit();
+}
+
+// Get the target domain GPMDomain object
+try
+{
+	var GPMTargetDomain = GPM.GetDomain(szTargetDomainName,szTargetDC,0);
+}
+catch (err)
+{
+	WScript.Echo("\nCould not resolve domain " + szTargetDomainName + " using DC " + szTargetDC + ".");
+	WScript.Echo("Verify the domain and DC specified exist.\n");
+	WScript.Echo(ErrCode(err.number) + " - " + err.description);
+	WScript.Quit();
+}
+
+// Initialize the migration table, if necessary
+var GPMMigrationTable = null;
+
+if (szMigrationTable != "")
+{
+	try
+	{
+		GPMMigrationTable = GPM.GetMigrationTable(szMigrationTable);
+	}
+	catch (err)
+	{
+		WScript.Echo("Could not initialize migration table '" + szMigrationTable + "'");
+		WScript.Quit();
+	}
+}
+
+// Get the source GPO specified
+var GPMGPO = GetGPO(szSourceGPOName, GPMSourceDomain);
+if (!GPMGPO)
+{
+	WScript.Echo("GPO " + szSourceGPOName + " could not be found in domain " + szSourceDomainName);
+	WScript.Quit();
+}
+
+var GPMTargetGPO = GetGPO(szTargetGPOName, GPMTargetDomain);
+if (GPMTargetGPO)
+{
+	WScript.Echo("Another GPO with name '" + szTargetGPOName + "' already exists.");
+	WScript.Echo("ID of existing GPO: " + GPMTargetGPO.ID);
+	WScript.Echo("\nPlease specify a different name for the target GPO.");
+	WScript.Quit();
+}
+
+WScript.Echo("================================================================");
+WScript.Echo("Attempting copy operation");
+WScript.Echo("\nSource GPO:\t" + szSourceGPOName);
+WScript.Echo("Source Domain:\t" + GPMSourceDomain.Domain);
+WScript.Echo("Source DC:\t" + GPMSourceDomain.DomainController);
+WScript.Echo("\nTarget GPO:\t" + szTargetGPOName);
+WScript.Echo("Target Domain:\t" + GPMTargetDomain.Domain);
+WScript.Echo("Target DC:\t" + GPMTargetDomain.DomainController);
+WScript.Echo("================================================================");
+
+// Copy the GPO
+if (GPMMigrationTable != null)
+{
+	WScript.Echo("\nUsing Migration table '" + szMigrationTable + "'");
+}
+
+var NewGPO = CopyGPO(GPMGPO, GPMSourceDomain, GPMTargetDomain, szTargetGPOName, GPMMigrationTable, bCopyACL);
+if (!NewGPO)
+{
+	WScript.Echo("\nThe copy attempt failed.");
+	WScript.Quit();
+}
+else
+{
+	WScript.Echo("\nCreated copy of GPO '" + GPMGPO.DisplayName + "' with the following properties:\n");
+	WScript.Echo("ID:\t" + NewGPO.ID);
+	WScript.Echo("Name:\t" + NewGPO.DisplayName);
+}
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Copies a GPO and returns a reference to the copied GPO
+function CopyGPO(GPMSourceGPO, GPMSourceDomain, GPMTargetDomain, szTargetGPOName, GPMMigrationTable, bCopyACL)
+{
+	var CopyFlags = 0;
+
+	if (bCopyACL)
+	{
+		// Set the flag to copy the ACL
+		CopyFlags = CopyFlags | Constants.ProcessSecurity;
+	}
+
+	try
+	{
+		if (GPMMigrationTable == null)
+		{
+			var GPMResult = GPMSourceGPO.CopyTo(CopyFlags, GPMTargetDomain, szTargetGPOName);
+		}
+		else
+		{
+			var GPMResult = GPMSourceGPO.CopyTo(CopyFlags, GPMTargetDomain, szTargetGPOName, GPMMigrationTable);
+		}
+
+		// Call the OverallStatus method on the GPMResult. This will throw an exception if there
+		// were any errors during the actual operation.
+		GPMResult.OverallStatus();
+
+		// Print any status messages
+		PrintStatusMessages(GPMResult);
+
+		var GPMNewGPO = GPMResult.Result;
+	}
+	catch (err)
+	{
+		// If we were able to get a GPMResult object, print any status message errors
+		if (GPMResult)
+		{
+			PrintStatusMessages(GPMResult);
+		}
+
+		WScript.Echo("\nError copying GPO.");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return false;
+	}
+	
+	return GPMNewGPO;
+}
+
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szSourceDomainName = "";
+	var szTargetDomainName =  "";
+	var szSourceDC =  "";
+	var szTargetDC =  "";
+	var szSourceGPOName =  "";
+	var szTargetGPOName =  "";
+	var szMigrationTable =  "";
+	var bCopyACL = false;
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0 || Arguments.Length < 2)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	// Get the parameters
+	szSourceGPOName = Arguments(0);
+	szTargetGPOName = Arguments(1);
+
+	// Get the domain names to use
+	if (WScript.Arguments.Named.Exists("SourceDomain"))
+	{
+		szSourceDomainName = Arguments.Named("SourceDomain");
+	}
+
+	if (szSourceDomainName == "")
+	{
+		szSourceDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	if (Arguments.Named.Exists("TargetDomain"))
+	{
+		szTargetDomainName = Arguments.Named("TargetDomain");
+	}
+
+	if (szTargetDomainName == "")
+	{
+		szTargetDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	if (Arguments.Named.Exists("SourceDC"))
+	{
+		szSourceDC = Arguments.Named("SourceDC");
+	}
+
+	if (Arguments.Named.Exists("TargetDC"))
+	{
+		szTargetDC = Arguments.Named("TargetDC");
+	}
+
+	// Get the Migration table, if any, to use
+	if (Arguments.Named.Exists("MigrationTable"))
+	{
+		szMigrationTable = Arguments.Named("MigrationTable");
+	}
+
+	// See if we should copy the ACL
+	if (Arguments.Named.Exists("CopyACL"))
+	{
+		bCopyACL = true;
+	}
+
+	Result.add("SourceDomain", szSourceDomainName);
+	Result.add("TargetDomain", szTargetDomainName);
+	Result.add("SourceDC", szSourceDC);
+	Result.add("TargetDC", szTargetDC);
+	Result.add("SourceGPO", szSourceGPOName);
+	Result.add("TargetGPO", szTargetGPOName);
+	Result.add("MigrationTable", szMigrationTable);
+	Result.add("CopyACL", bCopyACL);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Takes a source GPO name and a target GPO name and copies the source GPO to the target GPO.
+</description>
+
+<unnamed name="SourceGPO" helpstring="The name of the source GPO" type="string" required="true" />
+<unnamed name="TargetGPO" helpstring="The name of the target GPO" type="string" required="true" />
+<named name="SourceDomain" helpstring="DNS name of the source domain" type="string" required="false" />
+<named name="TargetDomain" helpstring="DNS name of the target domain" type="string" required="false" />
+<named name="SourceDC" helpstring="Domain controller to use in the source domain" type="string" required="false" />
+<named name="TargetDC" helpstring="Domain controller to use in the target domain" type="string" required="false" />
+<named name="MigrationTable" helpstring="Migration table to use" type="string" required="false" />
+<named name="CopyACL" helpstring="Will also copy the ACL on the GPO" type="simple" required="false" />
+
+<example>
+Example: CopyGPO.wsf TestGPO TargetGPO /SourceDomain:test.mycompany.com /TargetDomain:production.mycompany.com
+</example>
+
+</runtime>
+
+</job>

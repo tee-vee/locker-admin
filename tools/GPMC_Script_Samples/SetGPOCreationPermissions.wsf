@@ -1,0 +1,152 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	SetGPOCreationPermissions.wsf
+// Author:	mtreit@microsoft.com
+// Created:	1/28/2002
+//
+// Purpose:	Sets GPO creator / owner rights in the domain
+//		
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szGroup = ArgumentList.Item("Group");
+var bRemove = ArgumentList.Item("Remove");
+var szDomainName = ArgumentList.Item("Domain");
+
+// Initialize the Domain object
+var GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC);
+
+// Get a GPMSOM object representing the domain
+var GPMSOM = GPMDomain.GetSOM("");
+
+// Get the current SecurityInfo object for the domain
+var GPMSecInfo = GPMSOM.GetSecurityInfo();
+
+if (bRemove == true)
+{
+	// Remove the trustee from having GP creation rights
+	try
+	{
+		GPMSecInfo.RemoveTrustee(szGroup);
+		GPMSOM.SetSecurityInfo(GPMSecInfo);
+	}
+	catch (err)
+	{
+		WScript.Echo("Error removing '" + szGroup + "' from having GPO creation rights.");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		WScript.Quit();
+	}
+	
+	WScript.Echo("Removed '" + szGroup + "' from having GPO creation rights.");
+	WScript.Quit();
+}
+
+// Grant the group GPO creation rights
+try
+{
+	var GPMPermission = GPM.CreatePermission(szGroup, Constants.PermSOMGPOCreate, false);
+	GPMSecInfo.Add(GPMPermission);
+	GPMSOM.SetSecurityInfo(GPMSecInfo);
+}
+catch (err)
+{
+	WScript.Echo("Error adding GPO creation rights for '" + szGroup + "'.");
+	WScript.Echo(ErrCode(err.number) + " - " + err.description);
+	WScript.Quit();
+}
+
+WScript.Echo("\nAdded '" + szGroup + "' as having GPO creation rights in " + szDomainName + ".");
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szGroup = "";
+	var szDomainName = "";
+	var bRemove = false;
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	szGroup = Arguments(0);
+
+	if (Arguments.Named.Exists("Remove"))
+	{
+		bRemove = true;
+	}
+
+	if (Arguments.Named.Exists("Domain"))
+	{
+		szDomainName = Arguments.Named("Domain");
+	}
+
+	// Get the current domain if none was specified
+	if (szDomainName == "")
+	{
+		szDomainName = GetDNSDomainForCurrentUser();
+	}
+
+	Result.add("Group", szGroup);
+	Result.add("Remove", bRemove);
+	Result.add("Domain", szDomainName);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Grants or removes the ability to create GPOs in a domain for a given security group or user.
+</description>
+
+<unnamed name="Group" helpstring="The security group to grant GPO creation rights to" type="string" required="true" />
+<named name="Remove" helpstring="Removes the permission instead of granting it" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: SetGPOCreationPermissions.wsf "Policy Admins"
+</example>
+
+</runtime>
+
+</job>

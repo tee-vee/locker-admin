@@ -1,0 +1,217 @@
+////////////////////////////////////////////////////////////////////////////
+// Copyright (c) Microsoft Corporation.  All rights reserved
+//
+// Title:	QueryBackupLocation.wsf
+// Author:	mtreit@microsoft.com
+// Created:	1/7/2002
+//
+// Purpose:	Takes a GPO backup location and prints information about
+//		all GPOs backed up there.
+////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
+// Initialization
+///////////////////////////////////////
+<job>
+
+// Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+
+<script language="JScript">
+
+// Create global objects for use by the rest of the script
+var GPM = new ActiveXObject("GPMgmt.GPM");
+var Constants = GPM.GetConstants();
+
+///////////////////////////////////////
+// Main script
+///////////////////////////////////////
+
+// Handle command line arguments
+var ArgumentList = ProcessCommandLineArguments(WScript.Arguments);
+var szBackupFolder = ArgumentList.Item("BackupFolder");
+var bVerbose = ArgumentList.Item("Verbose");
+
+PrintBackupLocationData(szBackupFolder, bVerbose);
+
+///////////////////////////////////////
+// Function Definitions
+///////////////////////////////////////
+
+// Takes a file system location and prints the backups in that location
+function PrintBackupLocationData(szBackupLocation, bVerbose)
+{
+	// Get a GPMBackupDir object representing the specified backup folder
+	try
+	{
+		var GPMBackupDir = GPM.GetBackupDir(szBackupLocation);
+	}
+	catch (err)
+	{
+		WScript.Echo("Could not get a list of backups in folder " + szBackupLocation + ".");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return;
+	}
+	
+	// Create a search criteria object. 
+	//In this case we will use a blank criteria object to return all backups.
+	var GPMSearchCriteria = GPM.CreateSearchCriteria();
+	
+	// Get a list of all backups in the folder
+	try
+	{
+		var Backups = GPMBackupDir.SearchBackups(GPMSearchCriteria);
+	}
+	catch (err)
+	{
+		WScript.Echo("Error querying for backups in folder '" + szBackupLocation + "'");
+		WScript.Echo(ErrCode(err.number) + " - " + err.description);
+		return;
+	}
+	
+	// Check if no backups were found
+	if (Backups.Count == 0)
+	{
+		WScript.Echo("No backups found at " + szBackupLocation);
+		return;
+	}
+	
+	// Build a list of all GPOs backed up in the specified folder
+	var e = new Enumerator(Backups);
+	var Backup;
+	var arrGPOIDs = new Array();
+	var arrOutputStrings = new Array();
+	
+	for (;!e.atEnd();e.moveNext())
+	{
+		Backup = e.item();
+
+		if (! ElementExists(arrGPOIDs, Backup.GPOID))
+		{
+			arrGPOIDs = arrGPOIDs.concat(Backup.GPOID);
+			arrOutputStrings = arrOutputStrings.concat(Backup.GPOID + "  -  " + Backup.GPODisplayName);
+		}
+
+	}
+
+	// Now we have a list of all GPOs backed up in the backup folder
+	// Print out the list
+	WScript.Echo("\nThe following GPOs are backed up at " + szBackupLocation + ":");
+	WScript.Echo("\n-- Summary --");
+	e = new Enumerator(arrOutputStrings);
+	for (; !e.atEnd(); e.moveNext())
+	{
+		WScript.Echo("  " + e.item());
+	}	
+	
+	if (bVerbose == true)
+	{
+		e = new Enumerator(arrGPOIDs);
+		WScript.Echo("\n\n-- Details --");
+		for (; !e.atEnd(); e.moveNext())
+		{
+			PrintGPOBackupData(e.item(), GPMBackupDir);
+		}
+	}
+}
+
+// Takes a backup location and a GPO GUID and prints info for all backups
+// for that GPO
+function PrintGPOBackupData(GPOID, BackupDir)
+{
+	var GPMSearchCriteria = GPM.CreateSearchCriteria();
+	GPMSearchCriteria.Add(Constants.SearchPropertyGPOID, Constants.SearchOpEquals, GPOID);
+	
+	// Get a list of all backups in the folder
+	var Backups = BackupDir.SearchBackups(GPMSearchCriteria);
+
+	WScript.Echo("\n------------------------------------------------------------");	
+	//WScript.Echo("\n== Backups for GPO '" + Backups.Item(1).GPODisplayName +"' " + GPOID + " ==");
+	WScript.Echo("GPO Name:\t" + Backups.Item(1).GPODisplayName);
+	WScript.Echo("GPO ID:\t\t" + GPOID + "\n");
+	WScript.Echo("  " + Backups.Count + " backup(s)\n");
+	var e = new Enumerator(Backups);
+	var Backup;
+	for (; ! e.atEnd(); e.moveNext())
+	{
+		Backup = e.item();
+		WScript.Echo("  BackupID:\t" + Backup.ID);
+		WScript.Echo("  Timestamp:\t" + Backup.TimeStamp);
+		WScript.Echo("  Comment:\t" + Backup.Comment + "\n");
+	}
+	
+	WScript.Echo("------------------------------------------------------------\n");
+}
+
+
+// Check if an element already exists in an array
+function ElementExists(array, value)
+{
+	var e = new Enumerator(array);
+	for (; !e.atEnd(); e.moveNext())
+	{
+		if (e.item() == value)
+		{
+			return true;
+		}
+		
+	}
+	
+	return false;
+}
+
+// Takes a WScript.Arguments object and returns a dictionary object
+// containing the named arguments and values that were passed in
+//
+function ProcessCommandLineArguments(Arguments)
+{
+	var szBackupFolder = "";
+	var bVerbose = false;
+
+	// Check if this is cscript. If not, print an error and bail out
+	if (WScript.FullName.toLowerCase().search("wscript") > 0)
+	{
+		WScript.Echo("You must use cscript.exe to execute this script.");
+		WScript.Quit();
+	}
+
+	if (Arguments.Length == 0)
+	{
+		Arguments.ShowUsage();
+		WScript.Quit();
+	}
+	
+	var Result = new ActiveXObject("Scripting.Dictionary");
+
+	szBackupFolder = Arguments(0);
+
+	if (Arguments.Named.Exists("Verbose"))
+	{
+		bVerbose = true;
+	}
+
+	Result.add("BackupFolder", szBackupFolder);
+	Result.add("Verbose", bVerbose);
+	
+	return Result;
+}
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Takes a file system location and prints information about all GPOs backed-up at that location.
+</description>
+
+<unnamed name="BackupFolder" helpstring="The file system location to query" type="string" required="true" />
+<named name="Verbose" helpstring="Display detailed information about each backup" type="simple" required="false" />
+
+<example>
+Example: QueryBackupLocation.wsf \\MyServer\GPOBackups
+</example>
+
+</runtime>
+
+</job>

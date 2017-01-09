@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+The recommended Core Component Types (CCTs) are created by customizing
+the CCTs provided by Core Components Technical Specification (CCTS) and 
+UBL.
+
+The Copyright Statement of CCTS is repeated below for user's reference.
+
+*** Begin quote CCTS copyright statement ***
+  
+  Copyright c UN/CEFACT 2003.
+  
+  All Rights Reserved. This document and translations of it may be copied and 
+  furnished to others, and derivative works that comment on or otherwise 
+  explain it or assist in its implementation may be prepared, copied, 
+  published and distributed, in whole or in part, without restriction of any 
+  kind, provided that the above copyright notice and this paragraph are 
+  included on all such copies and derivative works. However, this document 
+  itself may not be modified in any way, such as by removing the copyright 
+  notice or references to UN/CEFACT except as required to translate it into 
+  languages other than English.
+
+*** End quote CCTS copyright statement ***
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:cct="http://www.xml.gov.hk/schemas/cct" xmlns="http://www.xml.gov.hk/schemas/cct" targetNamespace="http://www.xml.gov.hk/schemas/cct" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0">
+	<xs:complexType name="Amount.CT">
+		<xs:annotation>
+			<xs:documentation>A number of monetary units specified in a currency where the unit of currency is explicit or implied.
+			  currencyCode (mandatory) - A 3-letter alphabetic currency code in the UN/ECE Rec. 9 code list.
+			  codeListVersion - The version of the UN/ECE Rec. 9 code list.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal">
+				<xs:attribute name="currencyCode" type="xs:token" use="required"/>
+				<xs:attribute name="codeListVersion" type="xs:token" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BinaryObject.CT">
+		<xs:annotation>
+			<xs:documentation>A set of finite-length sequences of binary octets.
+			  characterSetCode - The character set of the binary object if the mime type is text. Reference IETF RFC 2045, 2046, 2047.
+			  encodingCode - The decoding algorithm of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  fileName - The filename of the encoded binary object. Reference IETF RFC 2045, 2046, 2047.
+			  format - The format of the binary content.
+			  mimeCode - The mime type of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  objectUri - The Uniform Resource Identifier that identifies where the binary object is located.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:base64Binary">
+				<xs:attribute name="characterSetCode" type="xs:token" use="optional"/>
+				<xs:attribute name="encodingCode" type="xs:token" use="optional"/>
+				<xs:attribute name="fileName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="format" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="mimeCode" type="xs:token" use="optional"/>
+				<xs:attribute name="objectUri" type="xs:anyURI" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Graphics.CT">
+		<xs:annotation>
+			<xs:documentation>A set of finite-length sequences of binary octets.
+			  characterSetCode - The character set of the binary object if the mime type is text. Reference IETF RFC 2045, 2046, 2047.
+			  encodingCode - The decoding algorithm of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  fileName - The filename of the encoded binary object. Reference IETF RFC 2045, 2046, 2047.
+			  format - The format of the binary content.
+			  mimeCode - The mime type of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  objectUri - The Uniform Resource Identifier that identifies where the binary object is located.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:base64Binary">
+				<xs:attribute name="characterSetCode" type="xs:token" use="optional"/>
+				<xs:attribute name="encodingCode" type="xs:token" use="optional"/>
+				<xs:attribute name="fileName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="format" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="mimeCode" type="xs:token" use="optional"/>
+				<xs:attribute name="objectUri" type="xs:anyURI" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Picture.CT">
+		<xs:annotation>
+			<xs:documentation>A set of finite-length sequences of binary octets.
+			  characterSetCode - The character set of the binary object if the mime type is text. Reference IETF RFC 2045, 2046, 2047.
+			  encodingCode - The decoding algorithm of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  fileName - The filename of the encoded binary object. Reference IETF RFC 2045, 2046, 2047.
+			  format - The format of the binary content.
+			  mimeCode - The mime type of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  objectUri - The Uniform Resource Identifier that identifies where the binary object is located.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:base64Binary">
+				<xs:attribute name="characterSetCode" type="xs:token" use="optional"/>
+				<xs:attribute name="encodingCode" type="xs:token" use="optional"/>
+				<xs:attribute name="fileName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="format" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="mimeCode" type="xs:token" use="optional"/>
+				<xs:attribute name="objectUri" type="xs:anyURI" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Sound.CT">
+		<xs:annotation>
+			<xs:documentation>A set of finite-length sequences of binary octets.
+			  characterSetCode - The character set of the binary object if the mime type is text. Reference IETF RFC 2045, 2046, 2047.
+			  encodingCode - The decoding algorithm of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  fileName - The filename of the encoded binary object. Reference IETF RFC 2045, 2046, 2047.
+			  format - The format of the binary content.
+			  mimeCode - The mime type of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  objectUri - The Uniform Resource Identifier that identifies where the binary object is located.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:base64Binary">
+				<xs:attribute name="characterSetCode" type="xs:token" use="optional"/>
+				<xs:attribute name="encodingCode" type="xs:token" use="optional"/>
+				<xs:attribute name="fileName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="format" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="mimeCode" type="xs:token" use="optional"/>
+				<xs:attribute name="objectUri" type="xs:anyURI" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Video.CT">
+		<xs:annotation>
+			<xs:documentation>A set of finite-length sequences of binary octets.
+			  characterSetCode - The character set of the binary object if the mime type is text. Reference IETF RFC 2045, 2046, 2047.
+			  encodingCode - The decoding algorithm of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  fileName - The filename of the encoded binary object. Reference IETF RFC 2045, 2046, 2047.
+			  format - The format of the binary content.
+			  mimeCode - The mime type of the binary object. Reference IETF RFC 2045, 2046, 2047.
+			  objectUri - The Uniform Resource Identifier that identifies where the binary object is located.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:base64Binary">
+				<xs:attribute name="characterSetCode" type="xs:token" use="optional"/>
+				<xs:attribute name="encodingCode" type="xs:token" use="optional"/>
+				<xs:attribute name="fileName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="format" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="mimeCode" type="xs:token" use="optional"/>
+				<xs:attribute name="objectUri" type="xs:anyURI" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Code.CT">
+		<xs:annotation>
+			<xs:documentation>A character string (letters, figures or symbols) that for brevity and/or language independence may be used to represent or replace a definitive value or text of an attribute.
+			  agencyId - The identification of the agency that maintains the code list.
+			  agencyName - The name of the agency that maintains the code list.
+			  codeListId - The identification of the code list, e.g. the URL of a source that publishes the code list.
+			  codeListName - The name of the code list.
+			  codeListVersion - The version of the code list.
+			  codeName - The textual equivalent of the code content.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="agencyId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="agencyName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListVersion" type="xs:token" use="optional"/>
+				<xs:attribute name="codeName" type="xs:normalizedString" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Date.CT">
+		<xs:annotation>
+			<xs:documentation>A particular point in the progression of time.
+			  Format Pattern: CCYY-MM-DD
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:date"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="DateTime.CT">
+		<xs:annotation>
+			<xs:documentation>A particular point in the progression of time.
+			  Format Pattern: CCYY-MM-DDThh:mm:ss
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:dateTime"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Time.CT">
+		<xs:annotation>
+			<xs:documentation>A particular point in the progression of time.
+			  Format Pattern: hh:mm:ss
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:time"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Identifier.CT">
+		<xs:annotation>
+			<xs:documentation>A character string to uniquely identify and distinguish one instance of an object in an identification scheme from all other objects in the same scheme. 
+			  agencyId - The identification of the agency that maintains the identification scheme.
+			  agencyName - The name of the agency that maintains the identification scheme.
+			  schemeId - The identification of the identification scheme, e.g. the URL of a source that publishes the identification scheme.
+			  schemeName - The name of the identification scheme.
+			  schemeVersion - The version of the identification scheme.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="agencyId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="agencyName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="schemeId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="schemeName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="schemeVersion" type="xs:token" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Indicator.CT">
+		<xs:annotation>
+			<xs:documentation>A list of two mutually exclusive Boolean values that express the only possible states of a Property. 
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Boolean.CT">
+		<xs:annotation>
+			<xs:documentation>A list of two mutually exclusive Boolean values that express the only possible states of a Property. 
+			  {true, false, 1, 0}
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:boolean"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Measure.CT">
+		<xs:annotation>
+			<xs:documentation>A numeric value determined by measuring an object along with the specified unit of measure.
+			  codeListVersion - The version of the UN/ECE Rec. 20 measure unit code list.
+			  unitCode (mandatory) - The unit code as defined in UN/ECE Rec. 20.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal">
+				<xs:attribute name="codeListVersion" type="xs:token" use="optional"/>
+				<xs:attribute name="unitCode" type="xs:token" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Numeric.CT">
+		<xs:annotation>
+			<xs:documentation>Numeric information that is assigned or is determined by calculation, counting, or sequencing. It does not require a unit of quantity or unit of measure.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Percent.CT">
+		<xs:annotation>
+			<xs:documentation>Numeric information that is assigned or is determined by calculation, counting, or sequencing. It does not require a unit of quantity or unit of measure.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Rate.CT">
+		<xs:annotation>
+			<xs:documentation>Numeric information that is assigned or is determined by calculation, counting, or sequencing. It does not require a unit of quantity or unit of measure.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Value.CT">
+		<xs:annotation>
+			<xs:documentation>Numeric information that is assigned or is determined by calculation, counting, or sequencing. It does not require a unit of quantity or unit of measure.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Quantity.CT">
+		<xs:annotation>
+			<xs:documentation>A number of non-monetary units possibly including fractions.
+			  agencyId - The identification of the agency that maintains the quantity unit code list.
+			  agencyName - The name of the agency which maintains the quantity unit code list.
+			  codeListId - The identification of the quantity code list, e.g. the URL of a source that publishes the code list.
+			  codeListVersion - The version of the quantity code list.
+			  unitCode - The quantity unit code.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:decimal">
+				<xs:attribute name="agencyId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="agencyName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListVersion" type="xs:token" use="optional"/>
+				<xs:attribute name="unitCode" type="xs:token" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Count.CT">
+		<xs:annotation>
+			<xs:documentation>A number of non-monetary units possibly including fractions.
+			  agencyId - The identification of the agency that maintains the quantity unit code list.
+			  agencyName - The name of the agency which maintains the quantity unit code list.
+			  codeListId - The identification of the quantity code list, e.g. the URL of a source that publishes the code list.
+			  codeListVersion - The version of the quantity code list.
+			  unitCode - The quantity unit code.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:integer">
+				<xs:attribute name="agencyId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="agencyName" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListId" type="xs:normalizedString" use="optional"/>
+				<xs:attribute name="codeListVersion" type="xs:token" use="optional"/>
+				<xs:attribute name="unitCode" type="xs:token" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Text.CT">
+		<xs:annotation>
+			<xs:documentation>A character string (i.e. a finite set of characters) generally in the form of words of a language.
+			  languageCode - The code of the language used in the corresponding text as defined in ISO 639.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="languageCode" type="xs:language" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Name.CT">
+		<xs:annotation>
+			<xs:documentation>A character string (i.e. a finite set of characters) generally in the form of words of a language.
+			  languageCode - The code of the language used in the corresponding text as defined in ISO 639.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="languageCode" type="xs:language" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="ElectronicAddress.CT">
+		<xs:annotation>
+			<xs:documentation>An address for electronic communication, such as email address, URL.
+			  protocolCode - The code that specifies the communication protocol used. Reference Official IANA Registry of URI Schemes.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="protocolCode" type="xs:token" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="URI.CT">
+		<xs:annotation>
+			<xs:documentation>An address for electronic communication, such as email address, URL.
+			  protocolCode - The code that specifies the communication protocol used. Reference Official IANA Registry of URI Schemes.
+			</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:anyURI">
+				<xs:attribute name="protocolCode" type="xs:token" use="optional"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+</xs:schema>

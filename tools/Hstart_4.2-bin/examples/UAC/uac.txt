@@ -1,0 +1,18 @@
+Windows Shell Script: Enable/Disable UAC on Secure Desktop
+==========================================================
+
+There is a simple WSH script to enable/disable 'UAC on Secure Desktop' option 
+faster. The script prompts a simple message depending on the current UAC 
+settings.
+
+Run it using the following command line:
+
+  hstart /NOUAC "WScript //nologo "D:\Scripts\uac.js""
+
+Don't forget to replace "D:\Scripts\uac.js" with your own path.
+
+
+Read the full article at:
+http://www.ntwind.com/tutorials/taking-screenshots-of-uac-prompts-with-winsnap.html
+
+

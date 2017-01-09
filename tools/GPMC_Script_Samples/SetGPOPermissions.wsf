@@ -1,0 +1,238 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		SetGPOPermissions.wsf
+'// Author:		mtreit@microsoft.com
+'// Created:		11/13/2001
+'//
+'// Purpose:		Takes a GPO name, a security group or user name and 
+'//			a permission level and sets that permission
+'// Revision:		Ported from JScript->VBScript by dtsaltas (December 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList : Set ArgumentList = ProcessCommandLineArguments()
+Dim szDomainName : szDomainName     = ArgumentList.Item("Domain")
+Dim szGroupName  : szGroupName      = ArgumentList.Item("Group")
+Dim szPermission : szPermission     = ArgumentList.Item("Permission")
+Dim szGPOName    : szGPOName        = ArgumentList.Item("GPOName")
+Dim bReplace     : bReplace         = ArgumentList.Item("Replace")
+
+
+' Initialize the Domain object
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(szDomainName, "", Constants.UseAnyDC)
+
+' Determine what type of permission we are setting
+Dim bRemoveAll : bRemoveAll = False
+Dim iPerm
+Select Case LCase(szPermission)
+
+	Case "read"
+	   iPerm = Constants.PermGPORead
+
+	Case "edit"
+	   iPerm = Constants.PermGPOEdit
+	
+	Case "apply"
+	   iPerm = Constants.PermGPOApply
+
+	Case "fulledit"
+	   iPerm = Constants.PermGPOEditSecurityAndDelete
+
+	Case "none"
+	   bRemoveAll = True
+	   iPerm = Constants.PermGPORead
+	
+	Case Else
+	   iPerm = vbNull
+
+End Select
+
+If iPerm = vbNull Then
+	WScript.Echo "The specified permission type " & szPermission & " is not recognized."
+	WScript.Quit
+End If
+
+Dim strPermName
+If LCase(szPermission) = "none" Then
+	strPermName = "no"
+Else
+	strPermName = szPermission
+End If
+
+' Get the GPO object requested
+Dim GPMGPO
+On Error Resume Next
+
+Set GPMGPO = GetGPO(szGPOName, GPMDomain)
+
+Err.Clear
+
+If GPMGPO Is Nothing Then
+	WScript.Echo "Could not find GPO '" & szGPOName & "' in domain '" & GPMDomain.Domain & "'."
+	WScript.Quit()
+End If
+
+' We could get back a collection of multiple GPOs instead of just one
+' If so, warn the user and quit
+Dim iCount
+On Error Resume Next
+Err.Clear
+
+iCount = GPMGPO.Count
+
+If Err.Number <> 0 Then
+	iCount = 0
+End If
+
+On Error Goto 0
+
+If iCount > 0 Then
+	WScript.Echo "There are multiple GPOs with the name '" & szGPOName & "'"
+	WScript.Echo "Please pass in the unique ID (GUID) of the GPO you want to delete."
+	WScript.Quit
+End If
+
+
+' Now get the permission object to add to the GPO
+On Error Resume Next
+Err.Clear
+Dim GPMPermission
+Set GPMPermission = GPM.CreatePermission(szGroupName, iPerm, False)
+
+If Err.Number <> 0 Then
+	WScript.Echo "There was an error creating the permission object."
+	WScript.Echo "Verify the specified user or group exists."
+	WScript.Echo Hex(Err.Number) &  " - " & Err.Description
+	WScript.Quit
+End If
+
+' Get the existing set of permissions for the GPO
+Dim SecurityInfo
+Set SecurityInfo = GPMGPO.GetSecurityInfo()
+
+' Strip off any existing rights for the given group if /replace was specified
+If bReplace = True OR bRemoveAll = True Then
+	' Determine the SID
+	Dim strSID : strSID = GPMPermission.Trustee.TrusteeSid
+	SecurityInfo.RemoveTrustee strSID
+End If
+
+If bRemoveAll <> True Then
+	' Add the specified permissions
+	SecurityInfo.Add GPMPermission
+End If
+
+On Error Resume Next
+Err.Clear
+' Now write the new set of permissions to the GPO
+GPMGPO.SetSecurityInfo SecurityInfo
+
+If Err.Number <> 0 Then
+	WScript.Echo "There was an error setting the security permission."
+	WScript.Echo "Error was: " & Err.Number & " - " & Err.Description
+	WScript.Quit
+End If
+
+WScript.Echo "Modified GPO " & szGPOName & " to give " & szGroupName & " " & strPermName & " rights."
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim szGPOName    : szGPOName    = ""
+        Dim szGroupName  : szGroupName  = ""
+        Dim szPermission : szPermission = ""
+        Dim bReplace     : bReplace     = False
+	Dim szDomainName : szDomainName = ""
+
+
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length < 3 OR Not WScript.Arguments.Named.Exists("Permission") Then
+		Arguments.ShowUsage()
+		WScript.Quit
+	End If
+	
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	' get the parameters
+	szGPOName    = WScript.Arguments(0)
+	szGroupName  =  WScript.Arguments(1)
+	szPermission = WScript.Arguments.Named("Permission")
+
+	If WScript.Arguments.Named.Exists("Replace") Then
+		bReplace = True
+	End If
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+		szDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If szDomainName = "" Then
+		szDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "GPOName"   , szGPOName
+	Result.Add "Group"     , szGroupName
+	Result.Add "Permission", szPermission
+	Result.Add "Replace"   , bReplace
+	Result.Add "Domain"    , szDomainName
+	
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Takes a group name, GPO name and permission level and grants that level of permission on the GPO.
+</description>
+
+<unnamed name="GPOName" helpstring="The name of the GPO to process" type="string" required="true" />
+<unnamed name="GroupName" helpstring="The security principal to grant permissions to" type="string" required="true" />
+<named name="Permission" helpstring="The permission level to set. Can be 'Read', 'Apply', 'Edit', 'FullEdit' or 'None'" type="string" required="true" />
+<named name="Replace" helpstring="Specifies that any existing permissions should be replaced." type="string" required="true" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: SetGPOPermissions.wsf MyGPO "Policy Admins" /permission:Edit
+
+The script ensures that the security principal has at least the specified permission level, unless the /replace flag is passed in.
+</example>
+
+</runtime>
+
+</job>

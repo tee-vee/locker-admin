@@ -1,0 +1,240 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.  All rights reserved
+'//
+'// Title:		GrantPermissionOnAllGPOs.wsf
+'// Author:		mtreit@microsoft.com
+'// Purpose:		Demonstrate how to use the GPMC interfaces
+'//			to update permission level on all GPOs in the domain
+'// Revision:		Converted to .wsf, added error handling by Stwhit (October 31, 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+<job id="main">	
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+
+' Handle command line arguments
+Dim ArgumentList	: Set ArgumentList	= ProcessCommandLineArguments()
+Dim strTrustee		: strTrustee		= ArgumentList.Item("GroupName")
+Dim strPermission	: strPermission		= ArgumentList.Item("Permission")
+Dim bReplace		: bReplace		= ArgumentList.Item("Replace")
+Dim bQuietMode		: bQuietMode		= ArgumentList.Item("QuietMode")
+Dim strDomainName	: strDomainName		= ArgumentList.Item("Domain")	
+
+' Create global objects
+Dim GPM       : Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants : Set Constants = GPM.GetConstants()
+Dim GPMDomain : Set GPMDomain = GPM.GetDomain(strDomainName, "", Constants.UseAnyDC)
+
+Dim Response : Response = ""
+
+If bQuietMode <> True Then
+
+	' Warn the user that this may cause significant replication
+	WScript.Echo ""
+	WScript.Echo "Warning! By executing this script, all GPOs in the target domain will be"
+	WScript.Echo "updated with the desired security setting."
+	WScript.Echo ""
+	WScript.Echo "Both the Active Directory and Sysvol portions of the GPO will be updated."
+	WScript.Echo "This will result in the Sysvol contents of every GPO being copied to all"
+	WScript.Echo "replica domain controllers, and may cause excessive replication traffic"
+	WScript.Echo "in your domain."
+ 	WScript.Echo ""
+	WScript.Echo "If you have slow network links or restricted bandwidth between your domain"
+	WScript.Echo "controllers, you should check the amount of data on the Sysvol that would"
+	WScript.Echo "be replicated before performing this task."
+	WScript.Echo ""
+	WScript.Echo "Do you want to proceed? [Y/N]"
+
+	While WScript.StdIn.AtEndOfLine <> True
+		Response = WScript.StdIn.Read(1)
+	Wend
+
+	If LCase(Response) <> "y" Then
+		WScript.Echo vbcrlf & "Operation canceled by user. No action taken."
+		WScript.Quit
+	End If
+
+End If
+
+' Grant Permissions to AllGPOs in domain
+GrantPermissionOnAllGPOs strTrustee, strPermission, bReplace, GPMDomain
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+' Grants a permission level to specified group or user in a domain
+Function GrantPermissionOnAllGPOs(strTrustee, strPermission, bReplace, GPMDomain)
+		
+	Dim strLCasePermission
+	Dim bRemove : bRemove = false	  
+	Dim GPMPermission : GPMPermission = null
+	Dim GPMSearchCriteria 
+	Dim GPOList
+	Dim GPO
+	Dim SecInfo
+		
+	' Map the permission string to the actual permission level
+	strLCasePermission = lcase (strPermission)
+	Select Case strLCasePermission
+		Case "read"
+			Permission = Constants.PermGPORead
+		Case "apply"
+			Permission = Constants.PermGPOApply
+		Case "edit"
+			Permission = Constants.PermGPOEdit
+		Case "fulledit"
+			Permission = Constants.PermGPOEditSecurityAndDelete
+		Case "none"
+			Permission = 0
+			bRemove = true
+		Case Else
+			WScript.Echo "The permission level '" & strPermission & "' is not valid."
+			WScript.Arguments.ShowUsage()
+			WScript.Quit(-1)
+	End Select
+		
+	On Error Resume Next
+		' Get a GPMPermission object corresponding to the trustee and permission level specified
+		If bRemove = false Then
+			Set GPMPermission = GPM.CreatePermission(strTrustee, Permission, false)
+		End If
+		
+	If Err.Number <> 0 then
+		WScript.Echo strTrustee & " does not exist in the specified domain."
+		WScript.Echo "Error Number: '"& Hex(Err.Number) & "' Error Description: '" & Err.Description & "'"
+		Exit Function
+	End If
+	
+	' Get a collection of all GPOs in the domain
+	On Error Resume Next
+	
+	Set GPMSearchCriteria = GPM.CreateSearchCriteria
+	Set GPOList = GPMDomain.SearchGPOs(GPMSearchCriteria)
+	
+	' For each GPO, update the permissions
+	For Each GPO In GPOList
+		Set SecInfo = GPO.GetSecurityInfo
+		
+		If bRemove = false AND bReplace = false Then
+			' Add the new desired permission level
+			SecInfo.Add GPMPermission
+		End If
+				
+		If bRemove = true OR bReplace = true Then
+			SecInfo.RemoveTrustee strTrustee
+
+			If bReplace = true AND bRemove = false Then
+				'If /Replace switch is specified (true), re-add the trustee with the desired new priv level
+				SecInfo.Add GPMPermission
+			End If
+		End If								
+				
+		' Write the new GPMSecurityInfo back to the GPO
+		GPO.SetSecurityInfo SecInfo
+		
+		If Err.Number <> 0 Then
+			WScript.Echo "Error updating GPO '" & GPO.DisplayName & "' to '" & strPermission & "' for " & strTrustee
+			WScript.Echo Hex(Err.Number) & " - " & Err.Description
+			Err.Clear
+		Else
+			WScript.Echo "Updated GPO '" & GPO.DisplayName & "' to '" & strPermission & "' for " & strTrustee 
+		End If
+		
+	Next
+
+	If err.Number <> 0 then
+		WScript.Echo "Error processing GPOs in " & GPMDomain
+		WScript.Echo "Error Number: '"& Hex(Err.Number) & "' Error Description: '" & Err.Description & "'"
+		Exit Function
+	End If
+	
+End Function
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim strTrustee  : strTrustee  = ""
+	Dim strPermission : strPermission = ""
+	Dim bReplace : bReplace = false
+	Dim bQuietMode : bQuietMode = false
+	Dim strDomainName : strDomainName = ""
+
+	' Check if this is cscript. If not, print an error and bail out
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length < 2 Then
+		WScript.Echo "Incorrect minimum number of arguments.  Please verify."
+		WScript.Arguments.ShowUsage()
+		WScript.Quit(-1)
+	End If
+
+	Dim Result : Set Result = CreateObject("Scripting.Dictionary")
+
+	strTrustee = WScript.Arguments(0)
+	strPermission = WScript.Arguments.Named("Permission")
+
+	If WScript.Arguments.Named.Exists("Replace") Then
+		bReplace = true
+	End If
+
+	If WScript.Arguments.Named.Exists("Q") Then
+		bQuietMode = true
+	End If
+
+	If WScript.Arguments.Named.Exists("Domain") Then
+		strDomainName = WScript.Arguments.Named("Domain")
+	End If
+		
+	' Get the current domain if none was specified
+	' Stwhit note: doesn't seem to work if you don't specify a domain
+	If strDomainName = "" Then
+		strDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "GroupName"	, strTrustee
+	Result.Add "Permission"	, strPermission
+	Result.Add "Replace"	, bReplace
+	Result.Add "QuietMode"	, bQuietMode
+	Result.Add "Domain"	, strDomainName
+
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+Applies security permission level on all GPOs in a domain for a specific group or user
+</description>
+
+<unnamed name="GroupName" helpstring="The security principal to grant permissions to" type="string" required="true" />
+<named name="Permission" helpstring="The permission level to set. Can be 'Read', 'Apply', 'Edit', 'FullEdit' or 'None'" type="string" required="true" />
+<named name="Replace" helpstring="Specifies that any existing permissions should be replaced" type="simple" required="false" />
+<named name="Q" helpstring="Quiet mode - do not display a warning before executing the script" type="simple" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: GrantPermissionOnAllGPOs.wsf "Policy Admins" /Permission:Edit /Domain:test.microsoft.com
+</example>
+
+</runtime>
+</job>

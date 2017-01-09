@@ -1,0 +1,265 @@
+'////////////////////////////////////////////////////////////////////////////
+'// Copyright (c) Microsoft Corporation.	All rights reserved
+'//
+'// Title:	ImportAllGPOs.wsf
+'// Author:	mtreit@microsoft.com
+'// Created:	1/16/2002
+'//
+'//Purpose:	Takes a backup location and creates new copies of all GPOs
+'//		backed up in that location.
+'// Revision:	Ported from JScript->VBScript by dtsaltas (October 24, 2002)
+'//
+'////////////////////////////////////////////////////////////////////////////
+
+'///////////////////////////////////////
+'// Initialization
+'///////////////////////////////////////
+<job>
+
+' Include necessary libraries
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+' Create global objects for use by the rest of the script
+Dim GPM		: Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants	: Set Constants = GPM.GetConstants()
+
+'///////////////////////////////////////
+'// Main script
+'///////////////////////////////////////
+
+' Handle command line arguments
+Dim ArgumentList
+Set ArgumentList = ProcessCommandLineArguments()
+Dim strBackupLocation	: strBackupLocation	= ArgumentList.Item("BackupLocation")
+Dim strDomainName	: strDomainName		= ArgumentList.Item("Domain")
+Dim strMigrationTable	: strMigrationTable	= ArgumentList.Item("MigrationTable")
+
+' Validate the path given
+Dim bValidPath	: bValidPath = ValidatePath(strBackupLocation)
+
+If bValidPath = false Then
+	WScript.Echo "The path '" & strBackupLocation & "' could not be found."
+	WScript.Echo "Verify the path exists."
+	WScript.Quit
+End If
+
+' Initialize the Domain object
+Dim GPMDomain
+Set GPMDomain = GPM.GetDomain(strDomainName, "", Constants.UseAnyDC)
+
+
+' Initialize the migration table, if necessary
+Dim GPMMigrationTable
+
+If strMigrationTable <> "" Then
+
+	On Error Resume Next
+	Set GPMMigrationTable = GPM.GetMigrationTable(strMigrationTable)
+	
+	If Err.Number <> 0 Then
+		WScript.Echo "Could not initialize migration table '" & strMigrationTable & "'"
+		WScript.Quit(-1)
+	End If
+
+End If
+
+' Get the backup location specified
+Dim GPMBackupDir
+Set GPMBackupDir = GPM.GetBackupDir(strBackupLocation)
+
+' Get the most recent backups for each GPO in the backup location
+Dim GPMSearchCriteria
+Set GPMSearchCriteria = GPM.CreateSearchCriteria()
+GPMSearchCriteria.Add Constants.SearchPropertyBackupMostRecent, Constants.SearchOpEquals, True
+Dim BackupList 
+Set BackupList = GPMBackupDir.SearchBackups(GPMSearchCriteria)
+
+' Iterate over the list of backups and process each
+Dim GPMBackup
+Dim GPMGPO
+Dim iSuccessCount	: iSuccessCount		= 0
+Dim iFailureCount	: iFailureCount		= 0
+Dim bFailure		: bFailure		= False
+Dim bNewGPOCreated	: bNewGPOCreated	= False
+
+If BackupList.Count = 0 Then
+	WScript.Echo "No backups found at the specified location."
+	WScript.Quit
+End If
+
+For Each GPMBackup in BackupList
+
+	WScript.Echo vbcrlf & "Processing backed up GPO '" & GPMBackup.GPODisplayName & "'"
+
+	' See if a GPO with the same name as the backup already exists. If so, use it.
+	On Error Resume Next
+	GPMGPO = Null
+	Set GPMGPO = GetGPO(CStr(GPMBackup.GPODisplayName), GPMDomain)
+		
+	Dim iGPMGPOCount
+	iGPMGPOCount = GPMGPO.Count
+	If Err.Number <> 0 Then
+		Err.Clear
+		iGPMGPOCount = 1
+	End If
+
+	If IsNull(GPMGPO) Or iGPMGPOCount > 1 Then
+
+		' either the GPO was not found or more than one GPO with that name already exists. So we
+		' need to create a new GPO with the same name as the backup 
+			
+		Err.Clear
+
+		Set GPMGPO = GPMDomain.CreateGPO()
+		If Err.Number <> 0 Then
+			WScript.Echo "There was an error creating the GPO."
+			WScript.Echo "The error was: " & Hex(Err.Number) & " - " & Err.Description
+			iFailureCount = iFailureCount + 1
+			bFailure = True
+			Err.Clear
+		End If
+
+		'Now set the display name. If this fails, delete the GPO and report an error
+		
+		If Not bFailure = True Then
+			GPMGPO.DisplayName = CStr(GPMBackup.GPODisplayName)
+			If Err.Number <> 0 Then
+			GPMGPO.Delete
+
+			WScript.Echo "There was an error creating the GPO."
+			WScript.Echo "The error was: " & Hex(Err.Number) & " - " & Err.Description
+
+			iFailureCount = iFailureCount + 1
+			bFailure = True
+		Else
+			bNewGPOCreated = True
+			WScript.Echo "New GPO created successfully."
+			End If
+		End If
+	Else
+		WScript.Echo "Found existing GPO '" & CStr(GPMGPO.DisplayName) & "' to import into."	
+	End If
+
+	If Not bFailure = True Then
+
+		' Import the settings from the backup into the new GPO
+
+		Dim GPMResult
+		If IsNull(GPMMigrationTable) Then
+			Set GPMResult = GPMGPO.Import(0, GPMBackup)
+		Else
+			Set GPMResult = GPMGPO.Import(0, GPMBackup, GPMMigrationTable)
+		End If
+				
+		' call the OverallStatus method on the GPMResult. This will throw an exception if there
+		' were any errors during the import
+
+		GPMResult.OverallStatus
+			If Err.Number <> 0 Then
+				' If we were able to get a GPMResult object, print any status message errors
+				If Not GPMResult Is Nothing Then
+					PrintStatusMessages GPMResult
+				End If
+				' if we created a new GPO, but could not import the settings into it, delete it
+				If bNewGPOCreated = True Then
+					GPMGPO.Delete
+				End If
+
+				WScript.Echo "Error importing settings into GPO " & CStr(GPMBackup.GPODisplayName)
+				WScript.Echo Err.Number & " - " & Err.Description
+				iFailureCount = iFailureCount + 1
+				bFailure = True
+			End If		
+	End If
+		
+	If Not bFailure = True Then 
+		' Print any status message warnings
+		PrintStatusMessages GPMResult 
+		iSuccessCount = iSuccessCount + 1
+		WScript.Echo "The import operation completed successfully."
+	End If
+
+	' reset flags for next loop
+	bFailure = False
+	bNewGPOCreated = False
+Next
+
+WScript.Echo vbCrLf
+WScript.Echo "Import succeeded for " & iSuccessCount & " GPOs."
+WScript.Echo "Import failed for "	& iFailureCount & " GPOs."
+
+'///////////////////////////////////////
+'// Function Definitions
+'///////////////////////////////////////
+
+
+' Takes a WScript.Arguments object and returns a dictionary object
+' containing the named arguments and values that were passed in
+Function ProcessCommandLineArguments()
+
+	Dim strBackupLocation	: strBackupLocation	= ""
+	Dim strDomainName	: strDomainName		= ""
+	Dim strMigrationTable	: strMigrationTable	= ""
+
+	
+	' Check if this is cscript. If not, print an error and bail out
+
+	If UCase(Right(WScript.FullName,11)) = "WSCRIPT.EXE" Then
+		WScript.Echo "You must use cscript.exe to execute this script."
+		WScript.Quit(-1)
+	End If
+
+	If WScript.Arguments.Length = 0 Then
+		WScript.Arguments.ShowUsage()
+		WScript.Quit(0)
+	End If
+	
+	Dim Result
+		Set Result = CreateObject("Scripting.Dictionary")
+
+	strBackupLocation = WScript.Arguments(0)
+
+	' Get the Migration table to use, if specified
+	If WScript.Arguments.Named.Exists("MigrationTable") Then
+		strMigrationTable = WScript.Arguments.Named("MigrationTable")
+	End If
+
+	' Get the domain to use, if specified
+	If WScript.Arguments.Named.Exists("Domain") Then
+		strDomainName = WScript.Arguments.Named("Domain")
+	End If
+
+	' Get the current domain if none was specified
+	If strDomainName = "" Then
+		strDomainName = GetDNSDomainForCurrentUser()
+	End If
+
+	Result.Add "Domain", strDomainName
+	Result.Add "BackupLocation", strBackupLocation
+	Result.Add "MigrationTable", strMigrationTable
+
+	Set ProcessCommandLineArguments = Result
+
+End Function
+
+</script>
+<!-- Usage and command line argument information -->
+<runtime>
+
+<description>
+For all GPOs in a backup location, creates new GPOs and imports the settings into them.
+The names of the GPOs that were originally backed up are used for the new GPOs that are created.
+</description>
+
+<unnamed name="BackupLocation" helpstring="File system location containing the GPO backups" type="string" required="true" />
+<named name="MigrationTable" helpstring="Optional Migration table to use when doing the import" type="string" required="false" />
+<named name="Domain" helpstring="DNS name of domain" type="string" required="false" />
+
+<example>
+Example: ImportAllGPOs.wsf c:\GPO-Backups /MigrationTable:"Test.xml"
+</example>
+
+</runtime>
+
+</job>

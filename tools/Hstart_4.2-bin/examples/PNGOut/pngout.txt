@@ -1,0 +1,9 @@
+
+Read the full article at:
+http://www.ntwind.com/tutorials/optimize-images-from-explorer-context-menu.html
+
+
+hstart /NOCONSOLE /WAIT /TITLE=PNGOUT /MSG="Image compressed!" 
+       ""E:\BIN\pngout.exe" /q "D:\My Pictures\Screenshot.png""
+
+

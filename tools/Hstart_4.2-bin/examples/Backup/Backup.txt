@@ -1,0 +1,8 @@
+
+Read the full article at:
+http://www.ntwind.com/tutorials/perform-automatic-backups.html
+
+
+hstart /NOCONSOLE /WAIT /D="E:\Backup\" 
+       /TITLE="7-Zip Backup" /MSG="Backup is completed successfully!" 
+       /ERRMSG="An error occurred while backing up data." daily-backup.bat
