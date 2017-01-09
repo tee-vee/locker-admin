@@ -1,13 +1,9 @@
-<<<<<<< HEAD
 #
 # Derek Yuen <derekyuen@lockerlife.hk>
 #
 # January 2017
 #
 
-=======
-# Derek Yuen <derekyuen@lockerlife.hk>
-# January 2017
 
 %windir%\System32\w32tm /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
 
@@ -16,4 +12,3 @@ net stop wuauserv
 curl -o "c:\temp" --url "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix475191/7600/free/468848_intl_i386_zip.exe"
 "%programfiles%\7-zip\7z.exe" e -y c:\temp\hotfix.exe
 
->>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
