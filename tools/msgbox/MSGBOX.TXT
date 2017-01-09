@@ -1,0 +1,47 @@
+
+MSGBOX release 1.3  - Prompt for an answer and set errorlevel
+Copyright 1995-2000 by David G. Thomas.
+
+Usage: MSGBOX flags "title" prompt_string ...
+
+Flags:
+	/?	Help (this screen)
+
+	/BARI	Buttons: Abort/Retry/Ignore
+	/BO	Button:  OK
+	/BOC	Buttons: OK/CANCEL
+	/BRC	Buttons: Retry/CANCEL
+	/BYN	Buttons: Yes/No
+	/BYNC	Buttons: Yes/No/CANCEL
+
+	/Dx	Default is button #x (1, 2 or 3)
+	/F1	Send Console window to the foreground before input
+	/F2	Send Console window to the foreground after input
+	/H	Hide the console window during the prompt
+
+	/I!	Icon Exclamation
+	/II	Icon Information
+	/IQ	Icon Question
+	/IS	Icon Stop
+
+	/MA	Application Modal
+	/MS	System Modal (stays on top)
+	/MT	Task Modal
+
+	/Tn	Time out after n seconds
+	/SERVICE	This is a service
+
+prompt_string:
+	The rest of the line will be the prompt/message string.
+	If quoted then each quoted string will be on a separate line.
+
+Errorlevels returned:
+	1 = OK
+	2 = Yes
+	3 = Retry
+	4 = Ignore
+	5 = No
+	6 = Cancel
+	7 = Abort
+	8 = Time Out
+

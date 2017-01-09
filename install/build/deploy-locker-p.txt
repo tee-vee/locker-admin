@@ -49,6 +49,7 @@ cinst gow
 cinst nssm
 cinst wget
 cinst jq
+cinst whois
 cinst 7zip
 cinst boxstarter.common
 cinst boxstarter.winconfig
