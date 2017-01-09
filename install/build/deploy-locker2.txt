@@ -1,0 +1,17 @@
+#
+# Derek Yuen <derekyuen@lockerlife.hk>
+# January 2017
+#
+
+# light cleanup
+del /q c:\temp\*.exe
+del /q c:\temp\*.msu
+del /q %userprofile%\*.lnk
+
+#
+# get locker-admin 
+#
+rm -fr c:\temp\*.*
+"%programfiles%\git\cmd\git.exe" clone -v --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git c:\temp
+
+
