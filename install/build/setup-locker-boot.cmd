@@ -54,15 +54,11 @@ echo "LOCKERADMIN is: %LOCKERADMIN%"
 %bitsadmin% /reset
 cd %_tmp%
 
-<<<<<<< HEAD
 :: --------------------------------------------------------------------------------------------
 :: Temporarily stop antivirus 
 :: --------------------------------------------------------------------------------------------
 %windir%\System32\sc.exe stop MsMpSvc
 %windir%\System32\timeout.exe /t 5 /nobreak
-=======
-%windir%\System32\sc.exe stop MsMpSvc
->>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 %windir%\System32\sc.exe stop MsMpSvc
 ping -n 5 www.gov.hk > NUL
 
