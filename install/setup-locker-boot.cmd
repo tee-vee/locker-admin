@@ -5,28 +5,14 @@
 @echo off
 
 echo ====================================================
-echo          Start Locker Build Process - BOOTSTRAP
+echo          Start Locker Build Process - BOOT
 echo ====================================================
 :: build.cmd debug -- build debug version.
-title "LOCKER DEPLOYMENT - BOOTSTRAP"
+title "LOCKER DEPLOYMENT - BOOT"
 
 echo.
 echo.%time%
 echo.
-
-:: --------------------------------------------------------------------------------------------
-:: Let there be Internet?
-:: --------------------------------------------------------------------------------------------
-nslookup lockerlife.hk > NUL
-nslookup 103.13.50.62 > NUL
-ping -n 3 google-public-dns-a.google.com > NUL
-if Errorlevel 1 (
-    echo.
-    echo "No Internet?"
-    echo.
-    exit /b -1
-)
-
 
 :: --------------------------------------------------------------------------------------------
 :: setup work environment
@@ -34,13 +20,13 @@ if Errorlevel 1 (
 echo.
 echo "%~n0 setup work environment ..."
 echo.
-set bitsadmin=%windir%\system32\bitsadmin.exe
+set bitsadmin=c:\windows\system32\bitsadmin.exe
 set _tmp=C:\temp
 set baseurl=http://lockerlife.hk/deploy
 
 :: get environment variables
-REM ## %bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
-:: call me maybe? 
+%bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
+:: call me maybe?
 call setenv.cmd
 
 
@@ -53,54 +39,6 @@ echo "LOCKERADMIN is: %LOCKERADMIN%"
 :: just in case
 %bitsadmin% /reset
 cd %_tmp%
-
-<<<<<<< HEAD
-:: --------------------------------------------------------------------------------------------
-:: Temporarily stop antivirus 
-:: --------------------------------------------------------------------------------------------
-%windir%\System32\sc.exe stop MsMpSvc
-%windir%\System32\timeout.exe /t 5 /nobreak
-=======
-%windir%\System32\sc.exe stop MsMpSvc
->>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
-%windir%\System32\sc.exe stop MsMpSvc
-ping -n 5 www.gov.hk > NUL
-
-:: --------------------------------------------------------------------------------------------
-:: let's try git
-:: --------------------------------------------------------------------------------------------
-
-:: check for git
-if not exist "%git%" (
-
-:: okay, no git. let's install - first we need a install config:
-
-	set _gitconfig=%_tmp%\git-install.inf
-    set gitinstall=Git-2.11.0-32-bit.exe
-
-    type NUL > %_gitconfig%
-	echo "[Setup]" >> %_gitconfig%
-	echo "Lang=default" >> %_gitconfig%
-	echo "Dir=C:\Program Files\Git" >> %_gitconfig%
-	echo "Group=Git" >> %_gitconfig%
-	echo "NoIcons=0" >> %_gitconfig%
-	echo "SetupType=default" >> %_gitconfig%
-	echo "Components=assoc,assoc_sh" >> %_gitconfig%
-	echo "Tasks=" >> %_gitconfig%
-	echo "PathOption=Cmd" >> %_gitconfig%
-	echo "SSHOption=OpenSSH" >> %_gitconfig%
-	echo "CRLFOption=CRLFCommitAsIs" >> %_gitconfig%
-	echo "BashTerminalOption=ConHost" >> %_gitconfig%
-	echo "PerformanceTweaksFSCache=Enabled" >> %_gitconfig%
-	echo "UseCredentialManager=Disabled" >> %_gitconfig%
-	echo "EnableSymlinks=Disabled" >> %_gitconfig%
-	echo "EnableBuiltinDifftool=Disabled" >> %_gitconfig%
-    
-    %bitsadmin% /transfer "get git" %baseurl%\%gitinstall% %_tmp%\%gitinstall%
-    
-        
-	set _gitconfig=
-)
 
 
 :: --------------------------------------------------------------------------------------------
@@ -115,18 +53,16 @@ if not exist "C:\temp\hstart.exe" (
     set hstart=C:\temp\hstart.exe
 )
 
-:: 2017-01 dky - changeover to boxstarter deployment
-REM ## if not exist "C:\temp\psexec.exe" (
-REM ##     echo.
-REM ##     echo "%~n0: Downloading psexec"
-REM ##      %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/psexec.exe' 'C:\temp\psexec.exe';}"
-REM ##      start "psexec" %bitsadmin% /transfer "Download psexec" %baseurl%/psexec.exe %_tmp%\psexec.exe
-REM ## )
+if not exist "C:\temp\psexec.exe" (
+    echo.
+    echo "%~n0: Downloading psexec"
+    REM ## %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/psexec.exe' 'C:\temp\psexec.exe';}"
+    start "psexec" %bitsadmin% /transfer "Download psexec" %baseurl%/psexec.exe %_tmp%\psexec.exe
+)
 
-:: 2017-01 dky - changeover to boxstarter deployment
-REM ## echo.
-REM ## echo "%~n0: Downloading software management"
-REM ## start "choco" %bitsadmin% /transfer "get-choco" %baseurl%/install-chocolatey.cmd %_tmp%\install-chocolatey.cmd
+echo.
+echo "%~n0: Downloading software management"
+start "choco" %bitsadmin% /transfer "get-choco" %baseurl%/install-chocolatey.cmd %_tmp%\install-chocolatey.cmd
 REM ## %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/install-chocolatey.cmd' 'C:\temp\install-chocolatey.cmd';}"
 
 echo.
@@ -284,7 +220,6 @@ if not defined BACKUPPLAN (
 ) else (
     :: IF CONDITION NOT NORMAL (i.e. BACKUPPLAN DEFINED)
     setlocal
-    echo.
     echo "%~n0: Build Environment Condition = POOR"
     %hstart% /runas /wait %_tmp%\setup-locker-stage0.cmd
     echo "%~n0 stage 0 status check: %errorlevel%"
@@ -298,21 +233,10 @@ if not defined BACKUPPLAN (
     echo.
 
     echo.
-    echo "today's advice:"
-    curl https://api.github.com/zen & echo.
-    echo.
-
-    echo.
     echo "%~n0: Starting setup-locker-stage2"
     %hstart% /runas /wait "%LOCKERINSTALL%\build\setup-locker-stage2.cmd"
     echo "stage 2 status check: %errorlevel%"
     echo.
-
-    echo.
-    echo "today's advice:"
-    curl https://api.github.com/zen & echo.
-    echo.
-
     endlocal
 )
 

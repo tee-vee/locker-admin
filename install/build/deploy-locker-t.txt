@@ -1,0 +1,57 @@
+# Derek Yuen <derekyuen@lockerlife.hk>
+# January 2017
+# Bootstrap script for use with http://boxstarter.org/
+# To use append the URL to the raw snippet to http://boxstarter.org/package/nr/url? (e.g. http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/....txt)
+
+# Windows Settings
+Set-ExplorerOptions -showFileExtensions
+Update-ExecutionPolicy RemoteSigned
+Disable-MicrosoftUpdate
+Disable-UAC
+Disable-BingSearch
+Set-WindowsExplorerOptions -DisableShowHiddenFilesFoldersDrives -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableOpenFileExplorerToQuickAccess -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess -DisableExpandToOpenFolder
+Set-TaskbarOptions -Size Small -Lock -Dock Bottom
+
+# Windows updates & features
+# cinst dotnet4.6.2
+## cinst powershell4
+# cinst microsoftsecurityessentials
+
+# local primary dependencies
+# cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
+# cinst teamviewer
+# cinst pstools
+# cinst curl
+# cinst gow
+# cinst nssm
+# cinst wget
+# cinst jq
+# cinst 7zip
+# cinst boxstarter.common
+# cinst boxstarter.winconfig
+# cinst chocolatey
+
+# secondary dependencies
+# cinst fciv
+# cinst vim
+# cinst clink
+# cinst putty
+# cinst winscp
+# cinst rsync
+# cinst which
+# cinst pswindowsupdate
+# cinst handle
+# cinst notepadplusplus
+# cinst teraterm
+
+# linking ...
+curl --version
+wget --version
+
+mkdir c:\temp
+cd c:\temp
+
+
+pause
+
+

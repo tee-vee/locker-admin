@@ -3,6 +3,7 @@
 # Bootstrap script for use with http://boxstarter.org/
 # To use append the URL to the raw snippet to http://boxstarter.org/package/nr/url? (e.g. http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/....txt)
 
+<<<<<<< HEAD
 
 #
 # Create temp dir
@@ -13,14 +14,24 @@ mkdir c:\temp
 #
 # Set System time zone and time (via NTP)
 #
+=======
+# Create temp dir
+mkdir c:\temp
+
+# Set System time zone and time (via NTP)
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 %windir\System32\%tzutil.exe /s "China Standard Time"
 %windir%\System32\tzutil.exe /g
 %windir%\System32\w32tm.exe /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
 
+<<<<<<< HEAD
 
 #
 # Windows Settings
 #
+=======
+# Windows Settings
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 Set-ExplorerOptions -showFileExtensions
 Update-ExecutionPolicy RemoteSigned
 Disable-MicrosoftUpdate
@@ -29,18 +40,26 @@ Disable-BingSearch
 Set-WindowsExplorerOptions -DisableShowHiddenFilesFoldersDrives -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableOpenFileExplorerToQuickAccess -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess -DisableExpandToOpenFolder
 Set-TaskbarOptions -Size Small -Lock -Dock Bottom
 
+<<<<<<< HEAD
 
 #
 # Windows updates & features
 #
+=======
+# Windows updates & features
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 cinst dotnet4.6.2
 ## cinst powershell4
 cinst microsoftsecurityessentials
 
+<<<<<<< HEAD
 
 #
 # local primary dependencies
 #
+=======
+# local primary dependencies
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 cinst teamviewer
 cinst pstools
@@ -49,13 +68,19 @@ cinst gow
 cinst nssm
 cinst wget
 cinst jq
+<<<<<<< HEAD
 cinst whois
+=======
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 cinst 7zip
 cinst boxstarter.common
 cinst boxstarter.winconfig
 cinst chocolatey
 
+<<<<<<< HEAD
 #
+=======
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 # secondary dependencies
 cinst fciv
 cinst vim
@@ -69,12 +94,18 @@ cinst handle
 cinst notepadplusplus
 cinst teraterm
 
+<<<<<<< HEAD
 #
 # test curl
 curl http://httpbin.org/ip
 
 
 #
+=======
+# test curl
+curl http://httpbin.org/ip
+
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 # apply hotfix
 # See: https://support.microsoft.com/en-us/kb/2889748
 cd c:\temp
@@ -83,6 +114,7 @@ cd c:\temp
 "%programfiles%\7-zip\7z.exe" e -y c:\temp\hotfix.exe
 %windir%\System32\wusa.exe c:\temp\Windows6.1-KB2889748-x86.msu /passive /quiet /norestart
 
+<<<<<<< HEAD
 #
 # light cleanup
 #
@@ -127,4 +159,14 @@ echo "use cancel-shutdown on desktop to abort shutdown"
 echo "%windir%\System32\shutdown.exe /a" > %userprofile%\Desktop\CANCEL-SHUTDOWN.cmd
 timeout /T 15
 #%windir%\System32\shutdown.exe /r /t 11 /d p:02:04 /c "LockerLife Locker Deployment Stage 1" 
+=======
+del /q c:\temp\*.exe
+del /q c:\temp\*.msu
+
+# get install
+git clone https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git c:\temp
+
+
+
+>>>>>>> 0604056cb03b41a1b2c132dcad9df2b3711ce59e
 
