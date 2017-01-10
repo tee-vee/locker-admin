@@ -8,16 +8,20 @@
 #
 # Create temp dir
 #
-mkdir c:\temp
-mkdir c:\local
+New-Item C:\temp -type Directory -ErrorAction SilentlyContinue
+New-Item C:\local -type Directory -ErrorAction SilentlyContinue
 
+# Start Time and Transcript
+Start-Transcript -Path "$Env:USERPROFILE\Prereq.log"
+$StartDateTime = get-date
+WriteInfo "Script started at $StartDateTime"
 
 #
 # Set System time zone and time (via NTP)
 #
-%windir%\System32\tzutil.exe /s "China Standard Time"
-%windir%\System32\tzutil.exe /g
-%windir%\System32\w32tm.exe /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
+& "$Env:WinDir\System32\tzutil.exe" /s "China Standard Time"
+& "$Env:WinDir\System32\tzutil.exe" /g
+& "$Env:WinDir\System32\w32tm.exe" /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
 
 
 #
@@ -31,110 +35,105 @@ Disable-BingSearch
 Set-WindowsExplorerOptions -DisableShowHiddenFilesFoldersDrives -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableOpenFileExplorerToQuickAccess -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess -DisableExpandToOpenFolder
 Set-TaskbarOptions -Size Small -Lock -Dock Bottom
 
-
-#
-# Windows updates & features
-#
-cinst dotnet4.6.2
-## cinst powershell4
-cinst microsoftsecurityessentials
-
-
 #
 # local primary dependencies
 #
 cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
-cinst teamviewer
-cinst pstools
-cinst curl
-cinst gow
-cinst nssm
-cinst wget
 cinst jq
 cinst whois
 cinst 7zip
+cinst boxstarter
 cinst boxstarter.common
 cinst boxstarter.winconfig
-cinst chocolatey
 
 #
 # secondary dependencies
 cinst fciv
-cinst vim
 cinst clink
 cinst putty
 cinst winscp
 cinst rsync
 cinst which
-cinst pswindowsupdate
+#cinst pswindowsupdate
 cinst handle
 cinst notepadplusplus
 cinst teraterm
 
 #
 # test curl
-"%programfiles%\Gow\bin\curl.exe" http://httpbin.org/ip
+& "$Env:ProgramFiles\Gow\bin\curl.exe" http://httpbin.org/ip
 
 
 #
 # apply hotfix
 # See: https://support.microsoft.com/en-us/kb/2889748
-cd c:\temp
-%windir%\System32\net.exe stop wuauserv
-"%programfiles%\Gow\bin\curl.exe" -o "c:\temp" --url "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix475191/7600/free/468848_intl_i386_zip.exe"
-"%programfiles%\7-zip\7z.exe" e -y c:\temp\hotfix.exe
-%windir%\System32\wusa.exe c:\temp\Windows6.1-KB2889748-x86.msu /passive /quiet /norestart
+Set-Location -Path C:\temp
+& "$Env:SystemRoot\System32\net.exe" stop wuauserv
+& "$Env:ProgramFiles\Gow\bin\curl.exe" -o c:\temp\hotfix.exe --url "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix475191/7600/free/468848_intl_i386_zip.exe"
+$p = Start-Process "$Env:ProgramFiles\7-zip\7z.exe" -ArgumentList "e -y c:\temp\hotfix.exe" -Wait -NoNewWindow -PassThru
+& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /passive /quiet /norestart
 
-timeout /t 10 /nobreak
+& "$Env:SystemRoot\System32\timeout.exe" /t 10 /nobreak
 
 #
 # get new powershell
 #
-curl -k -o c:\temp\Windows6.1-KB2506143-x86.msu --url "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x86.msu"
-%windir%\System32\wusa.exe c:\temp\Windows6.1-KB2506143-x86.msu /passive /quiet /norestart
+& "$Env:ProgramFiles\Gow\bin\curl.exe" -k -o c:\temp\Windows6.1-KB2506143-x86.msu --url "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x86.msu"
+& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2506143-x86.msu /passive /quiet /norestart
 
-timeout /t 10 /nobreak
+& "$Env:SystemRoot\System32\timeout.exe" /t 10 /nobreak
 
 # 
 # Get and install IE11 - only supported browser (maintain supported footing)
 #
-"%programfiles%\Gow\bin\curl.exe" -k -o c:\temp\IE11-Windows6.1-x86-en-us.exe --url "https://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe"
-c:\temp\IE11-Windows6.1-x86-en-us.exe /quiet /norestart
+& "$Env:ProgramFiles\Gow\bin\curl.exe" -k -o c:\temp\IE11-Windows6.1-x86-en-us.exe --url "https://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe"
+& "c:\temp\IE11-Windows6.1-x86-en-us.exe" /quiet /norestart
 
-timeout /t 20 /nobreak
+& "$Env:SystemRoot\System32\timeout.exe" /t 20 /nobreak
 
 #
 # light cleanup
 #
-del /q c:\temp\*.exe
-del /q c:\temp\*.msu
-del /q %userprofile%\*.lnk
+Remove-Item c:\temp\*.exe -Force
+Remove-Item c:\temp\*.msu -Force
+Remove-Item "$Env:USERPROFILE\*.lnk" -Force
 
 
 #
 # generate call to next stage ...
 #
+if (!( Test-Path "$Env:USERPROFILE\Desktop\deploy-locker.cmd" )) {
+    $script = New-Item "$Env:USERPROFILE\Desktop\deploy-locker.cmd" -Type File
+    $fileContent =  @'
+
+@echo off
+:: deploy-locker.cmd
+
+:: prompt to scan sim card; capture input" >> %userprofile%\Desktop\deploy-locker.cmd
 echo.
-type NUL > %userprofile%\Desktop\deploy-locker.cmd
-echo "@echo off" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "#" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "# prompt to scan sim card; capture input" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "#" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "START http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/deploy-locker2.txt" >> %userprofile%\Desktop\deploy-locker.cmd
-echo "" >> %userprofile%\Desktop\deploy-locker.cmd
 
 echo.
+START http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/deploy-locker2.txt
+
+
+:: Next stage needs a Run-Once restart script to apply system-level changes
+REM ## Echo reg ADD HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce /f /v SCRIPT /t REG_SZ /d %1 >%SystemDrive%\RestartAndRun.signal 
+REM ## Echo reg ADD HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce /f /v SCRIPT /t REG_SZ /d %1 >%SystemDrive%\RestartAndRun.cmd
+REM ## reg ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce /f /v SCRIPT /t REG_SZ /d %SystemDrive%\RestartAndRun.cmd
+
+echo.
+shutdown -r -f -t 3
+'@
+    Set-Content -Path $script -value $fileContent
+}
 
 #
 # reboot
 #
 #echo.
-echo "Will reboot in 10 seconds"
-echo "use cancel-shutdown on desktop to abort shutdown"
-echo "%windir%\System32\shutdown.exe /a" > %userprofile%\Desktop\CANCEL-SHUTDOWN.cmd
-timeout /T 15
+Write-Host "Will reboot in 10 seconds"
+Write-Host "use cancel-shutdown on desktop to abort shutdown"
+Write-Host "%windir%\System32\shutdown.exe /a" > %userprofile%\Desktop\CANCEL-SHUTDOWN.cmd
+& "$Env:SystemRoot\System32\timeout.exe" /t 15
 #%windir%\System32\shutdown.exe /r /t 11 /d p:02:04 /c "LockerLife Locker Deployment Stage 1" 
 
