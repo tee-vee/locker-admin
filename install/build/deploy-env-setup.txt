@@ -1,0 +1,24 @@
+# Derek Yuen
+# January 2017
+# 
+# deploy-env-setup.txt 
+# Note: Restart is desirable in this situation ... 
+# to prevent restart, /package/nr/url?
+# http://boxstarter.org/package/url?https://gist.githubusercontent.com/locker-admin/8468c4bc904185f93d3e7bcd43b67234/raw/29b431c48fc083be6529468e9a9e27759a24f137/deploy-env-setup.txt
+# Origin: https://gist.githubusercontent.com/locker-admin/8468c4bc904185f93d3e7bcd43b67234/raw/29b431c48fc083be6529468e9a9e27759a24f137/deploy-env-setup.txt
+
+cinst boxstarter
+cinst boxstarter.common
+cinst dotnet4.6.2
+cinst curl
+cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
+cinst microsoftsecurityessentials
+cinst teamviewer
+cinst pstools
+cinst gow
+cinst nssm
+cinst wget
+cinst chocolatey
+cinst which
+cinst vim --version 7.4.1087 --allow-downgrade
+cinst 7zip
