@@ -1,33 +1,179 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
+#
 # Bootstrap script for use with http://boxstarter.org/
 # To use append the URL to the raw snippet to http://boxstarter.org/package/nr/url? 
 #  (e.g. http://boxstarter.org/package/nr/url?http://lockerlife.hk/deploy/....txt)
 
+## 
+Write-BoxstarterMessage -nologo
+Write-BoxstarterMessage -nologo "Hello and Welcome to LockerLife Locker Deployment"
+Write-BoxstarterMessage -nologo "This is deploy-locker-p"
+Write-BoxstarterMessage -nologo
+Write-BoxstarterMessage -nologo ""
 
-#
+# Global Variables for DeploymentRobot
+$Boxstarter.RebootOk=$false # Allow reboots
+Update-ExecutionPolicy Unrestricted
+
+
+$checkpointPrefix = 'BoxStarter:Checkpoint:'
+
+function Get-CheckpointName
+{
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]
+        $CheckpointName
+    )
+    return "$checkpointPrefix$CheckpointName"
+}
+
+function Set-Checkpoint
+{
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]
+        $CheckpointName,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $CheckpointValue
+    )
+
+    $key = Get-CheckpointName $CheckpointName
+    [Environment]::SetEnvironmentVariable($key, $CheckpointValue, "Machine") # for reboots
+    [Environment]::SetEnvironmentVariable($key, $CheckpointValue, "Process") # for right now
+}
+
+function Get-Checkpoint
+{
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]
+        $CheckpointName
+    )
+
+    $key = Get-CheckpointName $CheckpointName
+    [Environment]::GetEnvironmentVariable($key, "Process")
+}
+
+function Clear-Checkpoints
+{
+    $checkpointMarkers = Get-ChildItem Env: | where { $_.name -like "$checkpointPrefix*" } | Select -ExpandProperty name
+    foreach ($checkpointMarker in $checkpointMarkers) {
+        [Environment]::SetEnvironmentVariable($checkpointMarker, '', "Machine")
+        [Environment]::SetEnvironmentVariable($checkpointMarker, '', "Process")
+    }
+}
+
+function Get-SystemDrive
+{
+    return $env:SystemDrive[0]
+}
+
+function Get-DataDrive
+{
+    $driveLetter = Get-SystemDrive
+
+    if((Test-Path env:\BoxStarter:DataDrive) -and (Test-Path $env:BoxStarter:DataDrive))
+    {
+        $driveLetter = $env:BoxStarter:DataDrive
+    }
+
+    return $driveLetter
+}
+
+
+function Install-WebPackage 
+{
+    param(
+        $packageName,
+        [ValidateSet('exe', 'msi')]
+        $fileType,
+        $installParameters,
+        $downloadFolder,
+        $url,
+        $filename
+    )
+
+    $done = Get-Checkpoint -CheckpointName $packageName
+
+    if ($done) {
+        Write-BoxstarterMessage "$packageName already installed"
+        return
+    }
+
+
+    if ([String]::IsNullOrEmpty($filename))
+    {
+        $filename = Split-Path $url -Leaf
+    }
+
+    $fullFilename = Join-Path $downloadFolder $filename
+
+    if (test-path $fullFilename) {
+        Write-BoxstarterMessage "$fullFilename already exists"
+        return
+    }
+
+    Get-ChocolateyWebFile $packageName $fullFilename $url
+    Install-ChocolateyInstallPackage $packageName $fileType $installParameters $fullFilename
+
+    Set-Checkpoint -CheckpointName $packageName -CheckpointValue 1
+}
+
+
+# Disable hibernate
+Write-BoxstarterMessage -nologo "Disable System Hibernate"
+Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off'
+
+Write-BoxstarterMessage -nologo ""
+
+
 # Create temp dir
 #
+Write-BoxstarterMessage -nologo "Creating Setup Directories"
 New-Item C:\temp -type Directory -ErrorAction SilentlyContinue
 New-Item C:\local -type Directory -ErrorAction SilentlyContinue
 
+Write-BoxstarterMessage -nologo ""
+
+
 # Start Time and Transcript
+Write-BoxstarterMessage -nologo "Creating deployment logs"
 Start-Transcript -Path "$Env:USERPROFILE\Prereq.log"
 $StartDateTime = get-date
-WriteInfo "Script started at $StartDateTime"
+WriteInfo "Deployment started at $StartDateTime"
+Write-BoxstarterMessage -nologo ""
+
+Write-BoxstarterMessage -nologo ""
+
 
 #
 # Set System time zone and time (via NTP)
 #
+Write-BoxstarterMessage -nologo "Getting and Setting Time"
 & "$Env:WinDir\System32\tzutil.exe" /s "China Standard Time"
 & "$Env:WinDir\System32\tzutil.exe" /g
 & "$Env:WinDir\System32\w32tm.exe" /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
+## Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sShortDate -Value 'dd MMM yy'
+## Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sCountry -Value Australia
+## Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sShortTime -Value 'hh:mm tt'
+## Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sTimeFormat -Value 'hh:mm:ss tt'
+## Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sLanguage -Value ENA
+
+Write-BoxstarterMessage -nologo ""
 
 
 #
 # Windows Settings
 #
-Set-ExplorerOptions -showFileExtensions
+Write-BoxstarterMessage -nologo "More Windows Customizations"
+## Set-ExplorerOptions -showFileExtensions
 Update-ExecutionPolicy RemoteSigned
 Disable-MicrosoftUpdate
 Disable-UAC
@@ -35,29 +181,44 @@ Disable-BingSearch
 Set-WindowsExplorerOptions -DisableShowHiddenFilesFoldersDrives -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableOpenFileExplorerToQuickAccess -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess -DisableExpandToOpenFolder
 Set-TaskbarOptions -Size Small -Lock -Dock Bottom
 
+Write-BoxstarterMessage -nologo ""
+
+
 #
 # local primary dependencies
 #
-cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
-cinst jq
+Write-BoxstarterMessage -nologo ""
+Write-BoxstarterMessage -nologo "Installing Foundation and Supporting Programs ..."
+cinst powershell -version 4.0.0.20140724
 cinst whois
-cinst 7zip
-cinst boxstarter
-cinst boxstarter.common
-cinst boxstarter.winconfig
+cinst prefix --limitoutput
+cinst wincommandpaste
+cinst ProcExp --limitoutput
+## cinst javaruntime
+
+Write-BoxstarterMessage -nologo ""
+
 
 #
-# secondary dependencies
-cinst fciv
+# Secondary dependencies
+Write-BoxstarterMessage -nologo "Installing Supporting Programs (2)"
+## cinst fciv
 cinst clink
 cinst putty
 cinst winscp
 cinst rsync
-cinst which
-#cinst pswindowsupdate
-cinst handle
-cinst notepadplusplus
+#cinst pswindowsupdate --limitoutput
+cinst handle --limitoutput
+cinst notepadplusplus --limitoutput
 cinst teraterm
+
+# Windows Customizations
+cinst explorer-show-all-folders --limitoutput
+cinst explorer-show-all-folders --limitoutput
+## cinst explorer-expand-to-current-folder --limitoutput
+
+Write-BoxstarterMessage -nologo ""
+
 
 #
 # test curl
@@ -78,16 +239,17 @@ $p = Start-Process "$Env:ProgramFiles\7-zip\7z.exe" -ArgumentList "e -y c:\temp\
 #
 # get new powershell
 #
-& "$Env:ProgramFiles\Gow\bin\curl.exe" -k -o c:\temp\Windows6.1-KB2506143-x86.msu --url "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x86.msu"
-& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2506143-x86.msu /passive /quiet /norestart
+##& "$Env:ProgramFiles\Gow\bin\curl.exe" -k -o c:\temp\Windows6.1-KB2506143-x86.msu --url "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x86.msu"
+##& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2506143-x86.msu /passive /quiet /norestart
 
 & "$Env:SystemRoot\System32\timeout.exe" /t 10 /nobreak
 
 # 
 # Get and install IE11 - only supported browser (maintain supported footing)
 #
-& "$Env:ProgramFiles\Gow\bin\curl.exe" -k -o c:\temp\IE11-Windows6.1-x86-en-us.exe --url "https://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe"
-& "c:\temp\IE11-Windows6.1-x86-en-us.exe" /quiet /norestart
+## & "$Env:ProgramFiles\Gow\bin\curl.exe" -k -o c:\temp\IE11-Windows6.1-x86-en-us.exe --url "https://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe"
+## & "c:\temp\IE11-Windows6.1-x86-en-us.exe" /quiet /norestart
+## "https://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe"
 
 & "$Env:SystemRoot\System32\timeout.exe" /t 20 /nobreak
 
@@ -127,13 +289,16 @@ shutdown -r -f -t 3
     Set-Content -Path $script -value $fileContent
 }
 
+Clear-Checkpoints
+
 #
 # reboot
 #
 #echo.
 Write-Host "Will reboot in 10 seconds"
 Write-Host "use cancel-shutdown on desktop to abort shutdown"
-Write-Host "%windir%\System32\shutdown.exe /a" > %userprofile%\Desktop\CANCEL-SHUTDOWN.cmd
+Write-Host "$Env:SystemRoot\System32\shutdown.exe /a" > "$Env:SystemRoot\Desktop\CANCEL-SHUTDOWN.cmd"
 & "$Env:SystemRoot\System32\timeout.exe" /t 15
 #%windir%\System32\shutdown.exe /r /t 11 /d p:02:04 /c "LockerLife Locker Deployment Stage 1" 
+
 
