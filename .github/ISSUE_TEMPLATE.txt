@@ -1,0 +1,31 @@
+
+### What You Are Seeing?
+
+### What is Expected?
+
+### How Did You Get This To Happen? (Steps to Reproduce)
+
+### Output Log
+<!--
+When including the log information, please take a picture and either attach here or send it to us via email.
+It provides important information for determining an issue
+
+- We need ALL output, not just what you may believe is relevant.
+- We need ALL OUTPUT (take pictures!)
+- Describe what you did ...
+- If it is hard to reproduce with debug/verbose, the log file already logs with those parameters, just grab the relevant section from the log file (in the logs directory of your Chocolatey install).
+-->
+
+GIST LINK - Please create a gist and link to that gist here
+
+OR
+
+~~~sh
+PLACE LOG CONTENT HERE
+~~~
+
+<!--
+TEMPLATE FOR FEATURE REQUESTS:
+
+It's a blank slate, have fun!
+-->
