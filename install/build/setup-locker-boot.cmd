@@ -14,19 +14,6 @@ echo.
 echo.%time%
 echo.
 
-:: --------------------------------------------------------------------------------------------
-:: Let there be Internet?
-:: --------------------------------------------------------------------------------------------
-nslookup lockerlife.hk > NUL
-nslookup 103.13.50.62 > NUL
-ping -n 3 google-public-dns-a.google.com > NUL
-if Errorlevel 1 (
-    echo.
-    echo "No Internet?"
-    echo.
-    exit /b -1
-)
-
 
 :: --------------------------------------------------------------------------------------------
 :: setup work environment
