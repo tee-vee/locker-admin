@@ -21,28 +21,22 @@ Update-ExecutionPolicy Unrestricted
 choco feature enable --name=allowGlobalConfirmation
 
 ## base required packages (in proper install order)
-Write-BoxstarterMessage -nologo "Installing foundation programs ..."
-cinst dotnet4.6.2
 cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 cinst powershell -version 3.0.20121027
-cinst Boxstarter.Common
-cinst boxstarter.WinConfig
-cinst boxstarter.bootstrapper
-cinst Boxstarter.Chocolatey
-cinst chocolatey
 cinst curl
 cinst gow
 cinst teamviewer
 cinst nssm
 cinst wget
-cinst vim --allow-empty-checksums
-cinst jq --allow-empty-checksums --allow-empty-checksums-secure
-cinst microsoftsecurityessentials --allow-empty-checksums --allow-empty-checksums-secure
-cinst ie11 --allow-empty-checksums --allow-empty-checksums-secure
+cinst vim
+cinst jq
+cinst microsoftsecurityessentials -allow-empty-checksums -allow-empty-checksums-secure
+# cinst ie11 -allow-empty-checksums -allow-empty-checksums-secure
 cinst pstools
-cinst TelnetClient --source windowsfeatures
-cinst 7zip
-choco feature disable --name=allowGlobalConfirmation
+cinst TelnetClient -source windowsfeatures
+#cinst 7zip
+choco install 7zip.commandline
+choco feature disable -name=allowGlobalConfirmation
 
 ## Set extensions
 Set-WindowsExplorerOptions -EnableShowHiddenFilesFoldersDrives -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar
