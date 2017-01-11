@@ -42,53 +42,58 @@ echo "LOCKERADMIN is: %LOCKERADMIN%"
 cd %_tmp%
 
 :: --------------------------------------------------------------------------------------------
+:: enable administrator
+hstart.exe /D="C:\temp" /nouac /delay=2 /runas /wait net user administrator /active:yes
+
+
+:: --------------------------------------------------------------------------------------------
 :: Temporarily stop antivirus 
 :: --------------------------------------------------------------------------------------------
 %windir%\System32\sc.exe stop MsMpSvc
 %windir%\System32\timeout.exe /t 5 /nobreak
 %windir%\System32\sc.exe stop MsMpSvc
-ping -n 5 www.gov.hk > NUL
 
 :: --------------------------------------------------------------------------------------------
 :: let's try git
 :: --------------------------------------------------------------------------------------------
 
 :: check for git
-if not exist "%git%" (
+REM ## if not exist "%git%" (
 
 :: okay, no git. let's install - first we need a install config:
 
-	set _gitconfig=%_tmp%\git-install.inf
-    set gitinstall=Git-2.11.0-32-bit.exe
-
-    type NUL > %_gitconfig%
-	echo "[Setup]" >> %_gitconfig%
-	echo "Lang=default" >> %_gitconfig%
-	echo "Dir=C:\Program Files\Git" >> %_gitconfig%
-	echo "Group=Git" >> %_gitconfig%
-	echo "NoIcons=0" >> %_gitconfig%
-	echo "SetupType=default" >> %_gitconfig%
-	echo "Components=assoc,assoc_sh" >> %_gitconfig%
-	echo "Tasks=" >> %_gitconfig%
-	echo "PathOption=Cmd" >> %_gitconfig%
-	echo "SSHOption=OpenSSH" >> %_gitconfig%
-	echo "CRLFOption=CRLFCommitAsIs" >> %_gitconfig%
-	echo "BashTerminalOption=ConHost" >> %_gitconfig%
-	echo "PerformanceTweaksFSCache=Enabled" >> %_gitconfig%
-	echo "UseCredentialManager=Disabled" >> %_gitconfig%
-	echo "EnableSymlinks=Disabled" >> %_gitconfig%
-	echo "EnableBuiltinDifftool=Disabled" >> %_gitconfig%
-    
-    %bitsadmin% /transfer "get git" %baseurl%\%gitinstall% %_tmp%\%gitinstall%
-    
-        
-	set _gitconfig=
-)
+REM ## 	set _gitconfig=%_tmp%\git-install.inf
+REM ##     set gitinstall=Git-2.11.0-32-bit.exe
+REM ## 
+REM ##     type NUL > %_gitconfig%
+REM ## 	echo "[Setup]" >> %_gitconfig%
+REM ## 	echo "Lang=default" >> %_gitconfig%
+REM ## 	echo "Dir=C:\Program Files\Git" >> %_gitconfig%
+REM ## 	echo "Group=Git" >> %_gitconfig%
+REM ## 	echo "NoIcons=0" >> %_gitconfig%
+REM ## 	echo "SetupType=default" >> %_gitconfig%
+REM ## 	echo "Components=assoc,assoc_sh" >> %_gitconfig%
+REM ## 	echo "Tasks=" >> %_gitconfig%
+REM ## 	echo "PathOption=Cmd" >> %_gitconfig%
+REM ## 	echo "SSHOption=OpenSSH" >> %_gitconfig%
+REM ## 	echo "CRLFOption=CRLFCommitAsIs" >> %_gitconfig%
+REM ## 	echo "BashTerminalOption=ConHost" >> %_gitconfig%
+REM ## 	echo "PerformanceTweaksFSCache=Enabled" >> %_gitconfig%
+REM ## 	echo "UseCredentialManager=Disabled" >> %_gitconfig%
+REM ## 	echo "EnableSymlinks=Disabled" >> %_gitconfig%
+REM ## 	echo "EnableBuiltinDifftool=Disabled" >> %_gitconfig%
+REM ##     
+REM ##     %bitsadmin% /transfer "get git" %baseurl%\%gitinstall% %_tmp%\%gitinstall%
+REM ##     
+REM ##         
+REM ## 	set _gitconfig=
+REM ## )
 
 
 :: --------------------------------------------------------------------------------------------
 :: grab stuff
 :: --------------------------------------------------------------------------------------------
+
 
 if not exist "C:\temp\hstart.exe" (
     echo.
@@ -119,11 +124,11 @@ REM ## %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInt
 start "download system mods" %bitsadmin% /transfer "Downloading System Mods1" %baseurl%/enable-UAC.cmd %_tmp%\enable-UAC.cmd
 start "download system mods2" %bitsadmin% /transfer "Downloading System Mods2" %baseurl%/disable-UAC.cmd %_tmp%\disable-UAC.cmd
 
-if not exist "C:\temp\Dropbox16.4.30OfflineInstaller.exe" (
-    echo "%~n0: Downloading Dropbox"
-    REM ## %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/Dropbox16.4.30OfflineInstaller.exe' 'C:\temp\Dropbox16.4.30OfflineInstaller.exe';}"
-    start "download dropbox" /wait %bitsadmin% /transfer "Downloading Dropbox" %baseurl%/Dropbox16.4.30OfflineInstaller.exe %_tmp%\Dropbox16.4.30OfflineInstaller.exe
-)
+REM ## if not exist "C:\temp\Dropbox16.4.30OfflineInstaller.exe" (
+REM ##     echo "%~n0: Downloading Dropbox"
+REM ##    REM ## %ps% -Command "& {Import-Module BitsTransfer;Start-BitsTransfer -retryInterval 60 'http://lockerlife.hk/deploy/Dropbox16.4.30OfflineInstaller.exe' 'C:\temp\Dropbox16.4.30OfflineInstaller.exe';}"
+REM ##    start "download dropbox" /wait %bitsadmin% /transfer "Downloading Dropbox" %baseurl%/Dropbox16.4.30OfflineInstaller.exe %_tmp%\Dropbox16.4.30OfflineInstaller.exe
+REM ## )
 
 echo.
 echo "%~n0: downloading setup-locker-stage0-2"
@@ -153,17 +158,15 @@ echo "%~n0: Fixing powershell runtime execution policy"
 :: hstart.exe /runas /wait fix-powershell.cmd
 echo.
 
-:: hstart.exe /D="C:\temp" /nouac /delay=2 /runas /wait net user administrator /active:yes
-
 
 :: --------------------------------------------------------------------------------------------
 :: installing dropbox
 :: --------------------------------------------------------------------------------------------
-echo.
-echo "%~n0: Installing dropbox
-%hstart% /runas /nouac /wait "Dropbox16.4.30OfflineInstaller.exe /S"
-echo "%~n0 statuscheck: %errorlevel%"
-echo.
+REM ## echo.
+REM ## echo "%~n0: Installing dropbox
+REM ## %hstart% /runas /nouac /wait "Dropbox16.4.30OfflineInstaller.exe /S"
+REM ## echo "%~n0 statuscheck: %errorlevel%"
+REM ## echo.
 
 
 :: --------------------------------------------------------------------------------------------
