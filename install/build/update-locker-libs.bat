@@ -1,12 +1,27 @@
+:: Derek Yuen <derekyuen@lockerlife.hk>
+:: January 2017
+:: UPDATE LOCKER-LIBS
+
 @echo off
 
-REM UPDATE LOCKER-LIBS
+REM ## setlocal enableDelayedExpansion
+setlocal
 
-setlocal enableDelayedExpansion
+set CURLOPTS=-Ss
+set JQOPTS='.[].url'
+set XARGSOPTS=-P %NUMBER_OF_PROCESSORS%
 
-set URL=https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs
+set LOCKERCLOUDHOST=770txnczi6.execute-api.ap-northeast-1.amazonaws.com
+set LOCKERCLOUDLIBPATH=/dev/lockers/libs
 
-curl %URL% >
-for /F %%x in ('curl %URL% | jq ".[].url"') do (
-	echo %%x
-)
+set LOCKERLIBS=D:\locker-libs
+set LIBLIST=locker-libs-list.txt
+
+:: locate locker-libs first
+:: send output to locker-lib
+curl %CURLOPTS% --url https://%LOCKERCLOUDHOST%%LOCKERCLOUDLIBPATH% | jq %JQOPTS% > %LOCKERLIBS%\%LIBLIST%
+
+:: download
+REM ## (e.g. cat or type %LIBLIST% | xargs -n 1 curl -LO )
+cat %LIBLIST% | xargs %XARGSOPTS% -n 1 curl -LO
+
