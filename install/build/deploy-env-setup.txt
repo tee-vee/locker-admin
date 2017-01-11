@@ -7,18 +7,37 @@
 # http://boxstarter.org/package/url?https://gist.githubusercontent.com/locker-admin/8468c4bc904185f93d3e7bcd43b67234/raw/29b431c48fc083be6529468e9a9e27759a24f137/deploy-env-setup.txt
 # Origin: https://gist.githubusercontent.com/locker-admin/8468c4bc904185f93d3e7bcd43b67234/raw/29b431c48fc083be6529468e9a9e27759a24f137/deploy-env-setup.txt
 
-cinst boxstarter
-cinst boxstarter.common
+Write-BoxstarterMessage -nologo ""
+$Boxstarter.RebootOk=$true # Allow reboots
+Update-ExecutionPolicy Unrestricted
+
+# Set extensions
+Set-WindowsExplorerOptions -EnableShowHiddenFilesFoldersDrives -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar
+
+Write-BoxstarterMessage -nologo ""
+choco install TelnetClient --source windowsfeatures
+
+
+## base required packages (in proper install order)
+Write-BoxstarterMessage -nologo "Installing foundation programs ..."
 cinst dotnet4.6.2
-cinst curl
 cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
-cinst microsoftsecurityessentials
-cinst teamviewer
-cinst pstools
+choco install powershell -version 3.0.20121027
+cinst Boxstarter
+cinst boxstarter.bootstrapper
+cinst Boxstarter.Common
+cinst Boxstarter.Chocolatey
+cinst boxstarter.WinConfig
+cinst chocolatey
+cinst curl
 cinst gow
+cinst teamviewer
+cinst ie11
+cinst pstools
 cinst nssm
 cinst wget
-cinst chocolatey
 cinst which
-cinst vim --version 7.4.1087 --allow-downgrade
+cinst vim --version 7.4.1087 --allow-downgrade --limitoutput
 cinst 7zip
+cinst jq
+cinst microsoftsecurityessentials
