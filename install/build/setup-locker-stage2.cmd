@@ -10,7 +10,6 @@ echo ====================================================
 :: build.cmd debug -- build debug version.
 title "LOCKER DEPLOYMENT - STAGE 2"
 
-
 :: --------------------------------------------------------------------------------------------
 :: Setup work environment
 :: --------------------------------------------------------------------------------------------
@@ -24,6 +23,12 @@ set baseurl=http://lockerlife.hk/deploy
 :: --------------------------------------------------------------------------------------------
 :: get environment variables
 :: --------------------------------------------------------------------------------------------
+
+:: scoreboard
+if %_score%== (
+    set _score=-1000
+)
+
 :: call me maybe?
 if not defined _setenv (
     start "BitsAdmin Service Init" %bitsadmin% /reset
