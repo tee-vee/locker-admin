@@ -60,6 +60,8 @@ cd %WINDIR%\System32
 hstart /runas /wait "%PROGRAMFILES%\7-Zip\7z.exe" e -y -bt production-gpo.zip
 gpupdate /force 
 
+:: scrub "Recommended programs" options
+REM ## HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\filetype\OpenWithList
 
 echo %time%
 REM [] DISABLE AERO
