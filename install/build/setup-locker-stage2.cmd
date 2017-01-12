@@ -174,6 +174,8 @@ REM [] INSTALL DRIVERS
 REM
 ECHO "INSTALL DRIVERS"
 
+driverquery /v /fo csv > %_tmp%\drvlist.csv
+
 :: --------------------------------------------------------------------------------------------
 REM INSTALL PRINTER DRIVERS
 :: --------------------------------------------------------------------------------------------
@@ -544,6 +546,7 @@ del /f /s /q "%Public%\Recent\*.*"
 del /f /s /q "%ALLUSERSPROFILE%\Desktop\*.lnk"
 del /f /s /q "%ALLUSERSPROFILE%\Desktop\desktop.ini"
 del /f /s /q "%ALLUSERSPROFILE%\Recent\*.*"
+sfc /scannow
 start %windir%\System32\cleanmgr.exe /verylowdisk
 REM ## del /f /s /q %_tmp%\
 
@@ -563,6 +566,7 @@ copy /V /Y %LOCKERINSTALL%\build\complete-locker-setup.cmd %KIOSKHOME%\Desktop
 ECHO "%~n0 CLEANUP"
 echo.
 echo "%~n0 DISABLE GUEST USER"
+:: https://technet.microsoft.com/en-us/library/ff687018.aspx
 %windir%\System32\net user guest /active:no
 %LOCKERINSTALL%\build\disable-admin.cmd
 %LOCKERINSTALL%\build\enable-UAC.cmd
@@ -575,6 +579,11 @@ set _setenv=
 %SYSTEMROOT%\System32\WinSAT.exe -v forgethistory
 %SYSTEMROOT%\System32\dism.exe /english /online /disable-feature /featurename:WindowsGadgetPlatform
 
+
+:: Update MSAV Signature
+:: https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396 
+"%ProgramFiles%\Windows Defender\MpCmdRun.exe" -SignatureUpdate
+"%ProgramFiles%\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
 
 :: --------------------------------------------------------------------------------------------
