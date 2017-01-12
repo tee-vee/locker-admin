@@ -1,0 +1,2 @@
+# turn off startup sounds
+Set-ItemProperty -Path HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System -Name DisableStartupSound -Type DWord -Value 1
