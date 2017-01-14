@@ -1,0 +1,17 @@
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:act="http://www.axis.com/vapix/ws/action1">
+   <soap:Header/>
+   <soap:Body>
+      <act:AddActionConfiguration>
+         <act:NewActionConfiguration>
+            <!--Optional:-->
+            <act:Name>?</act:Name>
+            <act:TemplateToken>?</act:TemplateToken>
+            <!--Optional:-->
+            <act:Parameters>
+               <!--Zero or more repetitions:-->
+               <act:Parameter Name="?" Value="?"/>
+            </act:Parameters>
+         </act:NewActionConfiguration>
+      </act:AddActionConfiguration>
+   </soap:Body>
+</soap:Envelope>

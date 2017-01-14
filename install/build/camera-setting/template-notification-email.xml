@@ -1,0 +1,28 @@
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:act="http://www.axis.com/vapix/ws/action1">
+    <soap:Header/>
+    <soap:Body>
+        <act:AddActionConfiguration>
+            <act:NewActionConfiguration>
+                <act:Name>Send Notification</act:Name>
+                <act:TemplateToken>com.axis.action.fixed.notification.smtp</act:TemplateToken>
+                <act:Parameters>
+                    <act:Parameter Name="message" Value="ANY MESSAGE"/>
+                    <act:Parameter Name="email_to" Value="ANY EMAIL"/>
+                    <act:Parameter Name="subject" Value="ANY SUBJECT"/>
+                    <act:Parameter Name="pop_port" Value=""/>
+                    <act:Parameter Name="encryption" Value="ssl"/>
+                    <act:Parameter Name="qos" Value="0"/>
+                    <act:Parameter Name="login" Value="locker-status@locision.com"/>
+                    <act:Parameter Name="pop_login" Value=""/>
+                    <act:Parameter Name="password" Value="Locision1707"/>
+                    <act:Parameter Name="email_from" Value="locker-status@locision.com"/>
+                    <act:Parameter Name="host" Value="hwsmtp.exmail.qq.com"/>
+                    <act:Parameter Name="port" Value="465"/>
+                    <act:Parameter Name="pop_password" Value=""/>
+                    <act:Parameter Name="validate_server_cert" Value="0"/>
+                    <act:Parameter Name="pop_host" Value=""/>
+                </act:Parameters>
+            </act:NewActionConfiguration>
+        </act:AddActionConfiguration>
+    </soap:Body>
+</soap:Envelope>

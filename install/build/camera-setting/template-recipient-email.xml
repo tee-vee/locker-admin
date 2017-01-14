@@ -1,0 +1,26 @@
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:act="http://www.axis.com/vapix/ws/action1">
+    <soap:Header/>
+    <soap:Body>
+        <act:AddRecipientConfiguration>
+            <act:NewRecipientConfiguration>
+                <act:Name>locker-status</act:Name>
+                <act:TemplateToken>com.axis.recipient.smtp</act:TemplateToken>
+                <act:Parameters>
+                    <act:Parameter Name="validate_server_cert" Value="0"/>
+                    <act:Parameter Name="pop_password" Value=""/>
+                    <act:Parameter Name="port" Value="465"/>
+                    <act:Parameter Name="host" Value="hwsmtp.exmail.qq.com"/>
+                    <act:Parameter Name="email_from" Value="locker-status@locision.com"/>
+                    <act:Parameter Name="pop_login" Value=""/>
+                    <act:Parameter Name="password" Value="Locision1707"/>
+                    <act:Parameter Name="login" Value="locker-status@locision.com"/>
+                    <act:Parameter Name="email_to" Value="locker-status@lockerlife.hk"/>
+                    <act:Parameter Name="qos" Value="0"/>
+                    <act:Parameter Name="encryption" Value="ssl"/>
+                    <act:Parameter Name="pop_port" Value=""/>
+                    <act:Parameter Name="pop_host" Value=""/>
+                </act:Parameters>
+            </act:NewRecipientConfiguration>
+        </act:AddRecipientConfiguration>
+    </soap:Body>
+</soap:Envelope>
