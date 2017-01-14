@@ -1,9 +1,45 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
-#
-# This is a placeholder file. Please refer to:
-#   PRODUCTION -> locker-admin GitHub Gist
-#   DEV -> Use your own Gist
-#  
 
-http://boxstarter.org/package/url?https://gist.githubusercontent.com/locker-admin/1b5e226d8f756411bbe2997b34099733/raw/53de96f0643cc9c3606726720a51db231434cebe/01-bootstrap.ps1
+# 01-bootstrap
+
+# Allow unattended reboots
+$Boxstarter.RebootOk=$true
+$Boxstarter.NoPassword=$false
+$Boxstarter.AutoLogin=$true
+
+Disable-MicrosoftUpdate
+Disable-UAC
+Update-ExecutionPolicy Unrestricted
+
+#chocolatey feature enable -n=allowGlobalConfirmation
+
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst dotnet4.6.2 --version 4.6.01590.0
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst Boxstarter.Common
+cinst boxstarter.WinConfig
+cinst Boxstarter.Chocolatey
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst gow
+cinst nircmd
+cinst xmlstarlet
+cinst curl
+cinst nssm
+
+cinst ie11
+if (Test-PendingReboot) { Invoke-Reboot }
+
+& RefreshEnv
+
+#chocolatey feature disable -n=allowGlobalConfirmation
+
+& curl https://api.github.com/zen ; echo ""
+
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?http://lockerlife.hk/deploy/02-bootstrap.ps1
+
+if (Test-PendingReboot) { Invoke-Reboot }
+
