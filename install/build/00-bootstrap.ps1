@@ -119,8 +119,69 @@ Set-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name Nation -Val
 
 Add-Computer -WorkGroupName "LOCKERLIFE.HK"
 
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?http://lockerlife.hk/deploy/01-bootstrap.ps1
-
 # To reboot or not to reboot?
 if (Test-PendingReboot) { Invoke-Reboot }
+
+#& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?http://lockerlife.hk/deploy/01-bootstrap.ps1
+
+cinst dotnet4.6.2 --version 4.6.01590.0
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst Boxstarter.Common
+cinst boxstarter.WinConfig
+cinst Boxstarter.Chocolatey
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst gow
+cinst nircmd
+cinst xmlstarlet
+cinst curl
+cinst nssm
+
+cinst ie11
+if (Test-PendingReboot) { Invoke-Reboot }
+
+& RefreshEnv
+
+#chocolatey feature disable -n=allowGlobalConfirmation
+
+
+#Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
+Install-ChocolateyEnvironmentVariable "baseurl" "http://lockerlife.hk/deploy"
+Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "d:\java\jdk\bin" -variableType "Machine"
+Install-ChocolateyEnvironmentVariable "local" "C:\local"
+
+# Windows Explorer Settings
+Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
+
+# Small taskbar
+Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
+
+#chocolatey feature enable -n=allowGlobalConfirmation
+
+cinst chocolatey-core.extension
+cinst chocolatey-uninstall.extension
+cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
+
+cinst powershell -version 3.0.20121027
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst powershell4
+if (Test-PendingReboot) { Invoke-Reboot }
+
+cinst microsoftsecurityessentials -version 4.5.0216.0
+if (Test-PendingReboot) { Invoke-Reboot }
+
+choco install teamviewer.host --version 12.0.72365
+choco install vim
+choco install jq
+choco install clink
+choco install putty
+choco install rsync
+choco install wget
+choco install nssm
+choco install teraterm
+choco install sysinternals
+
+& curl https://api.github.com/zen ; echo ""
 
