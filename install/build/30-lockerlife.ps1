@@ -1,27 +1,27 @@
 # Derek Yuen <derekyuen@locision.com>
-# 
+#
 # December 2016
 
-@echo off
+# @echo off
 
-echo ====================================================
-echo          Start Locker Build Process - STAGE 3
-echo ====================================================
+WriteInfoHighlighted ====================================================
+WriteInfoHighlighted          Start Locker Build Process - STAGE 3
+WriteInfoHighlighted ====================================================
 # build.cmd debug -- build debug version.
-title "LOCKER DEPLOYMENT - STAGE 3"
+#title "LOCKER DEPLOYMENT - STAGE 3"
 
 # add user
-ECHO "ADD KIOSK USER"
+Write-Host "ADD KIOSK USER"
 ## %TOOLS%\hstart.exe /elevate /uac add-kiosk-user.bat
-& net localgroup kiosk-group /add
-& net user /add kiosk locision123 /active:yes /comment:"kiosk" /fullname:"kiosk" /passwordchg:no
-& net localgroup "kiosk-group" "kiosk" /add
+& "$Env:SystemRoot\System32\net.exe" localgroup kiosk-group /add
+& "$Env:SystemRoot\System32\net.exe" user /add kiosk locision123 /active:yes /comment:"kiosk" /fullname:"kiosk" /passwordchg:no
+& "$Env:SystemRoot\System32\net.exe" localgroup "kiosk-group" "kiosk" /add
 
 
 # [] auto create user profile (super quick, super dirty!)
 ECHO "%~n0 Create kiosk user profile"
-psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
-psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
+& psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
+& psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 
 # psexec -u kiosk to use bginfo to change background to black
 
@@ -31,8 +31,8 @@ psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 
 # set autologon to kiosk user
 
-# symlink \Users\kiosk\...\startup items\run.bat->dropbox\locker-shared\production\run.bat 
-# symlink D:\run.bat->dropbox\locker-shared\production\run.bat 
+# symlink \Users\kiosk\...\startup items\run.bat->dropbox\locker-shared\production\run.bat
+# symlink D:\run.bat->dropbox\locker-shared\production\run.bat
 
 # create finish-locker-setup.ps1 on kiosk\desktop, reboot
 
@@ -56,4 +56,3 @@ psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 #Disable-BingSearch
 #Disable-GameBarTips
 #Update-Help
-
