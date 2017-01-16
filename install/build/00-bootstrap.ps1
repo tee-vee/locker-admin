@@ -69,7 +69,7 @@ If (!( $isAdmin )) {
 
  # Start Time and Transcript
  Start-Transcript -Path "C:\$basename.log"
- $StartDateTime = get-date
+ $StartDateTime = Get-Date
  WriteInfo "$basename Script started at $StartDateTime"
 
 # Load DeploymentConfig ...
@@ -93,24 +93,25 @@ $Boxstarter.NoPassword=$false
 $Boxstarter.AutoLogin=$true
 
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
+#Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
 Install-ChocolateyEnvironmentVariable "JAVA_HOME" "d:\java\jre\bin"
 Install-ChocolateyEnvironmentVariable "baseurl" "http://lockerlife.hk/deploy"
 Install-ChocolateyEnvironmentVariable "deployurl" "http://lockerlife.hk/deploy"
 Install-ChocolateyEnvironmentVariable "domainname" "lockerlife.hk"
-Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
 Install-ChocolateyEnvironmentVariable "local" "C:\local"
 Install-ChocolateyEnvironmentVariable "_tmp" "C:\temp"
 Install-ChocolateyEnvironmentVariable "_temp" "C:\temp"                         # just in case
 Install-ChocolateyEnvironmentVariable "logs" "E:\logs"
-Install-ChocolateyEnvironmentVariable "curl" "$Env:ProgramFiles\Gow\bin\curl.exe"
-Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
-
 Install-ChocolateyEnvironmentVariable "iccid" "NULL"
 Install-ChocolateyEnvironmentVariable "hostname" "NULL"
 Install-ChocolateyEnvironmentVariable "sitename" "NULL"
 Install-ChocolateyEnvironmentVariable "images" "E:\images"
 Install-ChocolateyEnvironmentVariable "imagesarchive" "E:\images\archive"
 
+Install-ChocolateyEnvironmentVariable "curl" "$Env:ProgramFiles\Gow\bin\curl.exe"
+Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
+
+#Set-Alias show Get-ChildItem
 
 choco feature enable -n=allowGlobalConfirmation
 
@@ -166,10 +167,11 @@ Move-Item "$Env:ProgramData\chocolatey\tools\7za.exe" "$Env:ProgramData\chocolat
 cinst 7zip --forcex86
 cinst 7zip.commandline
 
+New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File -ErrorAction SilentlyContinue | Out-Null
 # important directories
-New-Item -Path "~\Documents\WindowsPowerShell" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
-New-Item -Path "~\Documents\PSConfiguration" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
-New-Item -Path "$Env:_tmp" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "~\Documents\WindowsPowerShell" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "~\Documents\PSConfiguration" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:_tmp" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "$Env:logs" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "$Env:images" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "$Env:imagesarchive" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
