@@ -18,11 +18,11 @@ Write-Host "DISABLE WIRELESS INTERFACE"
 & "$Env:SystemRoot\System32\reg.exe" add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /d 4 /f
 
 # check
-& "$Env:curl" -k -Ss --url https://api.github.com/users/lockerlife-kiosk
+& "$Env:curl" -k -Ss --url "https://api.github.com/users/lockerlife-kiosk"
 Write-Host ""
-& "$Env:curl" -k -Ss --include --url https://api.github.com/users/lockerlife-kiosk
+& "$Env:curl" -k -Ss --include --url "https://api.github.com/users/lockerlife-kiosk"
 Write-Host ""
-& "$Env:curl" -k -Ss --user "lockerlife-kiosk" --url https://api.github.com/authorizations
+& "$Env:curl" -k -Ss --user "lockerlife-kiosk" --url "https://api.github.com/authorizations"
 
 Write-Host ""
 # curl --user "lockerlife-kiosk:Locision123" https://api.github.com/gists/starred
@@ -32,7 +32,7 @@ Write-Host ""
 #curl --user "caspyin" --data @data.txt https://api.github.com/gists
 
 # get \local\src
-& "$Env:ProgramFiles\git\cmd\git.exe" clone --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git c:\local\src
+& "$Env:ProgramFiles\git\cmd\git.exe" clone --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git "$Env:local\src"
 #& "$Env:ProgramFiles\git\cmd\git.exe" clone --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git "$Env:local\src"
 
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
@@ -245,8 +245,8 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # Internet Explorer: All:
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
-Remove-Item "$env:userprofile\Desktop\*.lnk"
-Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
+Remove-Item "$Env:userprofile\Desktop\*.lnk"
+Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
 
 
 WriteInfo "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
