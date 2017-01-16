@@ -13,8 +13,7 @@ If (!( $isAdmin )) {
     exit
 }
 
-
-# Skipping 10 lines because if running when all prereqs met, statusbar covers powershell output
+# Let libs/modules load ...
  1..10 |% { Write-Host ""}
 
 
@@ -101,8 +100,17 @@ Install-ChocolateyEnvironmentVariable "domainname" "lockerlife.hk"
 Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
 Install-ChocolateyEnvironmentVariable "local" "C:\local"
 Install-ChocolateyEnvironmentVariable "_tmp" "C:\temp"
+Install-ChocolateyEnvironmentVariable "_temp" "C:\temp"                         # just in case
+Install-ChocolateyEnvironmentVariable "logs" "E:\logs"
 Install-ChocolateyEnvironmentVariable "curl" "$Env:ProgramFiles\Gow\bin\curl.exe"
 Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
+
+Install-ChocolateyEnvironmentVariable "iccid" "NULL"
+Install-ChocolateyEnvironmentVariable "hostname" "NULL"
+Install-ChocolateyEnvironmentVariable "sitename" "NULL"
+Install-ChocolateyEnvironmentVariable "images" "E:\images"
+Install-ChocolateyEnvironmentVariable "imagesarchive" "E:\images\archive"
+
 
 choco feature enable -n=allowGlobalConfirmation
 
@@ -116,7 +124,8 @@ choco feature enable -n=allowGlobalConfirmation
 WriteInfoHighlighted "Checking if OS is Windows 7"
 
 $BuildNumber=Get-WindowsBuildNumber
-if ($BuildNumber -le 7601) {
+if ($BuildNumber -le 7601)
+{
     # Windows 7 RTM=7600, SP1=7601
     WriteSuccess "`t PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
     } else {
@@ -158,14 +167,18 @@ cinst 7zip --forcex86
 cinst 7zip.commandline
 
 # important directories
-New-Item -Path "~\Documents\WindowsPowerShell" -ItemType directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:_tmp" -ItemType directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\bin" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\drivers" -ItemType Directory -Force -ErrorAction SilentlyContinue    # for drivers (https://github.com/lockerlife-kiosk/deployment)
-New-Item -Path "$Env:local\etc" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\gpo" -ItemType Directory -Force -ErrorAction SilentlyContinue        # for gpo (on locker-admin github)
-New-Item -Path "$Env:local\src" -ItemType Directory -Force -ErrorAction SilentlyContinue        # for locker-admin source (refactor?)
-New-Item -Path "$Env:local\status" -ItemType Directory -Force -ErrorAction SilentlyContinue     # for deployment logging (refactor to use e: when drive detection code ready)
+New-Item -Path "~\Documents\WindowsPowerShell" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "~\Documents\PSConfiguration" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:_tmp" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:logs" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:images" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:imagesarchive" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:local\bin" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:local\drivers" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null     # for drivers (https://github.com/lockerlife-kiosk/deployment)
+New-Item -Path "$Env:local\etc" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$Env:local\gpo" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null         # for gpo (on locker-admin github)
+New-Item -Path "$Env:local\src" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null         # for locker-admin source (refactor?)
+New-Item -Path "$Env:local\status" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null      # for deployment logging (refactor to use e: when drive detection code ready)
 # $a = New-Item -ItemType Directory "$env:USERPROFILE\Desktop\Unattended Builds" -Force -ErrorAction SilentlyContinue
 
 
@@ -173,8 +186,12 @@ New-Item -Path "$Env:local\status" -ItemType Directory -Force -ErrorAction Silen
 & "$env:SystemRoot\net.exe" user administrator /active:yes
 
 # turn off startup sounds
-#[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation] "DisableStartupSound"=dword:00000000
-Set-ItemProperty -Path HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System -Name DisableStartupSound -Type DWord -Value 1
+#[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation] "DisableStartupSound"=dword:00000001
+& "$Env:SystemRoot\System32\reg.exe" ADD HKLM\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation /v DisableStartupSound /t REG_DWORD /d 1 /f
+Set-ItemProperty "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Verbose
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Verbose
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" "DisableStartupSound" 1 -Verbose
+
 
 # set region
 Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sLanguage -Value ENU
@@ -218,7 +235,7 @@ cinst powershell -version 3.0.20121027
 
 Enable-MicrosoftUpdate
 # critical Windows svchost.exe memory leak update
-& "$Env:curl" -Ss -k -o c:\temp\Windows6.1-KB2889748-x86.msu --url https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu
+& "$Env:curl" -Ss -k -o c:\temp\Windows6.1-KB2889748-x86.msu --url "https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu"
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
@@ -231,6 +248,10 @@ Disable-MicrosoftUpdate
 & c:\temp\7z1604.exe /S
 
 cinst powershell4
+# powershell performance issues
+# https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
+& "$Env:curl" -Ss -k -o fix-powershell4-performance.ps1 --url "https://gist.githubusercontent.com/tee-vee/dd42f3f87160c68c0518217dba4ec21b/raw/c9835bcf2f0ac62225144a26ed53c6bfed784ba8/fix-powershell4-performance.ps1"
+
 if (Test-PendingReboot) { Invoke-Reboot }
 
 choco install powershell-packagemanagement -y
@@ -266,25 +287,25 @@ if (Test-PendingReboot) { Invoke-Reboot }
 
 
 # cleanup desktop
-if (Test-Path "$env:userprofile\Desktop\*.lnk") {
-    Remove-Item "$env:userprofile\Desktop\*.lnk"
+if (Test-Path "$Env:userprofile\Desktop\*.lnk") {
+    Remove-Item "$Env:userprofile\Desktop\*.lnk"
 }
 
 WriteInfo ""
 WriteInfo "add \local\etc"
-& "$Env:curl" -Ss -k -o c:\local\etc --url http://lockerlife.hk/deploy/PRODUCTION-201701-TEAMVIEWER-HOST.reg
+& "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "http://lockerlife.hk/deploy/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 
 WriteInfo ""
 Write-Host "backup (more reliable) unzip"
-& "$Env:curl" -Ss -k -o c:\temp\unzip-5.51-1.exe --url https://github.com/lockerlife-kiosk/deployment/blob/master/unzip-5.51-1.exe
-& "c:\temp\unzip-5.51-1.exe" /SILENT
+& "$Env:curl" -Ss -k -o "$Env:_tmp\unzip-5.51-1.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/unzip-5.51-1.exe"
+& "$Env:_tmp\unzip-5.51-1.exe" /SILENT
 
 
 # install java/jre
 Write-Host "Installing Java/jre"
-& "$Env:curl" -k -Ss -o c:\temp\jre-8u111-windows-i586.exe --url http://lockerlife.hk/deploy/_pkg/jre-8u111-windows-i586.exe
-& "$Env:curl" -k -Ss -o c:\temp\jre-install.properties --url http://lockerlife.hk/deploy/_pkg/jre-install.properties
-& "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L %SETUPLOGS%\jre-install.log
+& "$Env:curl" -k -Ss -o "$Env:_tmp\jre-8u111-windows-i586.exe" --url "http://lockerlife.hk/deploy/_pkg/jre-8u111-windows-i586.exe"
+& "$Env:curl" -k -Ss -o "$Env:_tmp\jre-install.properties" --url "http://lockerlife.hk/deploy/_pkg/jre-install.properties"
+& "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "jre-install.log"
 # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
 
 #Write-Host ""
@@ -367,7 +388,7 @@ Write-Host ""
 Update-Help
 
 WriteInfo ""
-& bginfo c:\local\etc\production-admin-bginfo.bgi /nolicprompt /silent
+& bginfo "$Env:local\etc\production-admin-bginfo.bgi" /nolicprompt /silent
 
 & "$Env:curl" -Ss -k https://api.github.com/zen ; echo ""
 WriteInfo ""
