@@ -13,7 +13,7 @@ Write-Host ""
 Write-Host "DISABLE WIRELESS INTERFACE"
 & "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
 & "$Env:local\bin\devcon.exe" disable BTH*
-svchost -k bthsvcs
+& "$Env:SystemRoot\System32\svchost.exe" -k bthsvcs
 & "$Env:SystemRoot\System32\net.exe" stop bthserv
 & "$Env:REGEXE" add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /d 4 /f
 
