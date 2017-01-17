@@ -1,13 +1,12 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
-# INSTALLCFG=%LOCKERINSTALL%\_pkg\jre-install.properties /L %SETUPLOGS%\jre-install.log"
+# 20-setup
 
-# Disable hibernate
-Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off'
+# hardware & windows configuration/settings
 
 # --------------------------------------------------------------------------------------------
-# [] DISABLE WIRELESS INTERFACE
+# DISABLE 802.11 / Bluetooth interfaces
 # --------------------------------------------------------------------------------------------
 Write-Host ""
 Write-Host "DISABLE WIRELESS INTERFACE"
@@ -16,6 +15,56 @@ Write-Host "DISABLE WIRELESS INTERFACE"
 & "$Env:SystemRoot\System32\svchost.exe" -k bthsvcs
 & "$Env:SystemRoot\System32\net.exe" stop bthserv
 & "$Env:SystemRoot\System32\reg.exe" add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /d 4 /f
+
+
+# --------------------------------------------------------------------------------------------
+# Install printer-filter driver
+# RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 path-to-inf\infname.inf
+# --------------------------------------------------------------------------------------------
+# choco install -y zadig
+# check; don't reinstall if already exists
+# ** implementation incomplete ...
+Write-Host "Checking printer status ..."
+& "$Env:SystemRoot\System32\webm\wmic.exe" printer list status | Select-String 80mm
+
+# step 1: install port
+#& "$Env:local\drivers\printer\Windows81Driver\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 %LOCKERDRIVERS%\printer\Windows81Driver\POS88EN.inf
+# %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
+Write-Host "20-setup: Installing printer-filter driver"
+& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --device=USB\VID_0483"&"PID_5720"&"REV_0100
+
+# step 2: connect/bridge printer-filter to printer
+# %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install --inf=%LOCKERDRIVERS%\printer\SPRT_Printer.inf
+Write-Host "20-setup: connecting printer-filter to printer"
+& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --inf="$Env:local\drivers\printer\SPRT_Printer.inf"
+
+# Print a test page to one or more printers
+# for /f "tokens=1-4 delims=," %i in (%Printer.txt%) do cscript prnctrl.vbs -t -b \\%PrintServer%\%i
+#Cscript Prnqctl -e
+& "C:\windows\system32\cscript.exe" "c:\windows\system32\Printing_Admin_Scripts\en-US\prncnfg.vbs" -g -p "80mm Series Printer"
+& "C:\windows\system32\cscript.exe" "c:\windows\system32\Printing_Admin_Scripts\en-US\prnqctl.vbs" -e -p "80mm Series Printer"
+
+# --------------------------------------------------------------------------------------------
+# Install scanner driver
+# --------------------------------------------------------------------------------------------
+# step 1: install usb virtual com interface
+# takes 3-5 minutes to install
+Write-Host "20-setup: installing usb virtual com interface for driver"
+& "$Env:local\drivers\udp_and_vcom_drv.2.1.1.Setup.exe" /S
+
+# windows should look in IOUSB for remainder; 00-bootstrap
+
+
+# --------------------------------------------------------------------------------------------
+# LockerLife setup ...
+# --------------------------------------------------------------------------------------------
+
+Write-Host ""
+Write-Host "LockerLife setup ..."
+Write-Host ""
+
+Write-Host ""
+Write-Host ""
 
 # check
 & "$Env:curl" -k -Ss --url "https://api.github.com/users/lockerlife-kiosk"
@@ -35,17 +84,91 @@ Write-Host ""
 & "$Env:ProgramFiles\git\cmd\git.exe" clone --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git "$Env:local\src"
 #& "$Env:ProgramFiles\git\cmd\git.exe" clone --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git "$Env:local\src"
 
+# get locker-libs
+# get-location of locker-libs first from locker-cloud; preserve Last-Modified --> restamp all files using each individual file Last-Modified time
+curl -RSs -k --url https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
+
+
+# initial download
+# (e.g. cat or type %LIBLIST% | xargs -n 1 curl -LO )
+# xargs -P to run in parallel; match nunber of cpu cores
+Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Processors" -n 1 curl -LO
+
+
+# lockerlife production
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/RunLockerLifeConsole.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/RunLockerLifeTV.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/core.jar"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/data-collection.jar"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/run-manual.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/run-test.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/run.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/scanner.jar"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/production-Locker-Console.zip"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/production-Locker-Slider.zip"
+& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/production-kioskServer.zip"
+
+
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
 
-# suppress errors
+
+## Windows Firewall
+WriteInfoHighlighted "LOCAL FIREWALL SETUP"
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall show allprofiles
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall set allrprofiles state on
+
+## QUERY FIREWALL RULES
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall show rule name=all
+
+## set logging
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall set currentprofile logging filename "e:\logs\pfirewall.log"
+
+## set applications
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Allow Java" dir=in action=allow program="D:\java\jre\java.exe"
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Allow Kioskserver" dir=in action=allow program="D:\kioskserver\kioskserver.exe"
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall set rule group="Remote Desktop" new enable=Yes
+
+## set rulesets
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 23" dir=in action=allow protocol=TCP localport=23
+#netsh advfirewall firewall delete rule name="Open Server Port 23" protocol=tcp localport=23
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 8080" dir=in action=allow protocol=TCP localport=8080
+#netsh advfirewall firewall delete rule name="Open Server Port 8080" protocol=tcp localport=8080
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 8081" dir=in action=allow protocol=TCP localport=8081
+#netsh advfirewall firewall delete rule name="Open Server Port 8081" protocol=tcp localport=8081
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 9012" dir=in action=allow protocol=TCP localport=9012
+
+
+
+## --------------------------------------------------------------------------------------------
+## Windows Customizations ...
+## --------------------------------------------------------------------------------------------
+# Disable hibernate
+Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off'
+
+# hide boot
+Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set bootux disabled'
+
+# disable booting into recovery mode
+# undo: bcdedit /deletevalue {current} bootstatuspolicy
+Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} recoveryenabled No'
+Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures'
+
+
+# --------------------------------------------------------------------------------------------
+# Adjust for Best Performance:
+#
+# [HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects]
+# "VisualFXSetting"=dword:00000002"
+
+# suppress errors (production) - need watchdog
 #%REGEXE% add "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Windows" /v ErrorMode /t REG_DWORD /d 2 /f >nul 2>&1
 #%REGEXE% add "HKEY_CURRENT_USER\Software\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f >nul 2>&1
 
 
 # Disable Location Tracking
 Write-Host "Disabling Location Tracking..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Verbose
+Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Verbose
 
 
 # Disable Advertising ID
@@ -58,12 +181,23 @@ If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo
 
 # Disable Remote Assistance
 Write-Host "Disabling Remote Assistance..."
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0
+Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0 -Verbose
 
 
 # #########
 # UI Tweaks
 # #########
+
+# kill aero and visual effects
+WriteInfoHighlighted ""
+Get-Service uxsms
+Stop-Service -Verbose uxsms
+
+
+# Change LogonUI wallpaper
+## first - create key
+Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\background" -Name OEMBackground -Value 1 -Force -Verbose
+Copy-Item "$Env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\logon-background-black.jpg" -force
 
 
 # Disable Action Center
@@ -73,7 +207,7 @@ If (!(Test-Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer")) {
 }
 
 Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter" -Type DWord -Value 1
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -Type DWord -Value 0
+# Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -Type DWord -Value 0
 
 
 # Enable Action Center
@@ -82,12 +216,11 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNoti
 
 
 # Disable Lock screen
-Write-Host "Disabling Lock screen..."
-If (!(Test-Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization")) {
-    New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" | Out-Null
-}
-
-Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -Type DWord -Value 1
+#Write-Host "Disabling Lock screen..."
+#If (!(Test-Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization")) {
+#    New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" | Out-Null
+#}
+#Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -Type DWord -Value 1
 
 
 # Enable Lock screen
@@ -139,14 +272,12 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Fla
 # Show Task View button
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton"
 
+# Show large icons in taskbar
+#Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons"
 
 # Show small icons in taskbar
 Write-Host "Showing small icons in taskbar..."
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Type DWord -Value 1
-
-
-# Show large icons in taskbar
-#Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons"
 
 
 # Hide Computer shortcut from desktop
@@ -219,6 +350,10 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}"
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}"
 
+# shorten shutdown wait time
+# WaitToKillServiceTimeout
+# REG add "HKLM\SYSTEM\CurrentControlSet\Control" /v Start /t REG_DWORD /d 4 /f
+
 
 #############
 # finishing #
@@ -246,7 +381,8 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
 Remove-Item "$Env:userprofile\Desktop\*.lnk"
-Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
+Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" `
+                           -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
 
 
 WriteInfo "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
