@@ -10,6 +10,35 @@ WriteInfoHighlighted ====================================================
 # build.cmd debug -- build debug version.
 #title "LOCKER DEPLOYMENT - STAGE 3"
 
+
+# --------------------------------------------------------------------------------------------
+Write-Host "."
+WriteInfoHighlighted "install services"
+WriteInfoHighlighted"INSTALL SCANNER.JAR AS SERVICE"
+#CALL %LOCKERINSTALL%\build\new-service-scanner.bat
+#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
+Start-Process 'new-service-scanner.bat' -Verb runAs
+
+
+Write-Host "."
+WriteInfoHighlighted "INSTALL KIOSKSERVER AS SERVICE"
+#CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
+#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
+Start-Process 'new-service-kioskserver.bat' -Verb runAs
+
+Write-Host "."
+WriteInfoHighlighted "INSTALL DATA-COLLECTION.JAR AS SERVICE"
+#CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
+#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
+Start-Process 'ew-service-datacollection.bat' -Verb runAs
+
+
+Write-Host "."
+WriteInfoHighlighted "INSTALL CORE.JAR AS SERVICE"
+## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
+Start-Process 'new-service-core.bat' -Verb runAs
+
+
 # add user
 Write-Host "ADD KIOSK USER"
 ## %TOOLS%\hstart.exe /elevate /uac add-kiosk-user.bat
@@ -19,7 +48,7 @@ Write-Host "ADD KIOSK USER"
 
 
 # [] auto create user profile (super quick, super dirty!)
-ECHO "%~n0 Create kiosk user profile"
+Write-Host "Create kiosk user profile"
 & psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 & psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 
@@ -56,3 +85,8 @@ ECHO "%~n0 Create kiosk user profile"
 #Disable-BingSearch
 #Disable-GameBarTips
 #Update-Help
+
+# --------------------------------------------------------------------------------------------
+Write-Host "Set Autologon"
+WriteInfoHighlighted "SETUP AUTOLOGON"
+Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
