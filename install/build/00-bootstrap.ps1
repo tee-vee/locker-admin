@@ -113,6 +113,8 @@ Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
 
 #Set-Alias show Get-ChildItem
 
+$env:Path += ";C:\Program Files\GnuWin32\bin"
+
 choco feature enable -n=allowGlobalConfirmation
 
 
@@ -154,6 +156,7 @@ Stop-Service w32time -Confirm:$False                                            
 & "$Env:SystemRoot\System32\tzutil.exe" /s "China Standard Time"                    # set timezone
 & "$Env:SystemRoot\System32\w32tm.exe" /config /syncfromflags:manual `
         /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"    # set time
+
 Start-Service w32time -Confirm:$False                                               # start windows time service
 
 
@@ -168,9 +171,11 @@ cinst 7zip --forcex86
 cinst 7zip.commandline
 
 New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File -ErrorAction SilentlyContinue | Out-Null
+
 # important directories
 New-Item -Path "~\Documents\WindowsPowerShell" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "~\Documents\PSConfiguration" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "D:\locker-libs" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "$Env:_tmp" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "$Env:logs" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -Path "$Env:images" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
@@ -182,6 +187,7 @@ New-Item -Path "$Env:local\gpo" -ItemType Directory -Force -ErrorAction Silently
 New-Item -Path "$Env:local\src" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null         # for locker-admin source (refactor?)
 New-Item -Path "$Env:local\status" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null      # for deployment logging (refactor to use e: when drive detection code ready)
 # $a = New-Item -ItemType Directory "$env:USERPROFILE\Desktop\Unattended Builds" -Force -ErrorAction SilentlyContinue
+
 
 
 # enable administrator
@@ -214,8 +220,8 @@ cinst chocolatey-core.extension
 cinst chocolatey-uninstall.extension
 
 # cleanup desktop
-if (Test-Path "$env:userprofile\Desktop\*.lnk") {
-    Remove-Item "$env:userprofile\Desktop\*.lnk"
+if (Test-Path "$Env:userprofile\Desktop\*.lnk") {
+    Remove-Item "$Env:userprofile\Desktop\*.lnk"
 }
 
 if (Test-PendingReboot) { Invoke-Reboot }
@@ -237,22 +243,24 @@ cinst powershell -version 3.0.20121027
 
 Enable-MicrosoftUpdate
 # critical Windows svchost.exe memory leak update
-& "$Env:curl" -Ss -k -o c:\temp\Windows6.1-KB2889748-x86.msu --url "https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu"
+& "$Env:curl" -Ss -k -o "$Env:_tmp\Windows6.1-KB2889748-x86.msu" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu"
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 
 if (Test-PendingReboot) { Invoke-Reboot }
 
+# usually machine rebooted ...
 Disable-MicrosoftUpdate
 
-& "$Env:curl" -Ss -o c:\temp\7z1604.exe --url http://www.7-zip.org/a/7z1604.exe
-& c:\temp\7z1604.exe /S
+& "$Env:curl" -Ss -o "$Env:_tmp\7z1604.exe" --url "http://www.7-zip.org/a/7z1604.exe"
+& "$env:_tmp\7z1604.exe" /S
 
 cinst powershell4
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
-& "$Env:curl" -Ss -k -o fix-powershell4-performance.ps1 --url "https://gist.githubusercontent.com/tee-vee/dd42f3f87160c68c0518217dba4ec21b/raw/c9835bcf2f0ac62225144a26ed53c6bfed784ba8/fix-powershell4-performance.ps1"
+& "$Env:curl" -Ss -k -o "$Env:local\bin\fix-powershell4-performance.ps1" --url "https://gist.githubusercontent.com/tee-vee/dd42f3f87160c68c0518217dba4ec21b/raw/c9835bcf2f0ac62225144a26ed53c6bfed784ba8/fix-powershell4-performance.ps1"
+& "$Env:local\bin\fix-powershell4-performance.ps1"
 
 if (Test-PendingReboot) { Invoke-Reboot }
 
@@ -281,20 +289,20 @@ choco install rsync
 choco install wget
 choco install nssm
 choco install psexec
-#choco install teraterm
 choco install sysinternals
+#choco install teraterm
 
 cinst TelnetClient -source windowsfeatures
 if (Test-PendingReboot) { Invoke-Reboot }
 
 
 # cleanup desktop
-if (Test-Path "$Env:userprofile\Desktop\*.lnk") {
-    Remove-Item "$Env:userprofile\Desktop\*.lnk"
+if (Test-Path "$Env:UserProfile\Desktop\*.lnk") {
+    Remove-Item "$Env:UserProfile\Desktop\*.lnk"
 }
 
 WriteInfo ""
-WriteInfo "add \local\etc"
+WriteInfo "add local etc"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "http://lockerlife.hk/deploy/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 
 WriteInfo ""
@@ -304,10 +312,10 @@ Write-Host "backup (more reliable) unzip"
 
 
 # install java/jre
-Write-Host "Installing Java/jre"
+Write-Host "Installing Java jre"
 & "$Env:curl" -k -Ss -o "$Env:_tmp\jre-8u111-windows-i586.exe" --url "http://lockerlife.hk/deploy/_pkg/jre-8u111-windows-i586.exe"
 & "$Env:curl" -k -Ss -o "$Env:_tmp\jre-install.properties" --url "http://lockerlife.hk/deploy/_pkg/jre-install.properties"
-& "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "jre-install.log"
+& "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
 # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
 
 #Write-Host ""
@@ -315,38 +323,48 @@ Write-Host "Installing Java/jre"
 #"$env:programfiles\7-Zip\7z.exe" e c:\local\bin\nssm-2.24.zip -y
 
 Write-Host "updates"
-& "$Env:curl" -k -Ss -o c:\temp\Windows6.1-KB2889748-x86.msu  --url https://github.com/lockerlife-kiosk/deployment/blob/master/Windows6.1-KB2889748-x86.msu
-& "$Env:curl" -k -Ss -o c:\temp\402810_intl_i386_zip.exe --url https://github.com/lockerlife-kiosk/deployment/blob/master/402810_intl_i386_zip.exe
+& "$Env:curl" -k -Ss -o "c:\temp\Windows6.1-KB2889748-x86.msu"  --url "https://github.com/lockerlife-kiosk/deployment/blob/master/Windows6.1-KB2889748-x86.msu"
+& "$Env:curl" -k -Ss -o "c:\temp\402810_intl_i386_zip.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/402810_intl_i386_zip.exe"
 
-& "$Env:curl" -k -Ss -o c:\local\bin\nircmd.zip --url https://github.com/lockerlife-kiosk/deployment/blob/master/nircmd.zip
+& "$Env:curl" -k -Ss -o "c:\local\bin\nircmd.zip "--url "https://github.com/lockerlife-kiosk/deployment/blob/master/nircmd.zip"
 #"$env:programfiles\7-Zip\7z.exe" e c:\local\bin\nircmd.zip -y
 
 Write-Host "xmlstarlet"
-& "$Env:curl" -k -Ss -o c:\local\bin\xmlstarlet-1.6.1-win32.zip --url https://github.com/lockerlife-kiosk/deployment/blob/master/xmlstarlet-1.6.1-win32.zip
+& "$Env:curl" -k -Ss -o "c:\local\bin\xml.exe" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/xml.exe"
 #"$env:programfiles\7-Zip\7z.exe" e c:\local\bin\xmlstarlet-1.6.1-win32.zip -y
 
 Write-Host "devcon, nssm, hstart"
-& "$Env:curl" -Ss -k -o c:\Windows\System32\devcon.exe --url https://github.com/lockerlife-kiosk/deployment/blob/master/devcon.exe
-& "$Env:curl" -Ss -k -o c:\local\bin\nssm.exe --url https://github.com/lockerlife-kiosk/deployment/blob/master/nssm.exe
-& "$Env:curl" -Ss -k -o c:\local\bin\hstart.exe --url https://github.com/lockerlife-kiosk/deployment/blob/master/hstart.exe
+& "$Env:curl" -Ss -k -o "c:\Windows\System32\devcon.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/devcon.exe"
+& "$Env:curl" -Ss -k -o "$Env:local\bin\nssm.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/nssm.exe"
+& "$Env:curl" -Ss -k -o "$Env:local\bin\hstart.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/hstart.exe"
 
-& "$Env:curl" -Ss -o c:\local\bin\update-Gac.ps1 --url https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1
+& "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
 
 Write-Host ""
 Write-Host "Downloading Drivers"
-& "$Env:curl" -Ss -k -o c:\local\drivers\printer-filter.zip --url https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip
-& "$Env:curl" -Ss -k -o c:\local\drivers\printer.zip --url https://github.com/lockerlife-kiosk/deployment/blob/master/printer.zip
-& "$Env:curl" -Ss -k -o c:\local\drivers\scanner.zip --url https://github.com/lockerlife-kiosk/deployment/blob/master/scanner.zip
+Set-Location -Path \local\drivers
+#& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
+& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "http://lockerlife.hk/deploy/printer-filter.zip"
+& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer-filter.zip"
+& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.zip" --url "http://lockerlife.hk/deploy/printer.zip"
+& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer.zip"
+& "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "http://lockerlife.hk/deploy/scanner.zip"
+& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "scanner.zip"
 
 Write-Host ""
-& "$Env:curl" -Ss -k -o c:\local\etc\kiosk-production-black.bgi --url http://lockerlife.hk/deploy/kiosk-production-black.bgi
+& "$Env:curl" -Ss -k -o "$Env:local\etc\kiosk-production-black.bgi" --url "http://lockerlife.hk/deploy/kiosk-production-black.bgi"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\production-admin-bginfo.bgi" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/production-admin-bginfo.bgi"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\production-kiosk-bginfo.bgi" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/production-kiosk-bginfo.bgi"
 
 Write-Host ""
 Write-Host "Gpo"
-& "$Env:curl" -Ss -k -o c:\local\gpo\production-gpo.zip --url http://lockerlife.hk/deploy/production-gpo.zip
+Set-Location -Path \local\gpo
+& "$Env:curl" -Ss -k -o "$Env:local\gpo\production-gpo.zip" --url "http://lockerlife.hk/deploy/production-gpo.zip"
+& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "$Env:local\gpo\production-gpo.zip"
+
 
 # cleanup
-Remove-Item "$env:userprofile\Desktop\*.lnk"
+Remove-Item "$Env:userprofile\Desktop\*.lnk"
 & RefreshEnv
 
 ## Register Locker with Locker Cloud:
@@ -372,7 +390,7 @@ Write-Host ""
 if (Test-PendingReboot) { Invoke-Reboot }
 
 Write-Host ""
-& "$Env:curl" -Ss -k --url https://api.github.com/zen ; echo ""
+& "$Env:curl" -Ss -k --url "https://api.github.com/zen" ; echo ""
 Write-Host ""
 
 # & "$Env:rm" -r -f "$Env:local\src\*"
