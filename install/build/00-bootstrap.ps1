@@ -6,6 +6,9 @@
 ### ----- reload current shell elevated to administrator -> prepare for 01-bootstrap -> exec 01-bootstrap ----- ###
 
 # Verify Running as Admin
+Write-Host "."
+Write-Host "."
+
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
     Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Start-Sleep -Seconds 1
@@ -86,6 +89,9 @@ If (!( $isAdmin )) {
 #####################
 # Default variables #
 #####################
+Write-Host "."
+Write-Host "00-bootstrap: setting environment variables"
+Write-Host "."
 
 # Allow unattended reboots
 $Boxstarter.RebootOk=$true
@@ -121,7 +127,9 @@ choco feature enable -n=allowGlobalConfirmation
 ##########
 # Checks #
 ##########
-
+Write-Host "."
+Write-Host "00-bootstrap: system eligibility check"
+Write-Host "."
 
 # Checking for Compatible OS
 WriteInfoHighlighted "Checking if OS is Windows 7"
@@ -241,6 +249,8 @@ cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 
 cinst powershell -version 3.0.20121027
 
+WriteInfo ""
+WriteInfo "temporarily enabling microsoft update"
 Enable-MicrosoftUpdate
 # critical Windows svchost.exe memory leak update
 & "$Env:curl" -Ss -k -o "$Env:_tmp\Windows6.1-KB2889748-x86.msu" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu"
@@ -249,30 +259,44 @@ Enable-MicrosoftUpdate
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 
 if (Test-PendingReboot) { Invoke-Reboot }
+Write-Host ""
 
 # usually machine rebooted ...
 Disable-MicrosoftUpdate
 
+WriteInfo "."
+WriteInfoHighlighted "installing a known-good version of 7z"
 & "$Env:curl" -Ss -o "$Env:_tmp\7z1604.exe" --url "http://www.7-zip.org/a/7z1604.exe"
 & "$env:_tmp\7z1604.exe" /S
 
+WriteInfo "."
+WriteInfoHighlighted "Installing Powershell 4"
+WriteInfo ""
 cinst powershell4
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
-& "$Env:curl" -Ss -k -o "$Env:local\bin\fix-powershell4-performance.ps1" --url "https://gist.githubusercontent.com/tee-vee/dd42f3f87160c68c0518217dba4ec21b/raw/c9835bcf2f0ac62225144a26ed53c6bfed784ba8/fix-powershell4-performance.ps1"
+& "$Env:curl" -Ss -k -o "$Env:local\bin\fix-powershell4-performance.ps1" `
+              --url "https://gist.githubusercontent.com/tee-vee/dd42f3f87160c68c0518217dba4ec21b/raw/c9835bcf2f0ac62225144a26ed53c6bfed784ba8/fix-powershell4-performance.ps1"
 & "$Env:local\bin\fix-powershell4-performance.ps1"
 
 if (Test-PendingReboot) { Invoke-Reboot }
 
+WriteInfo ""
+WriteInfoHighlighted "installing psget"
 choco install powershell-packagemanagement -y
 
+Write-Host ""
+WriteInfoHighlighted "Installing Microsoft Security Essentials (antivirus)"
+Write-Host ""
 cinst microsoftsecurityessentials -version 4.5.0216.0
 if (Test-PendingReboot) { Invoke-Reboot }
+WriteInfo "."
 
 # --------------------------------------------------------------------------------------------
 # Temporarily stop antivirus
 # --------------------------------------------------------------------------------------------
-Write-Host "Temporarily disabling antivirus"
+WriteInfoHighlighted "Temporarily disabling antivirus"
+WriteInfo "."
 & "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
 & "$Env:SystemRoot\System32\timeout.exe" /t 5 /nobreak
 & "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
@@ -292,21 +316,24 @@ choco install psexec
 choco install sysinternals
 #choco install teraterm
 
+WriteInfo "."
+WriteInfoHighlighted "Installing Telnet Client (dism/windowsfeatures)"
 cinst TelnetClient -source windowsfeatures
 if (Test-PendingReboot) { Invoke-Reboot }
 
 
 # cleanup desktop
 if (Test-Path "$Env:UserProfile\Desktop\*.lnk") {
+    WriteInfo "cleaning up desktop"
     Remove-Item "$Env:UserProfile\Desktop\*.lnk"
 }
 
-WriteInfo ""
-WriteInfo "add local etc"
+WriteInfo "."
+WriteInfo "download teamviewer Settings"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "http://lockerlife.hk/deploy/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 
 WriteInfo ""
-Write-Host "backup (more reliable) unzip"
+Write-Host "second backup (more reliable) unzip"
 & "$Env:curl" -Ss -k -o "$Env:_tmp\unzip-5.51-1.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/unzip-5.51-1.exe"
 & "$Env:_tmp\unzip-5.51-1.exe" /SILENT
 
@@ -320,25 +347,26 @@ Write-Host "Installing Java jre"
 
 #Write-Host ""
 #& "$Env:curl" -k -Ss -o c:\local\bin\nssm-2.24.zip --url https://nssm.cc/release/nssm-2.24.zip
-#"$env:programfiles\7-Zip\7z.exe" e c:\local\bin\nssm-2.24.zip -y
+#"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nssm-2.24.zip -y
 
 Write-Host "updates"
-& "$Env:curl" -k -Ss -o "c:\temp\Windows6.1-KB2889748-x86.msu"  --url "https://github.com/lockerlife-kiosk/deployment/blob/master/Windows6.1-KB2889748-x86.msu"
-& "$Env:curl" -k -Ss -o "c:\temp\402810_intl_i386_zip.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/402810_intl_i386_zip.exe"
+& "$Env:curl" -k -Ss -o "$Env:_tmp\Windows6.1-KB2889748-x86.msu"  --url "https://github.com/lockerlife-kiosk/deployment/blob/master/Windows6.1-KB2889748-x86.msu"
+& "$Env:curl" -k -Ss -o "$Env:_tmp\402810_intl_i386_zip.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/402810_intl_i386_zip.exe"
 
-& "$Env:curl" -k -Ss -o "c:\local\bin\nircmd.zip "--url "https://github.com/lockerlife-kiosk/deployment/blob/master/nircmd.zip"
-#"$env:programfiles\7-Zip\7z.exe" e c:\local\bin\nircmd.zip -y
+& "$Env:curl" -k -Ss -o "$Env:local\bin\nircmd.zip "--url "https://github.com/lockerlife-kiosk/deployment/blob/master/nircmd.zip"
+#"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nircmd.zip -y
 
 Write-Host "xmlstarlet"
 & "$Env:curl" -k -Ss -o "c:\local\bin\xml.exe" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/xml.exe"
-#"$env:programfiles\7-Zip\7z.exe" e c:\local\bin\xmlstarlet-1.6.1-win32.zip -y
+#"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\xmlstarlet-1.6.1-win32.zip -y
 
 Write-Host "devcon, nssm, hstart"
-& "$Env:curl" -Ss -k -o "c:\Windows\System32\devcon.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/devcon.exe"
+& "$Env:curl" -Ss -k -o "$Env:SystemRoot\System32\devcon.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/devcon.exe"
 & "$Env:curl" -Ss -k -o "$Env:local\bin\nssm.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/nssm.exe"
 & "$Env:curl" -Ss -k -o "$Env:local\bin\hstart.exe" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/hstart.exe"
 
-& "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
+& "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" `
+    --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
 
 Write-Host ""
 Write-Host "Downloading Drivers"
@@ -355,12 +383,19 @@ Write-Host ""
 & "$Env:curl" -Ss -k -o "$Env:local\etc\kiosk-production-black.bgi" --url "http://lockerlife.hk/deploy/kiosk-production-black.bgi"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\production-admin-bginfo.bgi" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/production-admin-bginfo.bgi"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\production-kiosk-bginfo.bgi" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/production-kiosk-bginfo.bgi"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-classic-blue.bmp" --url "http://lockerlife.hk/deploy/PRODUCTION/pantone-classic-blue.bmp"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-classic-blue.jpg" --url "http://lockerlife.hk/deploy/PRODUCTION/pantone-classic-blue.jpg"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-classic-blue.bmp" --url "http://lockerlife.hk/deploy/PRODUCTION/pantone-classic-blue.bmp"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.bmp" --url "http://lockerlife.hk/deploy/PRODUCTION/pantone-process-black-c.bmp"
+& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.jpg" --url "http://lockerlife.hk/deploy/PRODUCTION/pantone-process-black-c.jpg"
 
 Write-Host ""
 Write-Host "Gpo"
-Set-Location -Path \local\gpo
-& "$Env:curl" -Ss -k -o "$Env:local\gpo\production-gpo.zip" --url "http://lockerlife.hk/deploy/production-gpo.zip"
-& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "$Env:local\gpo\production-gpo.zip"
+Set-Location -Path "$Env:SystemRoot\System32"
+## make backup of GroupPolicy directories
+# Copy-Item ...
+& "$Env:curl" -Ss -k -o "$Env:SystemRoot\System32\production-gpo.zip" --url "http://lockerlife.hk/deploy/production-gpo.zip"
+& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "$Env:SystemRoot\System32\production-gpo.zip"
 
 
 # cleanup
@@ -384,8 +419,10 @@ Remove-Item "$Env:userprofile\Desktop\*.lnk"
 chocolatey feature disable -n=allowGlobalConfirmation
 
 # shortcut to the lockerlife/deploy on the desktop
-Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\Deployment Homepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://lockerlife.hk/deploy" -Description "LockerLife Deployment Start"
-Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
+Install-ChocolateyShortcut  -ShortcutFilePath "$env:Public\Desktop\Deployment Homepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" `
+                            -Arguments "http://lockerlife.hk/deploy" -Description "LockerLife Deployment Start"
+Install-ChocolateyShortcut  -ShortcutFilePath "$env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" `
+                            -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
 Write-Host ""
 if (Test-PendingReboot) { Invoke-Reboot }
 
@@ -398,7 +435,7 @@ Write-Host ""
 WriteInfo ""
 WriteInfo ""
 Write-Host "00-bootstrap complete."
-Write-Host ""
+Write-Host "."
 Write-Host ""
 
 #############
