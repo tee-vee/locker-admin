@@ -53,21 +53,7 @@ WriteInfo "Script started at $StartDateTime"
 
 & "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 
-Disable-UAC
-Update-ExecutionPolicy Unrestricted
-
-Install-ChocolateyEnvironmentVariable "iccid" "NULL"
-Install-ChocolateyEnvironmentVariable "hostname" "NULL"
-Install-ChocolateyEnvironmentVariable "sitename" "NULL"
-Install-ChocolateyEnvironmentVariable "logs" "E:\logs"
-Install-ChocolateyEnvironmentVariable "images" "E:\images"
-Install-ChocolateyEnvironmentVariable "imagesarchive" "E:\images\archive"
-
 Write-Host ""
-New-Item -Path "$Env:logs" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-New-Item -Path "$Env:images" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-New-Item -Path "$Env:imagesarchive" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-
 Write-Host ""
 Write-Host ""
 Add-Type -AssemblyName Microsoft.VisualBasic
@@ -89,7 +75,8 @@ Write-Host "$Env:sitename"
 
 
 if (!$Env:sitename) {
-    WriteError "This SIM card is not authorized for use with LockerLife Locker Deployment"
+    WriteError "*** WARNING *** WARNING *** WARNING *** WARNING *** WARNING ***"
+    WriteError "This SIM card is not authorized for LockerLife Locker Deployment"
     WriteError "Send email to locker-admin@lockerlife.hk for further assistance."
     WriteErrorAndExit "Exiting"
     New-Item -Path C:\DEPLOYMENT-UNAUTHORIZED -ItemType File -Force -ErrorAction SilentlyContinue | Out-Null
