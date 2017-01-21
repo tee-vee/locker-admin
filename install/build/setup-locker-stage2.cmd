@@ -2,6 +2,10 @@
 :: setup-locker.bat
 :: December 2016
 
+:: RETIRED
+:: RETIRED
+
+
 @echo off
 
 echo ====================================================
@@ -35,34 +39,6 @@ if not defined _setenv (
     %bitsadmin% /transfer "getenv" %baseurl%/setenv.cmd %_tmp%\setenv.cmd
     cd %_tmp% & call %_tmp%\setenv.cmd
 
-)
-
-:: --------------------------------------------------------------------------------------------
-:: SIM ICCID
-:: --------------------------------------------------------------------------------------------
-::  * Expects 1 parameter (REQUIRES SIM CARD ICCID)
-::  * NOTE: DO NOT SCAN 2D CODE ON BOTTOM RIGHT CORNER
-::  * ERROR CHECKING - IF SCAN begins with http* -> alert user to rescan
-
-:: [] START: setup-locker.bat %1%
-::     -> VALIDATE %1% AS SIMCARD ICCID
-::        -> USE %1% TO DETERMINE SITENAME BY FINDING FILE OF SAME NAME IN \Dropbox\locker-admin\LOCKER\<SITENAME>\SIMCARD ICCID
-::        -> GET CONFIG FROM %HOMEPATH%\Dropbox\LOCKER\*\SIMCARD ICCID
-::        -> EXAMPLE RETURN: "\Dropbox\locker-admin\LOCKER\test-locker-foshan\SIMCARD ICCID"
-::     IF SIMCARD ICCID IS UFO ("\Dropbox\locker-admin\LOCKER\UFO") then build machine as NON-PRODUCTION (no locker cloud registration)
-
-:: [] FIND SITENAME (use system global variable %SIMICCID% and %SITENAME%
-:: maybe use it in path ?  i.e. %HOMEPATH%\Dropbox\locker-admin\LOCKER\%SITENAME%\config\%SIMICCID% ?
-cd %LOCKERBASE%\LOCKER
-dir /b /s | findstr %1%
-
-SET SIMICCID=%1
-FOR %%i IN ("%SIMICCID%") DO (
-    echo.
-    ECHO filedrive=%%~di
-    ECHO filepath=%%~pi
-    ECHO filename=%%~ni
-    ECHO fileextension=%%~xi
 )
 
 REM if %1 is NUL then display error msg "need to run setup-locker.bat <SCAN SIM CARD BARCODE>" and exit 1
@@ -185,7 +161,7 @@ REM CALL install-printer.bat
 REM RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 path-to-inf\infname.inf
 wmic printer list status
 %LOCKERDRIVERS%\printer\Windows81Driver\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 %LOCKERDRIVERS%\printer\Windows81Driver\POS88EN.inf
-%LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
+& "Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --device=USB\VID_0483&PID_5720&REV_0100"
 
 %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--inf=%LOCKERDRIVERS%\printer\SPRT_Printer.inf"
 
@@ -226,32 +202,6 @@ ECHO "WINDOWS INVENTORY CHECK"
 
 ping 127.0.0.1 -n 10
 
-:: --------------------------------------------------------------------------------------------
-REM [] Install JRE
-:: --------------------------------------------------------------------------------------------
-echo.
-ECHO "INSTALL JAVA"
-%hstart% /D="C:\temp" /nouac /delay=2 /runas /wait "%LOCKERINSTALL%\_pkg\jre-8u111-windows-i586.exe INSTALLCFG=%LOCKERINSTALL%\_pkg\jre-install.properties /L %SETUPLOGS%\jre-install.log"
-REM ## start /wait %TMP%\jre-8u111-windows-i586.exe INSTALLCFG=%TMP%\jre-install.properties /L %SETUPLOGS%\jre-install.log
-ping -n 20 127.0.0.1
-D:\Java\jre\bin\Java -version
-REM ## setx JAVA_HOME=D:\java\jre
-REM setx PATH "%PATH%;D:\java\jre\bin;%SYSTEMDRIVE%\%HOMEPATH%\Dropbox\locker-admin\tools"
-
-:: --------------------------------------------------------------------------------------------
-:: [] INSTALL MICROSOFT .NET 4.6.2
-:: --------------------------------------------------------------------------------------------
-echo.
-ECHO "INSTALL DOT NET 4.6.2"
-:: [][] CHECK & INSTALL
-%REGEXE% query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" /t REG_DWORD /f Release
-if Errorlevel 1 (
-    :: dot Net framework not installed
-    REM ## %TMP%\MicrosoftDotNETFramework462OfflineInstallerForWindows7SP1.exe /passive /norestart
-    %hstart% /nouac /delay=2 /runas /wait "%LOCKERINSTALL%\_pkg\Microsoft .NET Framework 4.6.2 (Offline Installer) for Windows 7 SP1.exe /passive /norestart"
-)
-
-ping -n 15 127.0.0.1
 
 :: --------------------------------------------------------------------------------------------
 :: Install Microsoft Security Essentials
@@ -275,34 +225,6 @@ REM [] INSTALL BLUETOOTH TOOLS
 :: --------------------------------------------------------------------------------------------
 echo.
 %hstart% /nouac /runas /wait "%LOCKERINSTALL%\_pkg\BluetoothCLTools.exe /silent"
-
-:: --------------------------------------------------------------------------------------------
-REM [] INSTALL POWERSHELL3
-:: --------------------------------------------------------------------------------------------
-echo.
-ECHO "INSTALL POWERSHELL 3"
-%hstart% /nouac /runas /wait "%WINDIR%\System32\wusa.exe %LOCKERINSTALL%\_pkg\Windows6.1-KB2506143-x86-WMF3.msu /quiet /norestart"
-REM ## start /wait wusa.exe %TMP%\Windows6.1-KB2506143-x86-WMF3.msu /quiet /norestart
-
-ping -n 15 127.0.0.1
-
-:: --------------------------------------------------------------------------------------------
-REM [] INSTALL POWERSHELL4
-:: --------------------------------------------------------------------------------------------
-echo.
-ECHO "INSTALL POWERSHELL 4"
-%hstart% /nouac /runas /wait "%WINDIR%\System32\wusa.exe %LOCKERINSTALL%\_pkg\Windows6.1-KB2819745-x86-MultiPkg-WMF4 /quiet /norestart"
-REM ## start /wait wusa.exe %TMP%\Windows6.1-KB2819745-x86-MultiPkg-WMF4 /quiet /norestart
-
-ping -n 15 127.0.0.1
-
-:: --------------------------------------------------------------------------------------------
-REM [] INSTALL POWERSHELL5
-:: --------------------------------------------------------------------------------------------
-echo.
-ECHO "INSTALL POWERSHELL 5"
-%hstart% /nouac /runas /wait "%WINDIR%\System32\wusa.exe %LOCKERINSTALL%\_pkg\Win7-KB3134760-x86.msu /quiet /norestart"
-:: start /wait wusa.exe %TMP%\Win7-KB3134760-x86.msu /quiet /norestart
 
 
 REM [] LOCKERLIFE ENVIRONMENT SETUP
@@ -368,7 +290,7 @@ ECHO "BOOT HARDENING"
 bcdedit /set bootux disabled
 
 REM [] SET CPU CORES USED TO BOOT SYSTEM AND CPU PARKING
-bcdedit /set numproc %NUMBER_OF_PROCESSORS% 
+bcdedit /set numproc %NUMBER_OF_PROCESSORS%
 
 REM [] CUT DOWN BOOT OS SELECTION TIMEOUT (default: 30 seconds!!)
 REM bcdedit
@@ -454,11 +376,8 @@ echo.
 REM disable windows update
 
 
-REM Stopping Automatic updates service 
+REM Stopping Automatic updates service
 net stop wuauserv
-
-
-
 
 
 
@@ -502,7 +421,7 @@ XXMKLINK.EXE %userprofile%\Links\locker-tools.lnk %LOCKERTOOLS%
 :: --------------------------------------------------------------------------------------------
 :: To schedule a command that runs every hour at five minutes past the hour
 :: The following command schedules the MyApp program to run hourly beginning at five minutes past midnight.
-:: Because the /mo parameter is omitted, the command uses the default value for the hourly schedule, which is every (1) hour. 
+:: Because the /mo parameter is omitted, the command uses the default value for the hourly schedule, which is every (1) hour.
 :: If this command is issued after 12:05 A.M., the program will not run until the next day.
 REM ## schtasks /create /sc hourly /st 00:05:00 /tn "My App" /tr c:\apps\myapp.exe
 
@@ -581,7 +500,7 @@ set _setenv=
 
 
 :: Update MSAV Signature
-:: https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396 
+:: https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396
 "%ProgramFiles%\Windows Defender\MpCmdRun.exe" -SignatureUpdate
 "%ProgramFiles%\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
