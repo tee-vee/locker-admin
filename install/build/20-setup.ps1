@@ -1,9 +1,17 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
-# 20-setup
+# 20-setup - hardware & windows configuration/settings
+$pswindow.windowtitle = "LockerLife Locker Deployment 20-setup"
 
-# hardware & windows configuration/settings
+
+$basename = $MyInvocation.MyCommand.Name
+
+# source DeploymentConfig
+(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
+. C:\local\etc\99-DeploymentConfig.ps1
+
+& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 
 # --------------------------------------------------------------------------------------------
 # DISABLE 802.11 / Bluetooth interfaces
@@ -24,25 +32,25 @@ Write-Host "DISABLE WIRELESS INTERFACE"
 # choco install -y zadig
 # check; don't reinstall if already exists
 # ** implementation incomplete ...
-Write-Host "Checking printer status ..."
-& "$Env:SystemRoot\System32\webm\wmic.exe" printer list status | Select-String 80mm
-
-# step 1: install port
-#& "$Env:local\drivers\printer\Windows81Driver\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 %LOCKERDRIVERS%\printer\Windows81Driver\POS88EN.inf
-# %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
-Write-Host "20-setup: Installing printer-filter driver"
-& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --device=USB\VID_0483"&"PID_5720"&"REV_0100
-
-# step 2: connect/bridge printer-filter to printer
-# %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install --inf=%LOCKERDRIVERS%\printer\SPRT_Printer.inf
-Write-Host "20-setup: connecting printer-filter to printer"
-& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --inf="$Env:local\drivers\printer\SPRT_Printer.inf"
-
-# Print a test page to one or more printers
-# for /f "tokens=1-4 delims=," %i in (%Printer.txt%) do cscript prnctrl.vbs -t -b \\%PrintServer%\%i
-#Cscript Prnqctl -e
-& "C:\windows\system32\cscript.exe" "c:\windows\system32\Printing_Admin_Scripts\en-US\prncnfg.vbs" -g -p "80mm Series Printer"
-& "C:\windows\system32\cscript.exe" "c:\windows\system32\Printing_Admin_Scripts\en-US\prnqctl.vbs" -e -p "80mm Series Printer"
+#Write-Host "Checking printer status ..."
+#& "$Env:SystemRoot\System32\webm\wmic.exe" printer list status | Select-String 80mm
+#
+## step 1: install port
+##& "$Env:local\drivers\printer\Windows81Driver\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 %LOCKERDRIVERS%\printer\Windows81Driver\POS88EN.inf
+## %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
+#Write-Host "20-setup: Installing printer-filter driver"
+#& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --device=USB\VID_0483"&"PID_5720"&"REV_0100
+#
+## step 2: connect/bridge printer-filter to printer
+## %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install --inf=%LOCKERDRIVERS%\printer\SPRT_Printer.inf
+#Write-Host "20-setup: connecting printer-filter to printer"
+#& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --inf="$Env:local\drivers\printer\SPRT_Printer.inf"
+#
+## Print a test page to one or more printers
+## for /f "tokens=1-4 delims=," %i in (%Printer.txt%) do cscript prnctrl.vbs -t -b \\%PrintServer%\%i
+##Cscript Prnqctl -e
+#& "C:\windows\system32\cscript.exe" "c:\windows\system32\Printing_Admin_Scripts\en-US\prncnfg.vbs" -g -p "80mm Series Printer"
+#& "C:\windows\system32\cscript.exe" "c:\windows\system32\Printing_Admin_Scripts\en-US\prnqctl.vbs" -e -p "80mm Series Printer"
 
 # --------------------------------------------------------------------------------------------
 # Install scanner driver
@@ -52,7 +60,11 @@ Write-Host "20-setup: connecting printer-filter to printer"
 Write-Host "20-setup: installing usb virtual com interface for driver"
 & "$Env:local\drivers\udp_and_vcom_drv.2.1.1.Setup.exe" /S
 
+
 # windows should look in IOUSB for remainder; 00-bootstrap
+
+# install scanner tools
+#& C:\temp\QuickSet-2.07-bulid0805.msi
 
 
 # --------------------------------------------------------------------------------------------
@@ -62,8 +74,6 @@ Write-Host "20-setup: installing usb virtual com interface for driver"
 Write-Host ""
 Write-Host "LockerLife setup ..."
 Write-Host ""
-
-Write-Host ""
 Write-Host ""
 
 # check
@@ -71,9 +81,9 @@ Write-Host ""
 Write-Host ""
 & "$Env:curl" -k -Ss --include --url "https://api.github.com/users/lockerlife-kiosk"
 Write-Host ""
-& "$Env:curl" -k -Ss --user "lockerlife-kiosk" --url "https://api.github.com/authorizations"
-
+& "$Env:curl" -k -Ss --user "lockerlife-kiosk:Locision123" --url "https://api.github.com/authorizations"
 Write-Host ""
+
 # curl --user "lockerlife-kiosk:Locision123" https://api.github.com/gists/starred
 # curl --user "lockerlife-kiosk:Locision123" https://api.github.com/users/lockerlife-kiosk
 #curl --user "lockerlife-kiosk:Locision123" --data '{"description":"Created via API","public":"true","files":{"file1.txt":{"content":"Demo"}}' --url https://api.github.com/gists
@@ -86,7 +96,7 @@ Write-Host ""
 
 # get locker-libs
 # get-location of locker-libs first from locker-cloud; preserve Last-Modified --> restamp all files using each individual file Last-Modified time
-curl -RSs -k --url https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
+& "$Env:curl" -RSs -k --url "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs" | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
 
 
 # initial download
@@ -96,17 +106,17 @@ Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Proce
 
 
 # lockerlife production
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/RunLockerLifeConsole.bat"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/RunLockerLifeTV.bat"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/core.jar"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/data-collection.jar"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/run-manual.bat"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/run-test.bat"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/run.bat"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/scanner.jar"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/production-Locker-Console.zip"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/production-Locker-Slider.zip"
-& "$Env:curl" -Ss -k -o "D:\" --url "http://lockerlife.hk/deploy/PRODUCTION/production-kioskServer.zip"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/RunLockerLifeConsole.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/RunLockerLifeTV.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/core.jar"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/data-collection.jar"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/run-manual.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/run-test.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/run.bat"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/scanner.jar"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/production-Locker-Console.zip"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/production-Locker-Slider.zip"
+& "$Env:curl" -Ss -k -o "D:\" --url "$Env:deployurl/PRODUCTION/production-kioskServer.zip"
 
 
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
@@ -114,7 +124,7 @@ Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Proce
 
 ## Windows Firewall
 WriteInfoHighlighted "LOCAL FIREWALL SETUP"
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall show allprofiles
+#& "$Env:SystemRoot\System32\netsh.exe" advfirewall show allprofiles
 & "$Env:SystemRoot\System32\netsh.exe" advfirewall set allrprofiles state on
 
 ## QUERY FIREWALL RULES
@@ -138,6 +148,13 @@ WriteInfoHighlighted "LOCAL FIREWALL SETUP"
 & "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 9012" dir=in action=allow protocol=TCP localport=9012
 
 
+# Update MSAV Signature
+# https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396
+#"%ProgramFiles%\Windows Defender\MpCmdRun.exe" -SignatureUpdate
+& "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -SignatureUpdate
+
+#"%ProgramFiles%\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
+& "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
 ## --------------------------------------------------------------------------------------------
 ## Windows Customizations ...
@@ -197,7 +214,7 @@ Stop-Service -Verbose uxsms
 # Change LogonUI wallpaper
 ## first - create key
 Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\background" -Name OEMBackground -Value 1 -Force -Verbose
-Copy-Item "$Env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\logon-background-black.jpg" -force
+Copy-Item "$Env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\logon-background-black.jpg" -Force
 
 
 # Disable Action Center
@@ -381,14 +398,13 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
 Remove-Item "$Env:userprofile\Desktop\*.lnk"
-Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" `
-                           -Arguments "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1" -Description "Redeploy Locker"
-
+Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/00-bootstrap.ps1" -Description "Redeploy Locker"
 
 WriteInfo "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 WriteSuccess "Press any key to continue..."
 $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
 
+if (Test-PendingReboot) { Invoke-Reboot }
 
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?http://lockerlife.hk/deploy/20-setup.ps1
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/30-lockerlife.ps1"

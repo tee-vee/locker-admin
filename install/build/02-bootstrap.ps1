@@ -2,16 +2,21 @@
 # January 2017
 
 # 02-bootstrap
+$pswindow.windowtitle = "LockerLife Locker Deployment 02-bootstrap"
 
 
-#$path = Get-Location
 $basename = $MyInvocation.MyCommand.Name
 
+# source DeploymentConfig
+(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
+. C:\local\etc\99-DeploymentConfig.ps1
 
-# Allow unattended reboots
-$Boxstarter.RebootOk=$true
-$Boxstarter.NoPassword=$false
-$Boxstarter.AutoLogin=$true
+Disable-MicrosoftUpdate
+Disable-UAC
+Update-ExecutionPolicy Unrestricted
+
+# Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123 /active:yes' -NoNewWindow
+
 
 #Set-Location -Path C:\temp
 #Get-ChocolateyWebFile -PackageName "Windows6.1-KB2889748-x86.msu" -FileFullPath "C:\local\Windows6.1-KB2889748-x86.msu"
@@ -33,11 +38,11 @@ if (Test-PendingReboot) { Invoke-Reboot }
 # & curl --url "http://$Env:baseurl/_pkg/jre-install.properties" -o "C:\local\etc\jre-install.properties"
 
 # temporarily restart windows update services to install updates ...
-Set-Service wuauserv -StartupType Mnaual
+Set-Service wuauserv -StartupType Mnaual -Verbose
 Start-Service wuauserv -Verbose
 #Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre REBOOT=DISABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE NOSTARTMENU=ENABLE WEB_JAVA=DISABLE EULA=Disable REMOVEOUTOFDATEJRES=1" 'http://lockerlife.hk/deploy/_pkg/jre-8u111-windows-i586.exe'
 # Install-ChocolateyPath '%JAVA_HOME%\bin' Machine
 
-#Remove-Item -Force "$env:UserProfile\Desktop\*.lnk"
+Remove-Item -Force "$env:UserProfile\Desktop\*.lnk" | out-null
 
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?http://lockerlife.hk/deploy/10-configure.ps1
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/10-configure.ps1"

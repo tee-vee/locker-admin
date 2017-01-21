@@ -1,48 +1,39 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
-# 01-bootstrap
-# --- RETIRED ---
+# 01-bootstrap - primarily a buffer for restarts
+$pswindow.windowtitle = "LockerLife Locker Deployment 01-bootstrap"
 
-# Allow unattended reboots
-$Boxstarter.RebootOk=$true
-$Boxstarter.NoPassword=$false
-$Boxstarter.AutoLogin=$true
 
-#Disable-MicrosoftUpdate
-#Disable-UAC
-#Update-ExecutionPolicy Unrestricted
-
-#chocolatey feature enable -n=allowGlobalConfirmation
-
-#$path = Get-Location
 $basename = $MyInvocation.MyCommand.Name
+
+# source DeploymentConfig
+(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
+. C:\local\etc\99-DeploymentConfig.ps1
+
+Disable-MicrosoftUpdate
+Disable-UAC
+Update-ExecutionPolicy Unrestricted
+
+& RefreshEnv
+#chocolatey feature enable -n=allowGlobalConfirmation
 
 & "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 
+Write-Host "."
 if (Test-PendingReboot) { Invoke-Reboot }
 
-#cinst dotnet4.6.2 --version 4.6.01590.0
-#if (Test-PendingReboot) { Invoke-Reboot }
-
-#cinst Boxstarter.Common
-#cinst boxstarter.WinConfig
-#cinst Boxstarter.Chocolatey
-#if (Test-PendingReboot) { Invoke-Reboot }
-
-#cinst gow
-#cinst nircmd
-#cinst xmlstarlet
-#cinst curl
-#cinst nssm
-
-#cinst ie11
-#if (Test-PendingReboot) { Invoke-Reboot }
-
+Write-Host "."
 & RefreshEnv
 
 #chocolatey feature disable -n=allowGlobalConfirmation
 
 & curl https://api.github.com/zen ; echo ""
 
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?http://lockerlife.hk/deploy/02-bootstrap.ps1
+# Internet Explorer: Temp Internet Files:
+RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
+
+Write-Host "."
+Write-Host "."
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/02-bootstrap.ps1"
+exit
