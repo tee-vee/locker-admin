@@ -2,9 +2,7 @@
 # January 2017
 
 # 01-bootstrap - primarily a buffer for restarts
-$pswindow.windowtitle = "LockerLife Locker Deployment 01-bootstrap"
-
-
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 01-bootstrap"
 $basename = $MyInvocation.MyCommand.Name
 
 # source DeploymentConfig
@@ -26,6 +24,8 @@ if (Test-PendingReboot) { Invoke-Reboot }
 Write-Host "."
 & RefreshEnv
 
+if (Test-PendingReboot) { Invoke-Reboot }
+
 #chocolatey feature disable -n=allowGlobalConfirmation
 
 & curl https://api.github.com/zen ; echo ""
@@ -34,6 +34,5 @@ Write-Host "."
 RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
 Write-Host "."
-Write-Host "."
+
 & "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/02-bootstrap.ps1"
-exit

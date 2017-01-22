@@ -2,7 +2,7 @@
 # January 2017
 
 # 02-bootstrap
-$pswindow.windowtitle = "LockerLife Locker Deployment 02-bootstrap"
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 02-bootstrap"
 
 
 $basename = $MyInvocation.MyCommand.Name
@@ -14,8 +14,6 @@ $basename = $MyInvocation.MyCommand.Name
 Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
-
-# Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123 /active:yes' -NoNewWindow
 
 
 #Set-Location -Path C:\temp
@@ -32,8 +30,6 @@ if (Test-PendingReboot) { Invoke-Reboot }
 #Get-ChocolateyWebFile -Url https://github.com/lockerlife-kiosk/deployment/raw/master/nircmd.zip -fileFullPath "C:\local\src\nircmd.zip"
 #Install-ChocolateyZipPackage -PackageName 'nircmd' -Url 'https://github.com/lockerlife-kiosk/deployment/raw/master/xmlstarlet-1.6.1-win32.zip' -UnzipLocation "C:\local\bin"
 
-
-# cleanup
 
 # & curl --url "http://$Env:baseurl/_pkg/jre-install.properties" -o "C:\local\etc\jre-install.properties"
 

@@ -3,7 +3,7 @@
 
 # 30-lockerlife - LockerLife Internal Configuration (Preparation for purple console screen)
 # ** autologon as kiosk user after boot
-$pswindow.windowtitle = "LockerLife Locker Deployment 30-lockerlife"
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 30-lockerlife"
 
 
 $basename = $MyInvocation.MyCommand.Name

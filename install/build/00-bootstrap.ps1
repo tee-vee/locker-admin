@@ -2,8 +2,9 @@
 # January 2017
 
 # 00-bootstrap
-$pswindow.windowtitle = "LockerLife Locker Deployment 00-bootstrap"
 
+#$pswindow.windowtitle = "LockerLife Locker Deployment 00-bootstrap"
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-bootstrap"
 $basename = $MyInvocation.MyCommand.Name
 
 # Verify Running as Admin
@@ -14,7 +15,6 @@ If (!( $isAdmin ))
   Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
   Write-Host; exit
 }
-
 
 
 $WebClient = New-Object System.Net.WebClient
@@ -52,53 +52,11 @@ Set-ItemProperty -Path 'registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows 
  $StartDateTime = Get-Date
  Write-Host "$basename Script started at $StartDateTime"
 
-
-# Load DeploymentConfig ...
-# Import-Module BitsTransfer
-#Get-BitsTransfer -AllUsers | Remove-BitsTransfer
-#Start-BitsTransfer -Source https://gist.githubusercontent.com/tee-vee/b20f5ec8bfc4ce539c9ba8ffbea85753/raw/99-DeploymentConfig.ps1 -Destination C:\ ...?
-
 # If (C:\DEPLOYMENT-UNAUTHORIZED) {
 #   WriteError "Deployment Unauthorized"
 #   WriteError "Contact email: locker-admin@lockerlife.hk
 #   WriteErrorAndExit "Exiting ..."
 #}
-
-# temp
-Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\LockerDeployment\Restart-00.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/00-bootstrap.ps1" -Description "Redeploy 00"
-
-#####################
-# Default variables #
-#####################
-
-Install-ChocolateyEnvironmentVariable "baseurl" "http://lockerlife.hk"
-Install-ChocolateyEnvironmentVariable "deployurl" "$Env:baseurl/deploy"
-Install-ChocolateyEnvironmentVariable "domainname" "lockerlife.hk"
-
-Install-ChocolateyEnvironmentVariable "iccid" "NULL"
-Install-ChocolateyEnvironmentVariable "locker-type" "NULL"
-Install-ChocolateyEnvironmentVariable "lockerserialnumber" "NULL"
-Install-ChocolateyEnvironmentVariable "hostname" "NULL"                         # $hostname == $sitename
-Install-ChocolateyEnvironmentVariable "sitename" "NULL"                         # $hostname == $sitename
-
-#Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
-#Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
-Install-ChocolateyEnvironmentVariable "JAVA_HOME" "d:\java\jre\bin"
-Install-ChocolateyEnvironmentVariable "local" "C:\local"
-Install-ChocolateyEnvironmentVariable "_tmp" "C:\temp"
-Install-ChocolateyEnvironmentVariable "_temp" "C:\temp"                         # just in case
-Install-ChocolateyEnvironmentVariable "logs" "E:\logs"
-Install-ChocolateyEnvironmentVariable "images" "E:\images"
-Install-ChocolateyEnvironmentVariable "imagesarchive" "E:\images\archive"
-
-Install-ChocolateyEnvironmentVariable "curl" "$Env:ProgramFiles\Gow\bin\curl.exe"
-Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
-
-#Set-Alias show Get-ChildItem
-
-Write-Host "."
-Write-Host "$basename Setting path"
-Write-Host "."
 
 
 choco feature enable -n=allowGlobalConfirmation
@@ -175,6 +133,7 @@ New-Item -Path "$Env:local\status" -ItemType Directory -Force -ErrorAction Silen
 # enable administrator
 # & "$env:SystemRoot\System32\net.exe" user administrator /active:yes
 Start-Process 'net.exe' -Verb runAs -ArgumentList 'user administrator /active:yes'
+## net user administrator /active:no (later!)
 
 
 # turn off startup sounds
@@ -212,14 +171,20 @@ if (Test-Path "$Env:userprofile\Desktop\*.lnk")
 if (Test-PendingReboot) { Invoke-Reboot }
 choco install teamviewer.host --version 12.0.72365
 
-cinst gow
+# gow installer can be confused ... only run if gow isn't installed ..
+if (!(Test-Path "$Env:ProgramFiles\Gow"))
+{
+  cinst gow
+
+}
 cinst nircmd
 cinst xmlstarlet
 #cinst curl
 cinst nssm
 
 cinst ie11
-if (Test-PendingReboot) { Invoke-Reboot }
+#if (Test-PendingReboot) { Invoke-Reboot }
+Reboot-IfRequired
 
 & RefreshEnv
 
@@ -236,8 +201,8 @@ Enable-MicrosoftUpdate
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 
-if (Test-PendingReboot) { Invoke-Reboot }
-Write-Host "."
+#if (Test-PendingReboot) { Invoke-Reboot }
+Reboot-IfRequired
 
 # usually machine rebooted ...
 Write-Host "Disable Windows Update"
@@ -274,7 +239,8 @@ Write-Host ""
 Write-Host "$basename -- Installing Microsoft Security Essentials (antivirus)"
 Write-Host ""
 cinst microsoftsecurityessentials -version 4.5.0216.0
-if (Test-PendingReboot) { Invoke-Reboot }
+#if (Test-PendingReboot) { Invoke-Reboot }
+Reboot-IfRequired
 Write-Host "."
 
 # --------------------------------------------------------------------------------------------
@@ -292,7 +258,7 @@ choco install bginfo
 choco install jq
 choco install clink
 #choco install putty
-choco install rsync
+#choco install rsync
 choco install wget
 choco install nssm
 choco install psexec
@@ -302,16 +268,9 @@ choco install psexec
 Write-Host "."
 Write-Host "Installing Telnet Client (dism/windowsfeatures)"
 cinst TelnetClient -source windowsfeatures
-if (Test-PendingReboot) { Invoke-Reboot }
+#if (Test-PendingReboot) { Invoke-Reboot }
+Reboot-IfRequired
 
-
-# cleanup desktop
-if (Test-Path "$Env:UserProfile\Desktop\*.lnk")
-{
-    Write-Host "$basename cleaning up desktop"
-    Remove-Item "$Env:UserProfile\Desktop\*.lnk"
-    Remove-Item "$Env:Public\Desktop\*.lnk"
-}
 
 Write-Host "`n $basename second backup (more reliable) unzip"
 & "$Env:curl" -Ss -k -o "$Env:_tmp\unzip-5.51-1.exe" --url "$Env:deployurl/unzip-5.51-1.exe"
@@ -365,10 +324,13 @@ Write-Host "."
 Write-Host "`n $basename Downloading Drivers"
 Set-Location -Path \local\drivers
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
-& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "$Env:deployurl/printer-filter.zip"
-& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer-filter.zip"
-& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.zip" --url "$Env:deployurl/printer.zip"
-& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer.zip"
+#& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "$Env:deployurl/printer-filter.zip"
+#& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer-filter.zip"
+
+#& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.zip" --url "$Env:deployurl/printer.zip"
+#& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer.zip"
+& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.exe" --url "$Env:deployurl/drivers/printer.exe"
+
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "$Env:deployurl/scanner.zip"
 & "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "scanner.zip"
 
@@ -442,11 +404,14 @@ Update-Help
 Write-Host ""
 & "$Env:local\bin\bginfo.exe" "$Env:local\etc\production-admin-bginfo.bgi" /nolicprompt /silent /timer:0
 
+
 & "$Env:curl" -Ss -k https://api.github.com/zen ; Write-Host ""
 Write-Host ""
 
 Write-Host "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
+
+if (Test-PendingReboot) { Invoke-Reboot }
 
 #WriteSuccess "Press any key to continue..."
 #$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
@@ -455,13 +420,12 @@ Write-Host ""
 # Internet Explorer: Temp Internet Files:
 RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
+# cleanup desktop
+CleanupDesktop
+
 # touch status file in \local\status
+
 
 # proceed to next step
 & "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1"
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/10-configure.ps1
-
-Write-Host "."
-Write-Host "."
-Write-Host "."
-exit

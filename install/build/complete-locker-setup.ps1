@@ -3,6 +3,7 @@
 # December 2016, January 2017
 
 # complete-locker-setup -
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment - complete-locker-setup"
 
 $basename = $MyInvocation.MyCommand.Name
 
@@ -115,6 +116,7 @@ Write-Host "set background"
 # --------------------------------------------------------------------------------------------
 # Adjust for Best Performance:
 #
+Set-ItemProperty "HKEY_CURRENT_USER\Control Panel\ColorsBackground" -Value "0 0 0" -Verbose
 # [HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects]
 # "VisualFXSetting"=dword:00000002"
 
@@ -157,6 +159,7 @@ Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance
 # Change LogonUI wallpaper
 ## first - create key
 Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\background" -Name OEMBackground -Value 1 -Force -Verbose
+mkdir "$Env:SystemRoot\System32\oobe\info\backgrounds"
 Copy-Item "$Env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\logon-background-black.jpg" -Force
 
 
@@ -231,7 +234,7 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Fla
 #Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons"
 
 # Show small icons in taskbar
-Write-Host "Showing small icons in taskbar..."
+Write-Host "Showing small icons in taskbar ..."
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Type DWord -Value 1
 
 
@@ -345,8 +348,6 @@ WriteInfoHighlighted "DISABLE GUEST USER"
 # Internet Explorer: All:
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
-Enable-UAC
-Disable-MicrosoftUpdate
 
 #echo.
 #echo "%~n0 clean up desktop"
@@ -368,6 +369,10 @@ Disable-MicrosoftUpdate
 #sfc /scannow
 #start %windir%\System32\cleanmgr.exe /verylowdisk
 ## del /f /s /q %_tmp%\
+
+## generate random password for administrator
+# -join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})
+& net user administrator /active:no
 
 WriteInfoHighlighted "Press any key to seal this locker or close window to stop shutdown"
 pause

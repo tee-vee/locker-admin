@@ -2,8 +2,7 @@
 # January 2017
 
 # 10-configure -- perform local identification tasks and setup for locker registration
-$pswindow.windowtitle = "LockerLife Locker Deployment 10-configure"
-
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 10-configure"
 $basename = $MyInvocation.MyCommand.Name
 
 

@@ -2,7 +2,7 @@
 # January 2017
 
 # 20-setup - hardware & windows configuration/settings
-$pswindow.windowtitle = "LockerLife Locker Deployment 20-setup"
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 20-setup"
 
 
 $basename = $MyInvocation.MyCommand.Name
@@ -17,12 +17,13 @@ $basename = $MyInvocation.MyCommand.Name
 # DISABLE 802.11 / Bluetooth interfaces
 # --------------------------------------------------------------------------------------------
 Write-Host ""
-Write-Host "DISABLE WIRELESS INTERFACE"
-& "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
+Write-Host "DISABLE BLUETOOTH INTERFACE"
 & "$Env:SystemRoot\System32\devcon.exe" disable BTH*
 & "$Env:SystemRoot\System32\svchost.exe" -k bthsvcs
 & "$Env:SystemRoot\System32\net.exe" stop bthserv
 & "$Env:SystemRoot\System32\reg.exe" add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /d 4 /f
+# 2017-01 Temporarily hold off on disabling wifi
+#& "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
 
 
 # --------------------------------------------------------------------------------------------

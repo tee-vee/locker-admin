@@ -1,12 +1,37 @@
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
+# 00-init - handle user account, help manage system/environment variables, make a stable environment for next part;
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-init"
 $basename = $MyInvocation.MyCommand.Name
+
+
+# Verify Running as Admin
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+If (!( $isAdmin )) {
+	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Start-Sleep -Seconds 1
+	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+	exit
+}
 
 # Allow unattended reboots
 $Boxstarter.RebootOk=$true
 $Boxstarter.NoPassword=$false
 $Boxstarter.AutoLogin=$true
+
+# get and source DeploymentConfig
+$WebClient = New-Object System.Net.WebClient
+(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
+. C:\local\etc\99-DeploymentConfig.ps1
+
+#--------------------------------------------------------------------
+# Lets start
+#--------------------------------------------------------------------
+
+# Start Time and Transcript
+Start-Transcript -Path "$PSScriptRoot\Prereq.log"
+$StartDateTime = get-date
+Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
 
 
 # remove limitations
@@ -14,7 +39,7 @@ Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
 
-
+# set window title
 $pshost = Get-Host
 $pswindow = $pshost.ui.rawui
 $newsize = $pswindow.buffersize
@@ -23,18 +48,16 @@ $newsize.height = 5500
 # reminder: you can’t have a screen width that’s bigger than the buffer size.
 # Therefore, before we can increase our window size we need to increase the buffer size
 # powershell screen width and the buffer size are set to 150.
-$newsize.width = 175
+$newsize.width = 170
 $pswindow.buffersize = $newsize
-$pswindow.windowtitle = "LockerLife Locker Deployment 00-init"
 
 # the nul ensures window size does not chnage
 #& cmd /c mode con: cols=150  >nul 2>nul
 
 
-#####################
-# Default variables #
-#####################
-
+#--------------------------------------------------------------------
+# Default variables
+#--------------------------------------------------------------------
 Install-ChocolateyEnvironmentVariable "baseurl" "http://lockerlife.hk"
 Install-ChocolateyEnvironmentVariable "deployurl" "$Env:baseurl/deploy"
 Install-ChocolateyEnvironmentVariable "domainname" "lockerlife.hk"
@@ -59,34 +82,18 @@ Install-ChocolateyEnvironmentVariable "curl" "$Env:ProgramFiles\Gow\bin\curl.exe
 Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
 
 
-
-### ----- reload current shell elevated to administrator -> prepare for 01-bootstrap -> exec 01-bootstrap ----- ###
-# Verify Running as Admin
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-If (!( $isAdmin )) {
-  Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Start-Sleep -Seconds 1
-  Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-  Write-Host
-  exit
-}
-
 Disable-UAC
 
-# important directories
-New-Item -Path "~\Documents\WindowsPowerShell" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "~\Desktop\LockerDeployment" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "~\Documents\PSConfiguration" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "D:\locker-libs" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:_tmp" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:logs" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:images" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:imagesarchive" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\bin" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\drivers" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\etc" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\gpo" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\src" -ItemType Directory -Force -ErrorAction SilentlyContinue
-New-Item -Path "$Env:local\status" -ItemType Directory -Force -ErrorAction SilentlyContinue
+# important directories - create directories as early as possible ...
+"$Env:local\status","$Env:local\src","$Env:local\gpo","$Env:local\etc","$Env:local\drivers","$Env:local\bin","$Env:imagesarchive","$Env:images","~\Documents\WindowsPowerShell","~\Desktop\LockerDeployment","~\Documents\PSConfiguration","D:\locker-libs","$Env:_tmp","$Env:logs" | ForEach-Object {
+  if (!( Test-Path "$_" )) { New-Item -Type Directory -Path "$_" }
+}
+#New-Item -Path "~\Documents\WindowsPowerShell" -ItemType Directory -Force -ErrorAction SilentlyContinue
+#New-Item -Path "~\Desktop\LockerDeployment" -ItemType Directory -Force -ErrorAction SilentlyContinue
+#New-Item -Path "~\Documents\PSConfiguration" -ItemType Directory -Force -ErrorAction SilentlyContinue
+#New-Item -Path "D:\locker-libs" -ItemType Directory -Force -ErrorAction SilentlyContinue
+#New-Item -Path  -ItemType Directory -Force -ErrorAction SilentlyContinue
+#New-Item -Path  -ItemType Directory -Force -ErrorAction SilentlyContinue
 # $a = New-Item -ItemType Directory "$env:USERPROFILE\Desktop\Unattended Builds" -Force -ErrorAction SilentlyContinue
 
 
@@ -95,7 +102,7 @@ $WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/curl.exe","C:\local\bin
 $WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/Autologon.exe","C:\local\bin\Autologon.exe")
 $WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/Bginfo.exe","C:\local\bin\Bginfo.exe")
 $WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/nssm.exe","C:\local\bin\nssm.exe")
-$WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/nssm.exe","C:\local\bin\nssm.exe")
+#$WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/nssm.exe","C:\local\bin\nssm.exe")
 $WebClient.DownloadFile("http://lockerlife.hk/deploy/bin/sendEmail.exe","C:\local\bin\sendEmail.exe")
 
 #iexplore http://lockerlife.hk/deploy/bin/curl.exe
@@ -111,10 +118,9 @@ Write-Host "load autologon"
 #"DefaultPassword"="P@$$w0rd"
 #"DefaultDomainName"="contoso"
 
+# Cleanup Desktop
+CleanupDesktop
 
-# create shortcut to deployment - 00-bootstrap
-Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$Env:deployurl" -Description "LockerLife Deployment Start"
-Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\LockerDeployment\Restart-00.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/00-bootstrap.ps1" -Description "Redeploy Locker"
 
 # Internet Explorer: Temp Internet Files:
 & RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
