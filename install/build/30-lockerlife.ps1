@@ -4,69 +4,105 @@
 # 30-lockerlife - LockerLife Internal Configuration (Preparation for purple console screen)
 # ** autologon as kiosk user after boot
 $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 30-lockerlife"
+$basename = Split-Path -Leaf $PSCommandPath
 
 
-$basename = $MyInvocation.MyCommand.Name
+#--------------------------------------------------------------------
+Write-Host "$basename - Lets start"
+#--------------------------------------------------------------------
 
-# source DeploymentConfig
-(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
-. C:\local\etc\99-DeploymentConfig.ps1
-
-### ----- reload current shell elevated to administrator -> prepare for 01-bootstrap -> exec 01-bootstrap ----- ###
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
-  Write-Host "`n"
-  Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Start-Sleep -Seconds 1
-  Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-  Write-Host; exit
+	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+	exit
 }
 
-#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123 /active:yes' -NoNewWindow
+Breathe
 
-# --------------------------------------------------------------------------------------------
-Write-Host "."
-WriteInfoHighlighted "install services"
-WriteInfoHighlighted"INSTALL SCANNER.JAR AS SERVICE"
+# close previous IE windows ...
+& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+
+# get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
+$WebClient = New-Object System.Net.WebClient
+(New-Object Net.WebClient).DownloadString("$Env:deployurl/99-DeploymentConfig.ps1") > "$Env:temp\99-DeploymentConfig.ps1"
+. "$Env:temp\99-DeploymentConfig.ps1"
+
+# remove limitations
+Disable-MicrosoftUpdate
+Disable-UAC
+Update-ExecutionPolicy Unrestricted
+
+# Start Time and Transcript
+Start-Transcript -Path "$Env:temp\$basename.log"
+$StartDateTime = Get-Date
+Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
+
+# set window title
+$pshost = Get-Host
+$pswindow = $pshost.ui.rawui
+$newsize = $pswindow.buffersize
+$newsize.height = 5500
+
+# reminder: you can’t have a screen width that’s bigger than the buffer size.
+# Therefore, before we can increase our window size we need to increase the buffer size
+# powershell screen width and the buffer size are set to 150.
+$newsize.width = 170
+$pswindow.buffersize = $newsize
+
+# the nul ensures window size does not chnage
+#& cmd /c mode con: cols=150  >nul 2>nul
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Install LockerLife Services"
+#--------------------------------------------------------------------
+
+WriteInfoHighlighted "$basename -- INSTALL SCANNER.JAR AS SERVICE"
 #CALL %LOCKERINSTALL%\build\new-service-scanner.bat
 #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
-Start-Process 'new-service-scanner.bat' -Verb runAs -Wait
+Start-Process $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
 
 Write-Host "."
-WriteInfoHighlighted "INSTALL KIOSKSERVER AS SERVICE"
+WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
 #CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
 #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
-Start-Process 'new-service-kioskserver.bat' -Verb runAs -Wait
+Start-Process $Env:local\bin\new-service-kioskserver.bat -Verb RunAs -Wait
 
 Write-Host "."
-WriteInfoHighlighted "INSTALL DATA-COLLECTION.JAR AS SERVICE"
+WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION.JAR AS SERVICE"
 #CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
 #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
-Start-Process 'ew-service-datacollection.bat' -Verb runAs -Wait
-
+Start-Process $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
 
 Write-Host "."
-WriteInfoHighlighted "INSTALL CORE.JAR AS SERVICE"
+WriteInfoHighlighted "$basename -- INSTALL CORE.JAR AS SERVICE"
 ## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
-Start-Process 'new-service-core.bat' -Verb runAs -Wait
+Start-Process $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
 
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Manage LockerLife User Accounts"
+#--------------------------------------------------------------------
 
 # add user
-Write-Host "."
-Write-Host "ADD KIOSK USER"
-Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb runAs ; WriteInfo
+Write-Host "$basename -- ADD KIOSK USER"
+Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
 Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
 Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
 
 
 # [] auto create user profile (super quick, super dirty!)
-Write-Host "."
-Write-Host "Create kiosk user profile"
+Write-Host "$basename -- Create kiosk user profile"
 Start-Process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow -Wait
+psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow
+psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 
-Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0' -NoNewWindow
 # psexec -u kiosk to use bginfo to change background to black
+Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0' -NoNewWindow
+psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0
 
 
 #get locker-libs
@@ -118,9 +154,19 @@ Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision12
 ## schtasks /create /tn "My App" /tr c:\apps\myapp.exe /sc daily /st 08:00:00 /ed 12/31/2001
 
 
-if (Test-PendingReboot) { Invoke-Reboot }
+#if (Test-PendingReboot) { Invoke-Reboot }
+Reboot-IfRequired
 
 # --------------------------------------------------------------------------------------------
 Write-Host "Set Autologon"
 WriteInfoHighlighted "SETUP AUTOLOGON"
-Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
+#Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
+
+### Use New-GPO ???
+#New-GPO NoDisplay | Set-GPRegistryValue -key “HKCU\Software\Microsoft\Windows\CurrentVersion\Policies \System” -ValueName NoDispCPL -Type DWORD -value 1 | New-GPLink -target “ou=executive,dc=sample,dc=com”
+
+# cleanup desktop
+CleanupDesktop
+
+RefreshEnv
+# touch $Env:local\status\30-lockerlife.done file

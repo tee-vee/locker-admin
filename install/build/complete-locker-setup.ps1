@@ -1,22 +1,65 @@
 # Derek Yuen <derekyuen@locision.com>
-# complete-locker-setup.ps1 (was complete-locker-setup.cmd)
 # December 2016, January 2017
 
-# complete-locker-setup -
+# complete-locker-setup - must run script while logged in as kiosk user
 $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment - complete-locker-setup"
-
 $basename = $MyInvocation.MyCommand.Name
 
-# source DeploymentConfig
-(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
-. C:\local\etc\99-DeploymentConfig.ps1
+#--------------------------------------------------------------------
+Write-Host "$basename - Lets start"
+#--------------------------------------------------------------------
 
-Write-Host "complete-locker-setup"
+# Verify Running as Admin
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+If (!( $isAdmin )) {
+	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+	exit
+}
+
+Breathe
+
+# close previous IE windows ...
+& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+
+## get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
+$WebClient = New-Object System.Net.WebClient
+(New-Object Net.WebClient).DownloadString("$Env:deployurl/99-DeploymentConfig.ps1") > "$Env:temp\99-DeploymentConfig.ps1"
+. "$Env:temp\99-DeploymentConfig.ps1"
+
+## remove limitations
+Disable-MicrosoftUpdate
+Disable-UAC
+Update-ExecutionPolicy Unrestricted
+
+# Start Time and Transcript
+Start-Transcript -Path "$Env:temp\$basename.log"
+$StartDateTime = Get-Date
+Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
+
+## set window title
+$pshost = Get-Host
+$pswindow = $pshost.ui.rawui
+$newsize = $pswindow.buffersize
+$newsize.height = 5500
+
+# reminder: you can’t have a screen width that’s bigger than the buffer size.
+# Therefore, before we can increase our window size we need to increase the buffer size
+# powershell screen width and the buffer size are set to 150.
+$newsize.width = 170
+$pswindow.buffersize = $newsize
+
+# the nul ensures window size does not chnage
+#& cmd /c mode con: cols=150  >nul 2>nul
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Setting up kiosk user environment"
+#--------------------------------------------------------------------
 
 # Small taskbar
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
-
 
 # set up git
 git config --global user.email kiosk@lockerlife.hk
@@ -24,6 +67,8 @@ git config --global user.name 'LockerLife Kiosk'
 
 # set up scheduled tasks for kiosk user (before we elevate this script to administrator)
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
+
+choco install -y dropbox
 
 Write-Host ====================================================================
 Write-Host
@@ -34,25 +79,13 @@ Write-Host ====================================================================
 Write-Host
 
 
-
-# Verify Running as Admin
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-If (!( $isAdmin )) {
-  Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Start-Sleep -Seconds 1
-  Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-  Write-Host; exit
-}
-
-choco install -y dropbox
-
-
 # --------------------------------------------------------------------------------------------
 # update boot screen
 # --------------------------------------------------------------------------------------------
 # & "$Env:local\bin\BootUpdCmd20.exe" "$Env:local\etc\build\lockerlife-boot-custom.bs7"
 
 
-Write-Host "Setting up teamviewer"
+Write-Host "$basename -- Setting up teamviewer"
 #hstart /runas /wait "net stop teamviewer"
 Stop-Service teamviewer
 Stop-Service teamviewer
@@ -68,7 +101,7 @@ Write-Host
 
 # --------------------------------------------------------------------------------------------
 # [] GROUP POLICY CHECK
-WriteInfo "GROUP POLICY"
+WriteInfo "$basename -- GROUP POLICY"
 #    Our group policy is applied to groups, not directly to users
 #    Good to double check from perspective of user
 #    Verify the RSoP
@@ -79,8 +112,8 @@ WriteInfo "GROUP POLICY"
 #& hstart /runas /wait "move /Y %WINDIR%\System32\GroupPolicy %WINDIR%\System32\GroupPolicy-Backup"
 #& hstart /runas /wait "move /Y %WINDIR%\System32\GroupPolicyUsers %WINDIR%\System32\GroupPolicyUsers-Backup"
 cd "$ENV:SystemRoot\System32"
-& hstart /runas /wait "$Env:PROGRAMFILES\7-Zip\7z.exe" e -y -bt production-gpo.zip
-& gpupdate /force
+hstart /runas /wait "$Env:PROGRAMFILES\7-Zip\7z.exe" e -y -bt production-gpo.zip
+gpupdate /force
 
 # scrub "Recommended programs" options
 #HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\filetype\OpenWithList
@@ -145,6 +178,14 @@ If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo
 # Disable Remote Assistance
 Write-Host "Disabling Remote Assistance..."
 Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0 -Verbose
+
+
+;Disable Remote Desktop
+reg add “hklm\system\currentcontrolset\control\Terminal Server” /v fDenyTSConnections /t REG_DWORD /d 1 /f
+
+
+;Allow connections from computers running any version of Remote Desktop (less secure)
+reg add “hklm\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp” /v UserAuthentication /t REG_DWORD /d 0 /f
 
 
 # #########
@@ -238,8 +279,41 @@ Write-Host "Showing small icons in taskbar ..."
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Type DWord -Value 1
 
 
+# ;Adjust the system tray icons – 0 = Display inactive tray icons
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer]
+“EnableAutoTray”=dword:00000000
+
+
+# ;Clear Most Frequently Used items
+[-HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{75048700-EF1F-11D0-9888-006097DEACF9}]
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{75048700-EF1F-11D0-9888-006097DEACF9}]
+@=””
+
+
+# ;Show/Hide desktop icons
+#; Internet Explorer = {871C5380-42A0-1069-A2EA-08002B30309D}
+#; User’s Files = {450D8FBA-AD25-11D0-98A8-0800361B1103}
+#; Network = {208D2C60-3AEA-1069-A2D7-08002B30309D}
+
+# ; 0 = Display
+# ; 1 = Hide
+
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons]
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel]
+“{871C5380-42A0-1069-A2EA-08002B30309D}”=dword:00000001
+“{450D8FBA-AD25-11D0-98A8-0800361B1103}”=dword:00000000
+“{20D04FE0-3AEA-1069-A2D8-08002B30309D}”=dword:00000000
+“{208D2C60-3AEA-1069-A2D7-08002B30309D}”=dword:00000000
+
+
+
 # Hide Computer shortcut from desktop
+#   ; Computer = {20D04FE0-3AEA-1069-A2D8-08002B30309D}
+Remove-ItemProperty -Path "[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons]" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
+
+Remove-ItemProperty -Path "[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel]" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 
 

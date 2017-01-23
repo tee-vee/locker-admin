@@ -3,15 +3,57 @@
 
 # 20-setup - hardware & windows configuration/settings
 $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 20-setup"
+$basename = Split-Path -Leaf $PSCommandPath
 
 
-$basename = $MyInvocation.MyCommand.Name
 
-# source DeploymentConfig
-(New-Object Net.WebClient).DownloadString("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1") > C:\local\etc\99-DeploymentConfig.ps1
-. C:\local\etc\99-DeploymentConfig.ps1
+#--------------------------------------------------------------------
+Write-Host "$basename - Lets start"
+#--------------------------------------------------------------------
 
+# Verify Running as Admin
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+If (!( $isAdmin )) {
+	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+	exit
+}
+
+Breathe
+
+# close previous IE windows ...
 & "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+
+# get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
+$WebClient = New-Object System.Net.WebClient
+(New-Object Net.WebClient).DownloadString("$Env:deployurl/99-DeploymentConfig.ps1") > "$Env:temp\99-DeploymentConfig.ps1"
+. "$Env:temp\99-DeploymentConfig.ps1"
+
+# remove limitations
+Disable-MicrosoftUpdate
+Disable-UAC
+Update-ExecutionPolicy Unrestricted
+
+# Start Time and Transcript
+Start-Transcript -Path "$Env:temp\$basename.log"
+$StartDateTime = Get-Date
+Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
+
+# set window title
+$pshost = Get-Host
+$pswindow = $pshost.ui.rawui
+$newsize = $pswindow.buffersize
+$newsize.height = 5500
+
+# reminder: you can’t have a screen width that’s bigger than the buffer size.
+# Therefore, before we can increase our window size we need to increase the buffer size
+# powershell screen width and the buffer size are set to 150.
+$newsize.width = 170
+$pswindow.buffersize = $newsize
+
+# the nul ensures window size does not chnage
+#& cmd /c mode con: cols=150  >nul 2>nul
+
 
 # --------------------------------------------------------------------------------------------
 # DISABLE 802.11 / Bluetooth interfaces
@@ -25,6 +67,8 @@ Write-Host "DISABLE BLUETOOTH INTERFACE"
 # 2017-01 Temporarily hold off on disabling wifi
 #& "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
 
+## must install printer before gpo;
+## must let machine contact windows update
 
 # --------------------------------------------------------------------------------------------
 # Install printer-filter driver
@@ -122,31 +166,21 @@ Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Proce
 
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
 
+## Register Locker with Locker Cloud:
+#$script = @"
+#    `$cred = Get-Credential $env:USERNAME
+#    Install-BoxstarterPackage https://gitlab.com/locker-admin/...ps1 -Credential `$cred
+#"@
+#Set-Content (Join-Path $a "register-locker.ps1") ($script)
 
-## Windows Firewall
-WriteInfoHighlighted "LOCAL FIREWALL SETUP"
-#& "$Env:SystemRoot\System32\netsh.exe" advfirewall show allprofiles
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall set allrprofiles state on
+## Finish Locker Deployment:
+#$script = @"
+#    `$cred = Get-Credential $env:USERNAME
+#    Install-BoxstarterPackage https://gitlab.com/locker-admin/...ps1 -Credential `$cred
+#"@
+#Set-Content (Join-Path $a "finish-locker-deployment.ps1") ($script)
 
-## QUERY FIREWALL RULES
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall show rule name=all
 
-## set logging
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall set currentprofile logging filename "e:\logs\pfirewall.log"
-
-## set applications
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Allow Java" dir=in action=allow program="D:\java\jre\java.exe"
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Allow Kioskserver" dir=in action=allow program="D:\kioskserver\kioskserver.exe"
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall set rule group="Remote Desktop" new enable=Yes
-
-## set rulesets
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 23" dir=in action=allow protocol=TCP localport=23
-#netsh advfirewall firewall delete rule name="Open Server Port 23" protocol=tcp localport=23
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 8080" dir=in action=allow protocol=TCP localport=8080
-#netsh advfirewall firewall delete rule name="Open Server Port 8080" protocol=tcp localport=8080
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 8081" dir=in action=allow protocol=TCP localport=8081
-#netsh advfirewall firewall delete rule name="Open Server Port 8081" protocol=tcp localport=8081
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 9012" dir=in action=allow protocol=TCP localport=9012
 
 
 # Update MSAV Signature
@@ -157,19 +191,6 @@ WriteInfoHighlighted "LOCAL FIREWALL SETUP"
 #"%ProgramFiles%\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 & "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
-## --------------------------------------------------------------------------------------------
-## Windows Customizations ...
-## --------------------------------------------------------------------------------------------
-# Disable hibernate
-Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off'
-
-# hide boot
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set bootux disabled'
-
-# disable booting into recovery mode
-# undo: bcdedit /deletevalue {current} bootstatuspolicy
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} recoveryenabled No'
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures'
 
 
 # --------------------------------------------------------------------------------------------
@@ -377,6 +398,10 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # finishing #
 #############
 
+#;Disable Automatic Updates
+#reg add “HKLM\Software\Policies\Microsoft\Windows\WindowsUpdate\AU” /v NoAutoUpdate /t REG_DWORD /d 1 /f
+
+
 # Internet Explorer: All:
 #RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 255
 
@@ -398,14 +423,36 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # Internet Explorer: All:
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
-Remove-Item "$Env:userprofile\Desktop\*.lnk"
-Install-ChocolateyShortcut -ShortcutFilePath "$Env:Public\Desktop\Restart Deployment.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/00-bootstrap.ps1" -Description "Redeploy Locker"
 
 WriteInfo "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
-WriteSuccess "Press any key to continue..."
-$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
 
-if (Test-PendingReboot) { Invoke-Reboot }
+#if (Test-PendingReboot) { Invoke-Reboot }
+Reboot-IfRequired
 
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Cleanup"
+#--------------------------------------------------------------------
+
+# Cleanup Desktop
+CleanupDesktop
+
+Create-DeploymentLinks
+
+# Internet Explorer: Temp Internet Files:
+RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
+
+# touch $Env:local\status\00-init.done file
+# echo date/time into file, add lines ...
+New-Item -Path "$Env:local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
+
+& "$Env:curl" -Ss -k https://api.github.com/zen ; Write-Host ""
+Write-Host ""
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Next stage ... "
+#--------------------------------------------------------------------
+& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 & "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/30-lockerlife.ps1"
