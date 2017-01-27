@@ -19,15 +19,18 @@ If (!( $isAdmin )) {
 	exit
 }
 
-Breathe
+1..5 | % { Write-Host }
 
 # close previous IE windows ...
-& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
-$WebClient = New-Object System.Net.WebClient
-(New-Object Net.WebClient).DownloadString("$Env:deployurl/99-DeploymentConfig.ps1") > "$Env:temp\99-DeploymentConfig.ps1"
-. "$Env:temp\99-DeploymentConfig.ps1"
+#$WebClient = New-Object System.Net.WebClient
+#$WebClient.DownloadFile("$Env:deployurl/99-DeploymentConfig.ps1","$Env:temp\99-DeploymentConfig.ps1")
+#. "$Env:temp\99-DeploymentConfig.ps1"
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
+. C:\99-DeploymentConfig.ps1
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -39,6 +42,7 @@ Start-Transcript -Path "$Env:temp\$basename.log"
 $StartDateTime = Get-Date
 Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
 
+
 # set window title
 $pshost = Get-Host
 $pswindow = $pshost.ui.rawui
@@ -48,7 +52,7 @@ $newsize.height = 5500
 # reminder: you can’t have a screen width that’s bigger than the buffer size.
 # Therefore, before we can increase our window size we need to increase the buffer size
 # powershell screen width and the buffer size are set to 150.
-$newsize.width = 170
+$newsize.width = 200
 $pswindow.buffersize = $newsize
 
 # the nul ensures window size does not chnage
@@ -78,9 +82,9 @@ Write-Host "$basename - Install some software"
 
 choco feature enable -n=allowGlobalConfirmation
 
-cinst chocolatey --version 0.9.10.3 --forcex86 --allow-downgrade
-choco pin add -n chocolatey -y
-
+#cinst chocolatey --version 0.9.10.3 --forcex86 --allow-downgrade
+#choco pin add -n chocolatey -y
+cinst chocolatey
 Reboot-IfRequired
 
 # fix mis-versioned 7z.exe x64 binary
@@ -89,10 +93,9 @@ Reboot-IfRequired
 
 cinst 7zip --forcex86
 cinst 7zip.commandline
-
+Reboot-IfRequired
 
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1
-
 
 cinst dotnet4.6.2 --version 4.6.01590.0
 #if (Test-PendingReboot) { Invoke-Reboot }
@@ -105,31 +108,29 @@ cinst Boxstarter.Chocolatey
 cinst chocolatey-core.extension
 cinst chocolatey-uninstall.extension
 
-RefreshEnv
-
 #if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 
-choco install teamviewer.host --version 12.0.72365
+cinst teamviewer.host --version 12.0.72365
+Reboot-IfRequired
 
 # gow installer is easily confused ... only run if gow isn't installed ..
 if (!(Test-Path "$Env:ProgramFiles\Gow"))
 {
+	#choco feature enable -n allowEmptyChecksums
   cinst gow
-  Reboot-IfRequired
 }
+
 cinst nircmd
 cinst xmlstarlet
 #cinst curl
-cinst nssm
-
-cinst ie11
-Breathe
-RefreshEnv
+cinst nssm --ignore-checksums
 Reboot-IfRequired
 
-cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
-RefreshEnv
+cinst ie11 --ignore-checksums -y
+Reboot-IfRequired
+
+cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"' -y
 Reboot-IfRequired
 
 cinst powershell -version 3.0.20121027
@@ -149,10 +150,9 @@ Reboot-IfRequired
 Write-Host "$basename -- Disable Windows Update"
 Disable-MicrosoftUpdate
 
-Write-Host "$basename -- installing a known-good version of 7z"
-& "$Env:curl" -Ss -o "$Env:_tmp\7z1604.exe" --url "http://www.7-zip.org/a/7z1604.exe"
-& "$Env:_tmp\7z1604.exe" /S
-
+#Write-Host "$basename -- installing a known-good version of 7z"
+#& "$Env:curl" -Ss -o "$Env:_tmp\7z1604.exe" --url "http://www.7-zip.org/a/7z1604.exe"
+#& "$Env:_tmp\7z1604.exe" /S
 
 Write-Host "$basename -- Installing Powershell 4"
 cinst powershell4
@@ -170,18 +170,16 @@ Write-Host "$basename -- test-reboot"
 Reboot-IfRequired
 
 Write-Host "$basename -- installing psget"
-choco install powershell-packagemanagement -y
+cinst powershell-packagemanagement
 
-Write-Host ""
 Write-Host "$basename -- Installing Microsoft Security Essentials (antivirus)"
-Write-Host ""
-cinst microsoftsecurityessentials -version 4.5.0216.0
+cinst microsoftsecurityessentials -version 4.5.0216.0 --ignore-checksums
 #if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 Write-Host "."
 
 # --------------------------------------------------------------------------------------------
-# Temporarily stop antivirus
+WriteInfo "Temporarily stop antivirus"
 # --------------------------------------------------------------------------------------------
 Write-Host "`n $basename -- Temporarily disabling antivirus"
 & "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
@@ -189,29 +187,26 @@ Write-Host "`n $basename -- Temporarily disabling antivirus"
 & "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
 
 Write-Host "`n $basename installing additional tools"
-choco install bginfo
-#choco install vim
-choco install jq
-choco install clink
-#choco install putty
-#choco install rsync
-choco install wget
-choco install nssm
-choco install psexec
-#choco install sysinternals
-#choco install teraterm
+cinst bginfo
+#cinst vim
+cinst jq --ignore-checksums
+cinst clink
+#cinst putty
+#cinst rsync
+cinst wget
+cinst nssm
+cinst psexec
+#cinst sysinternals
+#cinst teraterm
 
 Write-Host "$basename -- Installing Telnet Client (dism/windowsfeatures)"
 cinst TelnetClient -source windowsfeatures
 #if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 
-
-Write-Host "`n $basename -- second backup (more reliable) unzip"
-& "$Env:curl" -Ss -k -o "$Env:_tmp\unzip-5.51-1.exe" --url "$Env:deployurl/unzip-5.51-1.exe"
-& "$Env:_tmp\unzip-5.51-1.exe" /SILENT
-
-
+#Write-Host "`n $basename -- second backup (more reliable) unzip"
+#& "$Env:curl" -Ss -k -o "$Env:_tmp\unzip-5.51-1.exe" --url "$Env:deployurl/unzip-5.51-1.exe"
+#& "$Env:_tmp\unzip-5.51-1.exe" /SILENT
 
 # install java/jre
 Write-Host "`n $basename Installing Java jre"
@@ -231,12 +226,10 @@ Write-Host "`n $basename -- Applying Windows Update KB2889748 "
 
 #"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nircmd.zip -y
 
-
-
 Write-Host "."
 & "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
 
-Write-Host "`n $basename Downloading Drivers"
+Write-Host "`n $basename -- Downloading Drivers"
 Set-Location -Path "$Env:local\drivers"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "$Env:deployurl/printer-filter.zip"
@@ -249,7 +242,7 @@ Set-Location -Path "$Env:local\drivers"
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "$Env:deployurl/scanner.zip"
 & "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "scanner.zip"
 
-Write-Host ""
+Write-Host "$basename -- local\etc stuff"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\kiosk-production-black.bgi" --url "$Env:deployurl/etc/kiosk-production-black.bgi"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot-custom.bs7" --url "$Env:deployurl/etc/lockerlife-boot-custom.bs7"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot.bs7" --url "$Env:deployurl/etc/lockerlife-boot.bs7"
@@ -261,17 +254,14 @@ Write-Host ""
 & "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.jpg" --url "$Env:deployurl/etc/pantone-process-black-c.jpg"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\production-gpo.zip" --url "$Env:deployurl/etc/production-gpo.zip"
 
-Write-Host "`n $basename download teamviewer Settings"
+Write-Host "`n $basename -- download teamviewer Settings"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 
-Write-Host "`n GPO"
+Write-Host "$basename -- GPO"
 Set-Location -Path "$Env:SystemRoot\System32"
 ## make backup of GroupPolicy directories
-7z a -t7z "$Env:SystemRoot\System32\GroupPolicy-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicy\"
-7z a -t7z "$Env:SystemRoot\System32\GroupPolicyUsers-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicyUsers\"
-
-
-RefreshEnv
+c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicy-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicy\"
+c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicyUsers-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicyUsers\"
 
 chocolatey feature disable -n=allowGlobalConfirmation
 
@@ -290,14 +280,16 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
 #  ;Resort the Start Menu
 #  [-HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MenuOrder]
 
-
 Update-Help
 
 Write-Host "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
 # last chance to reboot before next step ...
-if (Test-PendingReboot) { Invoke-Reboot }
+if (Test-PendingReboot)
+{
+	Invoke-Reboot
+}
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
@@ -322,7 +314,8 @@ Write-Host ""
 #--------------------------------------------------------------------
 Write-Host "$basename - Next stage ... "
 #--------------------------------------------------------------------
-& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1"
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/02-bootstrap.ps1"
 & "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/10-identify.ps1
