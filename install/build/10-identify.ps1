@@ -2,9 +2,9 @@
 # January 2017
 
 # 10-configure -- perform local identification tasks and setup for locker registration
-$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 10-configure"
-$basename = Split-Path -Leaf $PSCommandPath
-
+$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 10-identify"
+#$basename = Split-Path -Leaf $PSCommandPath
+#Set-PSDebug -Trace 1
 
 
 #--------------------------------------------------------------------
@@ -16,23 +16,27 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
 If (!( $isAdmin )) {
 	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
 	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+	1..5 | % { Write-Host }
 	exit
 }
 
-Breathe
-
 # close previous IE windows ...
-& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
-$WebClient = New-Object System.Net.WebClient
-(New-Object Net.WebClient).DownloadString("$Env:deployurl/99-DeploymentConfig.ps1") > "$Env:temp\99-DeploymentConfig.ps1"
-. "$Env:temp\99-DeploymentConfig.ps1"
+#$WebClient = New-Object System.Net.WebClient
+#$WebClient.DownloadFile("$Env:deployurl/99-DeploymentConfig.ps1","$Env:temp\99-DeploymentConfig.ps1")
+#. "$Env:temp\99-DeploymentConfig.ps1"
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
+. C:\99-DeploymentConfig.ps1
+
+$basename = "10-identify"
 
 # remove limitations
 Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
+
 
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
@@ -48,7 +52,7 @@ $newsize.height = 5500
 # reminder: you can’t have a screen width that’s bigger than the buffer size.
 # Therefore, before we can increase our window size we need to increase the buffer size
 # powershell screen width and the buffer size are set to 150.
-$newsize.width = 170
+$newsize.width = 200
 $pswindow.buffersize = $newsize
 
 # the nul ensures window size does not chnage
@@ -58,20 +62,30 @@ $pswindow.buffersize = $newsize
 #--------------------------------------------------------------------
 #
 #--------------------------------------------------------------------
+
+# disable netbios
+wmic nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
+wmic nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2
+
+# find for camera
+#"$Env:CameraIpAddress" = "$Env:local\bin\UPnPScan.exe" -m -i a
+
+#--------------------------------------------------------------------
+
 Add-Type -AssemblyName Microsoft.VisualBasic
 
-# Scan SIM card to identify locker
+Write-Host "Scan SIM card to identify locker" -ForegroundColor Red
 $Env:iccid = [Microsoft.VisualBasic.Interaction]::InputBox('Scan SIM Card', 'LockerLife Locker Deployment', "")
 
-# Scan locker barcode for serial number
+Write-Host "Scan locker barcode for serial number" -ForegroundColor Red
 $Env:lockerserialnumber = [Microsoft.VisualBasic.Interaction]::InputBox('Scan Locker Serial Barcode', 'LockerLife Locker Deployment', "")
 
 
 # $Env:sitename = & "$Env:curl" -Ss -k --url "https://gist.githubusercontent.com/tee-vee/bfa0ea73871ce47e6436beb88b2b77ac/raw/locker-iccid.db" | findstr "$Env:iccid" | awk '{ print $2 }'
 $Env:sitename = & "$Env:curl" -Ss -k --url "https://gist.githubusercontent.com/tee-vee/bfa0ea73871ce47e6436beb88b2b77ac/raw/locker-iccid.db" | Select-String "$Env:iccid" | Out-String | %{ $_.Split(' ')[1]; } | foreach { $_ -replace "`r|`n","" }
 
-Write-Host "iccid - $Env:iccid"
-Write-Host "serial number - $Env:lockerserialnumber"
+Write-Host "$basename -- iccid - $env:iccid"
+Write-Host "$basename -- serial number - $env:lockerserialnumber"
 #Write-Host "hostname - $Env:hostname"
 #Write-Host "sitename - $Env:sitename"
 #Write-Host "serial number - $Env:lockerserialnumber"
@@ -108,12 +122,12 @@ if (!$Env:sitename) {
       Install-ChocolateyEnvironmentVariable "UfoIccid" "NULL"
       $Env:UfoIccid = $Env:iccid.SubString($Env:iccid.Length-5)
       Write-Host "$Env:UfoIccid"
-      Rename-Computer -NewName "UFO-$Env:UfoIccid" -Restart
+      Rename-Computer -NewName "UFO-$Env:UfoIccid" -Force -PassThru -Restart
     }
     else
     {
       Uninstall-ChocolateyEnvironmentVariable -VariableName 'UfoIccid'
-      Rename-Computer -NewName "$Env:sitename" -Restart
+      Rename-Computer -NewName "$Env:sitename" -Force -PassThru -Restart
     }
 
     Add-Computer -WorkGroupName "LOCKERLIFE.HK"
@@ -129,9 +143,10 @@ if (!$Env:sitename) {
 #if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 
-#############
+
+#--------------------------------------------------------------------
 # finishing #
-#############
+#--------------------------------------------------------------------
 
 # Internet Explorer: All:
 #RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 255
@@ -159,8 +174,8 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 Write-Host "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 Write-Host "Mistake with Locker registration? Double-click the register-locker icon on the desktop..."
-Write-Host "`t Or Continue to the next step ..."
-$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
+#Write-Host "`t Or Continue to the next step ..."
+#$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
@@ -179,11 +194,18 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 New-Item -Path "$Env:local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
 
 & "$Env:curl" -Ss -k https://api.github.com/zen ; Write-Host ""
-Write-Host ""
+Write-Host "."
 
+
+Write-Host "`n $basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Stop-Transcript
+
+# last chance to reboot before next step ...
+Reboot-IfRequired
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Next stage ... "
 #--------------------------------------------------------------------
-& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
-#& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/20-setup.ps1
+#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/20-setup.ps1

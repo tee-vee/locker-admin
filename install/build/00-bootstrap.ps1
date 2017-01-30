@@ -3,7 +3,7 @@
 
 # 00-bootstrap - install some stuff?
 $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-bootstrap"
-$basename = $MyInvocation.MyCommand.Name
+
 
 
 
@@ -14,16 +14,14 @@ Write-Host "$basename - Lets start"
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
-	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
-	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-	exit
+    Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    1..5 | % { Write-Host }
+    exit
 }
-
-1..5 | % { Write-Host }
 
 # close previous IE windows ...
 #& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
 #$WebClient = New-Object System.Net.WebClient
@@ -32,15 +30,18 @@ Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
 . C:\99-DeploymentConfig.ps1
 
+$basename = "00-bootstrap"
+
 # remove limitations
 Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
 
+
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
 $StartDateTime = Get-Date
-Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
+Write-Host "Script started at $StartDateTime" -ForegroundColor Green
 
 
 # set window title
@@ -82,9 +83,8 @@ Write-Host "$basename - Install some software"
 
 choco feature enable -n=allowGlobalConfirmation
 
-#cinst chocolatey --version 0.9.10.3 --forcex86 --allow-downgrade
-#choco pin add -n chocolatey -y
 cinst chocolatey
+cinst Boxstarter
 Reboot-IfRequired
 
 # fix mis-versioned 7z.exe x64 binary
@@ -93,6 +93,7 @@ Reboot-IfRequired
 
 cinst 7zip --forcex86
 cinst 7zip.commandline
+cinst unzip --ignore-checksums
 Reboot-IfRequired
 
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1
@@ -117,13 +118,13 @@ Reboot-IfRequired
 # gow installer is easily confused ... only run if gow isn't installed ..
 if (!(Test-Path "$Env:ProgramFiles\Gow"))
 {
-	#choco feature enable -n allowEmptyChecksums
-  cinst gow
+    #choco feature enable -n allowEmptyChecksums
+    cinst gow --ignore-checksums
 }
 
 cinst nircmd
 cinst xmlstarlet
-#cinst curl
+cinst curl
 cinst nssm --ignore-checksums
 Reboot-IfRequired
 
@@ -134,7 +135,6 @@ cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"' -y
 Reboot-IfRequired
 
 cinst powershell -version 3.0.20121027
-Breathe
 
 Write-Host "$basename -- Fixing critical Windows svchost.exe memory leak -- KB2889748"
 Enable-MicrosoftUpdate
@@ -155,14 +155,14 @@ Disable-MicrosoftUpdate
 #& "$Env:_tmp\7z1604.exe" /S
 
 Write-Host "$basename -- Installing Powershell 4"
-cinst powershell4
+cinst powershell4 --ignore-checksums
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
 if (!(Test-Path "$Env:local\bin\fix-powershell4-performance.ps1") -Or !(Test-Path "$Env:local\status\powershell4-ngen.ok"))
 {
   ##& "$Env:curl" -Ss -k -o "$Env:local\bin\fix-powershell4-performance.ps1" --url "$Env:deployurl/fix-powershell4-performance.ps1"
   #& "$Env:local\bin\fix-powershell4-performance.ps1" -Verb runAs
-  iex ((New-Object System.Net.WebClient).DownloadString('$Env:deployurl/fix-powershell4-performance.ps1'))
+  iex ((New-Object System.Net.WebClient).DownloadString('http://lockerlife.hk/deploy/fix-powershell4-performance.ps1'))
   #(new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
 }
 
@@ -174,7 +174,6 @@ cinst powershell-packagemanagement
 
 Write-Host "$basename -- Installing Microsoft Security Essentials (antivirus)"
 cinst microsoftsecurityessentials -version 4.5.0216.0 --ignore-checksums
-#if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 Write-Host "."
 
@@ -191,9 +190,11 @@ cinst bginfo
 #cinst vim
 cinst jq --ignore-checksums
 cinst clink
+#cinst webpicmd
 #cinst putty
 #cinst rsync
 cinst wget
+cinst which
 cinst nssm
 cinst psexec
 #cinst sysinternals
@@ -201,21 +202,15 @@ cinst psexec
 
 Write-Host "$basename -- Installing Telnet Client (dism/windowsfeatures)"
 cinst TelnetClient -source windowsfeatures
-#if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 
-#Write-Host "`n $basename -- second backup (more reliable) unzip"
-#& "$Env:curl" -Ss -k -o "$Env:_tmp\unzip-5.51-1.exe" --url "$Env:deployurl/unzip-5.51-1.exe"
-#& "$Env:_tmp\unzip-5.51-1.exe" /SILENT
-
-# install java/jre
-Write-Host "`n $basename Installing Java jre"
-& "$Env:curl" -k -Ss -o "$Env:_tmp\jre-8u111-windows-i586.exe" --url "$Env:deployurl/_pkg/jre-8u111-windows-i586.exe"
-& "$Env:curl" -k -Ss -o "$Env:_tmp\jre-install.properties" --url "$Env:deployurl/_pkg/jre-install.properties"
-& "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
-# Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
-
-#Write-Host ""
+if (!(Test-Path "$JAVA_HOME\java.exe")) {
+  Write-Host "`n $basename -- Installing Java jre"
+  & "$Env:curl" --progress-bar -k -Ss -o "$Env:_tmp\jre-8u111-windows-i586.exe" --url "$Env:deployurl/_pkg/jre-8u111-windows-i586.exe"
+  & "$Env:curl" --progress-bar -k -Ss -o "$Env:_tmp\jre-install.properties" --url "$Env:deployurl/_pkg/jre-install.properties"
+  & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
+  # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
+} else { Write-Host "`n $basename -- java already installed, skipping ..." }
 #& "$Env:curl" -k -Ss -o c:\local\bin\nssm-2.24.zip --url https://nssm.cc/release/nssm-2.24.zip
 #"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nssm-2.24.zip -y
 
@@ -226,9 +221,30 @@ Write-Host "`n $basename -- Applying Windows Update KB2889748 "
 
 #"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nircmd.zip -y
 
-Write-Host "."
+cinst dropbox
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Out of band Installers"
+#--------------------------------------------------------------------
+
+WriteInfoHighlighted "$basename -- Installing QuickSet"
+msiexec /i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive
+
+#--------------------------------------------------------------------
+Write-Host "$basename -- Begin -- Remove unnecessary Windows components"
+
+dism /online /disable-feature /featurename:InboxGames
+dism /online /disable-feature /featurename:FaxServicesClientPackage
+dism /online /disable-feature /featurename:WindowsGadgetPlatform
+dism /online /disable-feature /featurename:OpticalMediaDisc
+dism /online /disable-feature /featurename:Xps-Foundation-Xps-Viewer
+Write-Host "$basename -- End -- Remove unnecessary Windows components"
+
+#--------------------------------------------------------------------
+Write-Host "$basename -- GAC Update ..."
 & "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
 
+#--------------------------------------------------------------------
 Write-Host "`n $basename -- Downloading Drivers"
 Set-Location -Path "$Env:local\drivers"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
@@ -240,7 +256,8 @@ Set-Location -Path "$Env:local\drivers"
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.exe" --url "$Env:deployurl/drivers/printer.exe"
 
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "$Env:deployurl/scanner.zip"
-& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "scanner.zip"
+cd "$local\drivers"
+unzip.exe -o "scanner.zip"
 
 Write-Host "$basename -- local\etc stuff"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\kiosk-production-black.bgi" --url "$Env:deployurl/etc/kiosk-production-black.bgi"
@@ -252,10 +269,17 @@ Write-Host "$basename -- local\etc stuff"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-classic-blue.jpg" --url "$Env:deployurl/etc/pantone-classic-blue.jpg"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.bmp" --url "$Env:deployurl/etc/pantone-process-black-c.bmp"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.jpg" --url "$Env:deployurl/etc/pantone-process-black-c.jpg"
+Copy-Item "$local\etc\pantone-process-black-c.jpg" "C:\windows\system32\oobe\info\backgrounds\backgroundDefault.jpg" -Force
+Copy-Item "$local\etc\pantone-process-black-c.bmp" "C:\Windows\System32\oobe\background.bmp" -Force
 & "$Env:curl" -Ss -k -o "$Env:local\etc\production-gpo.zip" --url "$Env:deployurl/etc/production-gpo.zip"
 
+#--------------------------------------------------------------------
 Write-Host "`n $basename -- download teamviewer Settings"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
+Write-Host "`n $basename -- install teamviewer Settings"
+net stop teamviewer
+reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
+net start teamviewer
 
 Write-Host "$basename -- GPO"
 Set-Location -Path "$Env:SystemRoot\System32"
@@ -265,6 +289,8 @@ c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicy
 
 chocolatey feature disable -n=allowGlobalConfirmation
 
+
+#--------------------------------------------------------------------
 # Make bginfo run on startup/login
 # & "$Env:local\bin\bginfo.exe" "$Env:local\etc\production-admin-bginfo.bgi" /nolicprompt /silent /timer:0
 if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\bginfo.lnk"))
@@ -272,24 +298,15 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
   $WshShell = New-Object -comObject WScript.Shell
   $Shortcut = $WshShell.CreateShortcut("C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\bginfo.lnk")
   $Shortcut.TargetPath = "$Env:local\bin\Bginfo.exe"
-  $Shortcut.Arguments = "$Env:local\etc\production-kiosk.bgi /nolicprompt /timer:0"
+  $Shortcut.Arguments = "$Env:local\etc\production-kiosk.bgi /nolicprompt /timer:0 /silent"
   $Shortcut.Save()
 }
 
-# makes sense ?
-#  ;Resort the Start Menu
-#  [-HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MenuOrder]
-
-Update-Help
-
-Write-Host "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Write-Host "`n $basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
 # last chance to reboot before next step ...
-if (Test-PendingReboot)
-{
-	Invoke-Reboot
-}
+Reboot-IfRequired
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
@@ -305,17 +322,16 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
-New-Item -Path "$Env:local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
 
-& "$Env:curl" -Ss -k --url "https://api.github.com/zen"
-Write-Host ""
-
+& "$env:curl" -Ss -k --url "https://api.github.com/zen"
+Write-Host "."
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Next stage ... "
 #--------------------------------------------------------------------
 #& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue
+#Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1"
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/02-bootstrap.ps1"
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/10-identify.ps1
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/10-identify.ps1"

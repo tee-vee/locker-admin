@@ -4,8 +4,8 @@
 # 30-lockerlife - LockerLife Internal Configuration (Preparation for purple console screen)
 # ** autologon as kiosk user after boot
 $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 30-lockerlife"
-$basename = Split-Path -Leaf $PSCommandPath
-
+#$basename = Split-Path -Leaf $PSCommandPath
+#Set-PSDebug -Trace 1
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Lets start"
@@ -16,18 +16,21 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
 If (!( $isAdmin )) {
 	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
 	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+	1..5 | % { Write-Host }
 	exit
 }
 
-Breathe
-
 # close previous IE windows ...
-& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
-$WebClient = New-Object System.Net.WebClient
-(New-Object Net.WebClient).DownloadString("$Env:deployurl/99-DeploymentConfig.ps1") > "$Env:temp\99-DeploymentConfig.ps1"
-. "$Env:temp\99-DeploymentConfig.ps1"
+#$WebClient = New-Object System.Net.WebClient
+#$WebClient.DownloadFile("$Env:deployurl/99-DeploymentConfig.ps1","$Env:temp\99-DeploymentConfig.ps1")
+#. "$Env:temp\99-DeploymentConfig.ps1"
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
+. C:\99-DeploymentConfig.ps1
+
+$basename = "30-lockerlife"
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -48,11 +51,100 @@ $newsize.height = 5500
 # reminder: you can’t have a screen width that’s bigger than the buffer size.
 # Therefore, before we can increase our window size we need to increase the buffer size
 # powershell screen width and the buffer size are set to 150.
-$newsize.width = 170
+$newsize.width = 200
 $pswindow.buffersize = $newsize
 
 # the nul ensures window size does not chnage
 #& cmd /c mode con: cols=150  >nul 2>nul
+
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- LockerLife -> Repo Checks ..."
+# --------------------------------------------------------------------------------------------
+
+# check
+& "$Env:curl" --progress-bar -Ss -k --url "https://api.github.com/users/lockerlife-kiosk"
+#& "$Env:curl" --progress-bar -Ss -k --include --url "https://api.github.com/users/lockerlife-kiosk"
+#& "$Env:curl" --progress-bar -Ss -k --user "lockerlife-kiosk:Locision123" --url "https://api.github.com/authorizations"
+
+# curl --user "lockerlife-kiosk:Locision123" https://api.github.com/gists/starred
+# curl --user "lockerlife-kiosk:Locision123" https://api.github.com/users/lockerlife-kiosk
+#curl --user "lockerlife-kiosk:Locision123" --data '{"description":"Created via API","public":"true","files":{"file1.txt":{"content":"Demo"}}' --url https://api.github.com/gists
+
+# read in from file -> post to my gist
+#curl --user "lockerlife-kiosm" --data @data.txt https://api.github.com/gists
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- LockerLife -> Pull Source ..."
+# --------------------------------------------------------------------------------------------
+
+WriteInfo "$basename -- set up git"
+& "$Env:ProgramFiles\git\cmd\git.exe" config --global user.email kiosk@lockerlife.hk
+& "$Env:ProgramFiles\git\cmd\git.exe" config --global user.name 'LockerLife Kiosk'
+
+
+# get \local\src
+#& "$Env:ProgramFiles\git\cmd\git.exe" clone --progress https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git "$Env:local\src"
+& "$Env:ProgramFiles\git\cmd\git.exe" clone https://lockerlife-kiosk:Locision123@github.com/tee-vee/locker-admin.git "$Env:local\src"
+
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- LockerLife -> Setup D drive ..."
+# --------------------------------------------------------------------------------------------
+
+# lockerlife production
+"RunLockerLifeConsole.bat","RunLockerLifeTV.bat","core.jar","data-collection.jar","run-manual.bat","run-test.bat","run.bat","scanner.jar","production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
+	& "$Env:curl" --progress-bar -Ss -k -o "D:\$_" --url "$env:deployurl/PRODUCTION/$_"
+}
+
+#schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
+
+## Register Locker with Locker Cloud:
+#$script = @"
+#    `$cred = Get-Credential $env:USERNAME
+#    Install-BoxstarterPackage https://gitlab.com/locker-admin/...ps1 -Credential `$cred
+#"@
+#Set-Content (Join-Path $a "register-locker.ps1") ($script)
+
+## Finish Locker Deployment:
+#$script = @"
+#    `$cred = Get-Credential $env:USERNAME
+#    Install-BoxstarterPackage https://gitlab.com/locker-admin/...ps1 -Credential `$cred
+#"@
+#Set-Content (Join-Path $a "finish-locker-deployment.ps1") ($script)
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Install LockerLife Libraries"
+#--------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- LockerLife -> Get lockerlife libraries ..."
+# --------------------------------------------------------------------------------------------
+
+# get-location of locker-libs first from locker-cloud; preserve Last-Modified --> restamp all files using each individual file Last-Modified time
+
+#$jqopts = " '.[].url' "
+$lockercloudhost = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com"
+$lockercloudlibpath= "/dev/lockers/libs"
+
+$lockerlibs = "D:\locker-libs"
+$liblist = "locker-libs-list.txt"
+$libtimestamp = "locker-libs-timestamps.txt"
+
+#locate locker-libs first; then send output to locker-lib
+## & "$Env:curl" -Ss -R -k --url "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs" | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
+& "$env:curl" -RSs -k --cacert ~\cacert.pem --url "$lockercloudhost$lockercloudlibpath" | jq '.[].url' > $lockerlibs\$liblist
+
+# create timestamps file
+# fetch Last-Modified header for specific file; only donwload if-modified
+## cat %LIBLIST% | xargs %XARGSOPTS% -n 1 curl -LR
+
+# download (e.g. cat or type %LIBLIST% | xargs -n 1 curl -LO )
+# xargs -P to run in parallel; match nunber of cpu cores
+#cat $lockerlibs\$liblist | xargs -n 1 curl -LO
+#Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Processors" -n 1 curl -LO
+Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl -LO
 
 
 #--------------------------------------------------------------------
@@ -62,24 +154,24 @@ Write-Host "$basename - Install LockerLife Services"
 WriteInfoHighlighted "$basename -- INSTALL SCANNER.JAR AS SERVICE"
 #CALL %LOCKERINSTALL%\build\new-service-scanner.bat
 #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
-Start-Process $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
+Start-Process -FilePath $Env:local\src\install\build\new-service-scanner.bat -Verb RunAs -Wait
 
 Write-Host "."
 WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
 #CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
 #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
-Start-Process $Env:local\bin\new-service-kioskserver.bat -Verb RunAs -Wait
+Start-Process -FilePath $Env:local\src\install\build\new-service-kioskserver.bat -Verb RunAs -Wait
 
 Write-Host "."
 WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION.JAR AS SERVICE"
 #CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
 #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
-Start-Process $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
+Start-Process -FilePath $Env:local\src\install\build\new-service-datacollection.bat -Verb RunAs -Wait
 
 Write-Host "."
 WriteInfoHighlighted "$basename -- INSTALL CORE.JAR AS SERVICE"
 ## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
-Start-Process $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
+Start-Process -FilePath $Env:local\src\install\build\new-service-core.bat -Verb RunAs -Wait
 
 
 #--------------------------------------------------------------------
@@ -88,10 +180,12 @@ Write-Host "$basename - Manage LockerLife User Accounts"
 
 # add user
 Write-Host "$basename -- ADD KIOSK USER"
-Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
-Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
-Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
-
+#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
+net localgroup kiosk-group /add
+#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
+net user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no
+#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
+net localgroup "kiosk-group" "kiosk" /add
 
 # [] auto create user profile (super quick, super dirty!)
 Write-Host "$basename -- Create kiosk user profile"
@@ -101,11 +195,9 @@ Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision12
 psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 
 # psexec -u kiosk to use bginfo to change background to black
-Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0' -NoNewWindow
-psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0
+#Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0' -NoNewWindow
+#psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0
 
-
-#get locker-libs
 
 # set autologon to kiosk user
 
@@ -136,6 +228,10 @@ psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\
 # set scheduled tasks
 # Examples: https://technet.microsoft.com/en-us/library/bb490996.aspx
 # --------------------------------------------------------------------------------------------
+
+#Register-ScheduledJob -Name Update-Help -ScriptBlock {Update-Help -Module *} -Trigger ( New-JobTrigger -DaysOfWeek Monday -Weekly -At 8AM) -ScheduledJobOption (New-ScheduledJobOption -RequireNetwork)
+# -Credential $cred
+Register-ScheduledJob -Verbose -Name UpdatePowerShellHelpJob -ScriptBlock { Update-Help -Module * } -Trigger ( New-JobTrigger -Daily -At "1 AM" )
 # To schedule a command that runs every hour at five minutes past the hour
 # The following command schedules the MyApp program to run hourly beginning at five minutes past midnight.
 # Because the /mo parameter is omitted, the command uses the default value for the hourly schedule, which is every (1) hour.
@@ -154,19 +250,38 @@ psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\
 ## schtasks /create /tn "My App" /tr c:\apps\myapp.exe /sc daily /st 08:00:00 /ed 12/31/2001
 
 
-#if (Test-PendingReboot) { Invoke-Reboot }
-Reboot-IfRequired
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Setting up kiosk user environment"
+#--------------------------------------------------------------------
+
 
 # --------------------------------------------------------------------------------------------
-Write-Host "Set Autologon"
+# set autologin to kiosk user, reboot computer ...
 WriteInfoHighlighted "SETUP AUTOLOGON"
 #Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
+& "$env:local\bin\autologon.exe" /accepteula kiosk $env:computername locision123
+
+Write-Host "."
 
 ### Use New-GPO ???
 #New-GPO NoDisplay | Set-GPRegistryValue -key “HKCU\Software\Microsoft\Windows\CurrentVersion\Policies \System” -ValueName NoDispCPL -Type DWORD -value 1 | New-GPLink -target “ou=executive,dc=sample,dc=com”
+
+
+# Reset for kiosk user -> Small taskbar
+Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
+Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
+
+
+Write-Host "`n $basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Stop-Transcript
+
+# last chance to reboot before next step ...
+Reboot-IfRequired
 
 # cleanup desktop
 CleanupDesktop
 
 RefreshEnv
+
 # touch $Env:local\status\30-lockerlife.done file

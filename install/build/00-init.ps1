@@ -3,7 +3,7 @@
 
 # 00-init - make directories, setup system-only user accounts (no LockerLife customizations)
 $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-init"
-#$basename = $MyInvocation.MyCommand.Name
+
 
 
 
@@ -21,7 +21,7 @@ If (!( $isAdmin )) {
 }
 
 # close previous IE windows ...
-#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue -Verbose
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
 #$WebClient = New-Object System.Net.WebClient
@@ -40,8 +40,7 @@ Update-ExecutionPolicy Unrestricted
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
 $StartDateTime = Get-Date
-Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
-
+Write-Host "Script started at $StartDateTime" -ForegroundColor Green
 
 # set window title
 $pshost = Get-Host
@@ -70,25 +69,34 @@ $BuildNumber = Get-WindowsBuildNumber
 if ($BuildNumber -le 7601)
 {
     # Windows 7 RTM=7600, SP1=7601
-    WriteSuccess "`t PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
+    WriteSuccess "PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
     } else {
     WriteErrorAndExit "`t FAIL: Windows version $BuildNumber detected and is not supported. Exiting"
 }
 
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- Setup D drive ..."
+# --------------------------------------------------------------------------------------------
+WriteInfo "$basename -- Not Yet Implemented ... Skipping"
 
 #--------------------------------------------------------------------
 Write-Host "$basename - General Windows Configuration"
 #--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+Write-Host "$basename -- HARDWARE CONFIGURATION"
+Write-Host "$basename -- Disable hibernate"
+Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off' -Wait -Verbose
 
 #power plan type (0=power saver, 1=high performance, 2=balanced)
 #powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c fea3413e-7e05-4911-9a71-700331f1c294 245d8541-3943-4422-b025-13a784f679b7 1
 #powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c fea3413e-7e05-4911-9a71-700331f1c294 245d8541-3943-4422-b025-13a784f679b7 1
 
 # sets the power configuration to High Performance -- does this really work?
-powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+#powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 # turns hibernation off
-powercfg -hibernate OFF
+#powercfg -hibernate OFF
 
 #monitor timeout
 #powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 0
@@ -98,87 +106,124 @@ powercfg -hibernate OFF
 #powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 03680956-93bc-4294-bba6-4e0f09bb717f 2
 #powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 03680956-93bc-4294-bba6-4e0f09bb717f 2
 
-Write-Host "$basename -- set region"
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - SOFTWARE CONFIGURATION"
+#--------------------------------------------------------------------
+Write-Host "$basename -- Hide boot"
+Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set bootux disabled' -Wait -Verbose
+
+
+Write-Host "$basename -- Disable Boot Recovery Mode"
+# disable booting into recovery mode
+# undo: bcdedit /deletevalue {current} bootstatuspolicy
+Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} recoveryenabled No' -Wait -Verbose
+Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures' -Wait -Verbose
+
+#--------------------------------------------------------------------
+Write-Host "$basename -- Configure Windows Time Services"
+# stop windows time service
+Stop-Service w32time -Confirm:$False -Verbose
+Write-Host "$basename -- Set Time Zone"
+& "$Env:SystemRoot\System32\tzutil.exe" /s "China Standard Time"
+& "$Env:SystemRoot\System32\w32tm.exe" /tz
+Write-Host "$basename -- Set Nearby NTP Servers"
+& "$Env:SystemRoot\System32\w32tm.exe" /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
+Start-Service w32time -Confirm:$False -Verbose
+& "$Env:SystemRoot\System32\w32tm.exe" /query /status /verbose
+
+#--------------------------------------------------------------------
+Write-Host "$basename -- Set Language and Region"
 Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sLanguage -Value ENU
 Set-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name Nation -Value 104
 
-
-Write-Host "$basename -- Configure Windows Time Services"
-Stop-Service w32time -Confirm:$False                                                		# stop windows time service
-& "$Env:SystemRoot\System32\tzutil.exe" /s "China Standard Time"                    		# set timezone
-& "$Env:SystemRoot\System32\w32tm.exe" /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"    # set time
-
-Start-Service w32time -Confirm:$False                                               		# start windows time service
-Breathe
+#--------------------------------------------------------------------
+Write-Host "$basename -- Set Sound Volume = 0"
+$obj = new-object -com wscript.shell
+$obj.SendKeys([char]173)
 
 # turn off startup sounds
-##;Turn Off System Beeps
-#reg add "[HKEY_CURRENT_USER\Control Panel\Sound]" “Beep”=No
-#net stop beep
-#sc stop beep
-#sc config beep start= demand
-REG ADD "HKLM\System\CurrentControlSet\Services\Beep" /v start /t REG_DWORD /d 4 /f
+#reg add "[HKEY_CURRENT_USER\Control Panel\Sound]" "Beep"=No
+#REG ADD "HKLM\System\CurrentControlSet\Services\Beep" /v start /t REG_DWORD /d 4 /f
+
+Write-Host "$basename -- Set File Associations"
+Install-ChocolateyFileAssociation ".err" "${Env:SystemRoot}\System32\notepad.exe"
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Before login ..."
+Write-Host "$basename - set logon UI Background image"
+# enable custom logon background
+#HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1 -Verbose -Force
+WriteInfoHighlighted "."
 
 # Disable Welcome logon screen & require CTRL+ALT+DEL
 REG ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" /v LogonType /t REG_DWORD /d 0 /f
 REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableCAD /t REG_DWORD /d 0 /f
 
-
 # Interactive logon: Do not display last user name
-REG ADD "hklm\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dontdisplaylastusername /t REG_DWORD /d 1 /f
+REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dontdisplaylastusername /t REG_DWORD /d 1 /f
 
-# Enable Remote Desktop for locker deployment
-REG ADD "HKLM\System\Currentcontrolset\control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
-# Allow connections from computers running any version of Remote Desktop (less secure)
-REG ADD "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
+#--------------------------------------------------------------------
+Write-Host "$basename - After login ..."
+#--------------------------------------------------------------------
+# Windows Explorer Settings through Choco
+#Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
+Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
+
+Write-Host "$basename - Set UI to Classic Theme"
+#& "$Env:SystemRoot\System32\rundll32.exe" "$Env:SystemRoot\system32\shell32.dll,Control_RunDLL" "$Env:SystemRoot\system32\desk.cpl" desk,@Themes /Action:OpenTheme /file:"$Env:SystemRoot\Resources\Ease of Access Themes\classic.theme"
+Start-Process -Wait -FilePath "rundll32.exe" -ArgumentList "$env:SystemRoot\system32\shell32.dll,Control_RunDLL $env:SystemRoot\system32\desk.cpl desk,@Themes /Action:OpenTheme /file:""C:\Windows\Resources\Ease of Access Themes\classic.theme"""
+
+Write-Host "$basename - Set Desktop Background"
+New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name System -Verbose -Force
+#Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
+Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
+
+#Write-Host "$basename -- Set Desktop Wallpaper"
+#Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name Wallpaper -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose -Force
+#Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name Wallpaper -Value "" -Force
+#Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name WallpaperStyle -Value 2 -Verbose -Force
+
+#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v Wallpaper /t REG_SZ /d "$Env:SystemRoot\Web\Wallpaper\YOUR_FILE.bmp" /f
+#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ /d "2" /f
+#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v TileWallpaper /t REG_SZ /d "0" /f
+
+
+WriteInfo "$basename - Set lock screen background image"
+New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Verbose -ErrorAction SilentlyContinue -Verbose
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose
+
+
 
 #Set the Screen Saver Settings
 #REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v ScreenSaveActive /t REG_SZ /d 1 /f
 #reg add "hku\.DEFAULT\Control Panel\Desktop" /v ScreenSaverIsSecure /t REG_SZ /d 1 /f
 #reg add "hku\.DEFAULT\Control Panel\Desktop" /v ScreenSaveTimeOut /t REG_SZ /d 900 /f
-#reg add "hku\.DEFAULT\Control Panel\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d “%SystemRoot%\System32\YOUR_FILE.scr” /f
+#reg add "hku\.DEFAULT\Control Panel\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d "$env:SystemRoot\System32\YOUR_FILE.scr" /f
 
-
-#Set the Desktop Wallpaper
-#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v Wallpaper /t REG_SZ /d "%SystemRoot%\Web\Wallpaper\YOUR_FILE.bmp" /f
-#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ /d “2” /f
-#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v TileWallpaper /t REG_SZ /d “0” /f
-
-# enable custom logon background
-#HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background
 
 #[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation] "DisableStartupSound"=dword:00000001
 REG ADD "HKLM\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 1 /f
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" "DisableStartupSound" 1 -Verbose -Force
 REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
-Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" "DisableStartupSound" 1 -Verbose
-Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Verbose
-
-# Windows Explorer Settings through Choco
-Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
-Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Verbose -Force
 
 
-# make Windows faster ...
-##  ;Disable Menu Delay
-##  [HKEY_CURRENT_USER\Control Panel\Desktop]
-##  “MenuShowDelay”=”0”
-
-#;Increase NTFS System Peformance by disabling NTFS Last Access Update and 8.3 Creation
-#[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem]
-#“NTFSDisableLastAccessUpdate”=1
-#“NTFSDisable8Dot3NameCreation”=1
-
-
+#--------------------------------------------------------------------
 ## Windows Firewall
 WriteInfoHighlighted "$basename -- Configure Windows Firewall"
-#& "$Env:SystemRoot\System32\netsh.exe" advfirewall show allprofiles
-#& "$Env:SystemRoot\System32\netsh.exe" advfirewall set allrprofiles state on
+WriteInfoHighlighted "$basename -- turn on firewall"
+& "$Env:SystemRoot\System32\netsh.exe"  advfirewall set allprofiles state on
 
 ## QUERY FIREWALL RULES
 #& "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall show rule name=all
 
 ## set logging
-& "$Env:SystemRoot\System32\netsh.exe" advfirewall set currentprofile logging filename "e:\logs\pfirewall.log"
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall set currentprofile logging filename "e:\logs\firewall-cur.log"
+& "$Env:SystemRoot\System32\netsh.exe" advfirewall set allprofiles logging filename "e:\logs\firewall-all.log"
 
 ## set applications
 & "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Allow Java" dir=in action=allow program="D:\java\jre\java.exe"
@@ -194,16 +239,13 @@ WriteInfoHighlighted "$basename -- Configure Windows Firewall"
 #netsh advfirewall firewall delete rule name="Open Server Port 8081" protocol=tcp localport=8081
 & "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 9012" dir=in action=allow protocol=TCP localport=9012
 
-# Disable hibernate
-Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off'
 
-# hide boot
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set bootux disabled'
+#--------------------------------------------------------------------
+# Enable Remote Desktop for locker deployment
+# REG ADD "HKLM\System\Currentcontrolset\control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+# Allow connections from computers running any version of Remote Desktop (less secure)
+# REG ADD "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
 
-# disable booting into recovery mode
-# undo: bcdedit /deletevalue {current} bootstatuspolicy
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} recoveryenabled No'
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures'
 
 
 #--------------------------------------------------------------------
@@ -211,17 +253,9 @@ Write-Host "$basename - Make some directories"
 #--------------------------------------------------------------------
 
 # important directories - create directories as early as possible ...
-"$Env:local\status","$Env:local\src","$Env:local\gpo","$Env:local\etc","$Env:local\drivers","$Env:local\bin","$Env:imagesarchive","$Env:images","~\Documents\WindowsPowerShell","~\Desktop\LockerDeployment","~\Documents\PSConfiguration","D:\locker-libs","$Env:_tmp","$Env:logs" | ForEach-Object {
-  if (!( Test-Path "$_" )) { write-host $_ ; New-Item -ItemType Directory -Path "$_" }
+"E:\images\archive","$Env:SystemRoot\System32\oobe\info\backgrounds","$local\status","$local\src","$local\gpo","$local\etc","$Env:local\drivers","$Env:local\bin","$Env:imagesarchive","$Env:images","~\Documents\WindowsPowerShell","~\Desktop\LockerDeployment","~\Documents\PSConfiguration","D:\locker-libs","$Env:_tmp","$Env:logs" | ForEach-Object {
+  if (!( Test-Path "$_" )) { New-Item -ItemType Directory -Path "$_" -Verbose -ErrorAction SilentlyContinue }
 }
-#New-Item -Path "~\Documents\WindowsPowerShell" -ItemType Directory -Force -ErrorAction SilentlyContinue
-#New-Item -Path "~\Desktop\LockerDeployment" -ItemType Directory -Force -ErrorAction SilentlyContinue
-#New-Item -Path "~\Documents\PSConfiguration" -ItemType Directory -Force -ErrorAction SilentlyContinue
-#New-Item -Path "D:\locker-libs" -ItemType Directory -Force -ErrorAction SilentlyContinue
-#New-Item -Path  -ItemType Directory -Force -ErrorAction SilentlyContinue
-#New-Item -Path  -ItemType Directory -Force -ErrorAction SilentlyContinue
-# $a = New-Item -ItemType Directory "$env:USERPROFILE\Desktop\Unattended Builds" -Force -ErrorAction SilentlyContinue
-
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Make some Files"
@@ -229,84 +263,51 @@ Write-Host "$basename - Make some Files"
 
 "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" | ForEach-Object {
 	#New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File -ErrorAction SilentlyContinue | Out-Null
-  if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" }
+  if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" -Verbose -ErrorAction SilentlyContinue }
 }
-
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Get some basic tools"
 #--------------------------------------------------------------------
 
 $WebClient = New-Object System.Net.WebClient
+#Import-Module BitsTransfer
+#Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/curl.exe","c:\local\bin\curl.exe")
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/Bginfo.exe","c:\local\bin\Bginfo.exe")
 
-#$WebClient.DownloadFile("$Env:deployurl/bin/curl.exe","$Env:local\bin\curl.exe")
-
-#& "$Env:curl" -Ss -k --url "https://live.sysinternals.com/Autologon.exe" -o "$Env:local\bin\Autologon.exe"
-$WebClient.DownloadFile("$Env:deployurl/bin/Autologon.exe","$Env:local\bin\Autologon.exe")
+#& "$env:curl" --progress-bar -Ss -k --url "https://live.sysinternals.com/Autologon.exe" -o "$Env:local\bin\Autologon.exe"
+$WebClient.DownloadFile("$env:deployurl/bin/Autologon.exe","$local\bin\Autologon.exe")
 #$WebClient.DownloadFile("$Env:deployurl/bin/Bginfo.exe","$Env:local\bin\Bginfo.exe")
-#& "$Env:curl" -Ss -k -o "$Env:local\bin\devcon.exe" --url "$Env:deployurl/bin/devcon.exe"
-$WebClient.DownloadFile("$Env:deployurl/bin/devcon.exe","$Env:local\bin\devcon.exe")
-& "$Env:curl" -Ss -k -o "$Env:local\bin\hstart.exe" --url "$Env:deployurl/bin/hstart.exe"
-& "$Env:curl" -k -Ss -o "$Env:local\bin\nircmd.exe "--url "$Env:deployurl/bin/nircmd.exe"
-& "$Env:curl" -k -Ss -o "$Env:local\bin\nircmdc.exe "--url "$Env:deployurl/bin/nircmdc.exe"
-$WebClient.DownloadFile("$Env:deployurl/bin/nssm.exe","$Env:local\bin\nssm.exe")
-#& "$Env:curl" -Ss -k -o "$Env:local\bin\sendEmail.exe" --url "$Env:deployurl/bin/sendEmail.exe"
-$WebClient.DownloadFile("$Env:deployurl/bin/sendEmail.exe","$Env:local\bin\sendEmail.exe")
-#& "$Env:curl" -Ss -k --url "$Env:deployurl/bin/UPnPScan.exe" -o "$Env:local\bin\UPnPScan.exe"
-$WebClient.DownloadFile("$Env:deployurl/bin/UPnPScan.exe","$Env:local\bin\UPnPScan.exe")
-& "$Env:curl" -k -Ss -o "$Env:local\bin\xml.exe" --url "$Env:deployurl/bin/xml.exe"
-
-& "$Env:curl" -Ss -k -o "$Env:local\bin\du.exe" --url "$Env:deployurl/bin/du.exe"
-& "$Env:curl" -Ss -k -o "$Env:local\bin\LGPO.exe" --url "$Env:deployurl/bin/LGPO.exe"
-& "$Env:curl" -Ss -k -o "$Env:local\bin\psexec.exe" --url "$Env:deployurl/bin/psexec.exe"
-& "$Env:curl" -k -Ss -o "$Env:local\bin\BootUpdCmd20.exe" --url "$Env:deployurl/bin/BootUpdCmd20.exe"
-
-# Configuration
-$files = @{
-	# Curl for command line web downloads (x86)
-	curl			= 'http://curl.haxx.se/gknw.net/win32/curl-7.24.0-ssl-sspi-zlib-static-bin-w32.zip'
-
-	# MsysGit (x86)
-	git				= 'http://msysgit.googlecode.com/files/Git-1.7.9-preview20120201.exe'
-
-	# KDiff3 (x86)
-	kdiff3		= 'http://sourceforge.net/projects/kdiff3/files/latest/download?source=files'
-
-	# 7-zip (x64)
-	sevenZip	= 'http://downloads.sourceforge.net/sevenzip/7z920-x64.msi'
-
-	# Vim for Windows (works x86 and x64)
-	gvim				= 'http://ftp.vim.org/pub/vim/pc/gvim73_46.exe'
-
-	# msvcredist_x64 - required by HardLinkShellExt_x64
-	linkshellreq = 'http://download.microsoft.com/download/6/B/B/6BB661D6-A8AE-4819-B79F-236472F6070C/vcredist_x64.exe'
-
-	# HardLinkShellExt_x64 - Shows hard links and junctions in Windows Explorer
-	linkshell = 'http://schinagl.priv.at/nt/hardlinkshellext/HardLinkShellExt_X64.exe'
-}
-$downloadDir = "C:\temp"
-
-#--------------------------------------------------------------------
-Write-Host "$basename - Get installers"
-#--------------------------------------------------------------------
-
-#$WebClient.DownloadFile("http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi","C:\temp\QuickSet-2.07-bulid0805.msi")
+#& "$Env:curl" --progress-bar -Ss -k -o "$Env:local\bin\devcon.exe" --url "$Env:deployurl/bin/devcon.exe"
+$WebClient.DownloadFile("$env:deployurl/bin/devcon.exe","$local\bin\devcon.exe")
+& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\hstart.exe" --url "$env:deployurl/bin/hstart.exe"
+& "$env:curl" --progress-bar -Ss -k -o "$local\bin\nircmd.exe" --url "$env:deployurl/bin/nircmd.exe"
+& "$env:curl" --progress-bar -Ss -k -o "$local\bin\nircmdc.exe" --url "$env:deployurl/bin/nircmdc.exe"
+$WebClient.DownloadFile("$env:deployurl/bin/nssm.exe","$local\bin\nssm.exe")
+#& "$env:curl" --progress-bar -Ss -k -o "$Env:local\bin\sendEmail.exe" --url "$Env:deployurl/bin/sendEmail.exe"
+$WebClient.DownloadFile("$env:deployurl/bin/sendEmail.exe","$env:local\bin\sendEmail.exe")
+$WebClient.DownloadFile("$env:deployurl/bin/UPnPScan.exe","$env:local\bin\UPnPScan.exe")
+& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\xml.exe" --url "$env:deployurl/bin/xml.exe"
+& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\du.exe" --url "$env:deployurl/bin/du.exe"
+& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\LGPO.exe" --url "$env:deployurl/bin/LGPO.exe"
+& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\psexec.exe" --url "$env:deployurl/bin/psexec.exe"
+& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\BootUpdCmd20.exe" --url "$env:deployurl/bin/BootUpdCmd20.exe"
 
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Manage System User Accounts"
+Write-Host "$basename - Manage System User Accounts (no lockerlife accounts)"
 #--------------------------------------------------------------------
 
 Write-Host "$basename -- Enable Administrator"
-# & "$env:SystemRoot\System32\net.exe" user administrator /active:yes
 net user Administrator /active:yes
-## net user administrator /active:no (later!)
+#net user administrator /active:no
 
 $U = gwmi -class Win32_UserAccount | Where { $_.Name -eq "AAICON" }
 if ($U) {
 	WriteInfo "$basename -- AAICON exists"
+	WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
+	net user AAICON Locision123
 }
 else
 {
@@ -318,41 +319,29 @@ else
 	#"DefaultUserName"="admnistrator"
 	#"DefaultPassword"="P@$$w0rd"
 	#"DefaultDomainName"="contoso"
-
-	net user AAICON "Locision123" /add /expires:never /passwordchg:no
+	#Start-ChocolateyProcessAsAdmin -statements $args -exeToRun $vcdmount
+	net user AAICON Locision123 /add /expires:never /passwordchg:no
 	net user AAICON Locision123
 }
-
-
-#Set-ItemProperty -Path 'registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name DefaultUserName -Value "AAICON"
-#Set-ItemProperty -Path 'registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name DefaultPassword -Value "Locision123"
-#Set-ItemProperty -Path 'registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name AutoAdminLogon -Value 1
-#Set-ItemProperty -Path 'registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name ForceAutoLogon -Value 0
 
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 #--------------------------------------------------------------------
 
-# Cleanup Desktop
 CleanupDesktop
-
 Create-DeploymentLinks
+Update-Help -Verbose -ErrorAction SilentlyContinue
 
 # Internet Explorer: Temp Internet Files:
 RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
 # touch $Env:local\status\00-init.done file
-# echo date/time into file, add lines ...
-New-Item -Path "$Env:local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$local\status\$basename.done" -ItemType File -Verbose -ErrorAction SilentlyContinue | Out-Null
 
-& "$Env:curl" -Ss -k https://api.github.com/zen ; Write-Host ""
+& "$env:curl" --progress-bar -Ss -k --url "https://api.github.com/zen"
+Write-Host "."
+
 Write-Host "$basename -- done"
-
-
-#--------------------------------------------------------------------
-Write-Host "$basename - Next stage ... "
-#--------------------------------------------------------------------
-#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/00-bootstrap.ps1"
+Write-Host "$basename - Next stage ..."
+& "$env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1"
