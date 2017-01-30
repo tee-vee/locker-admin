@@ -69,4 +69,4 @@ Write-Host ""
 Write-Host "$basename - Next stage ... "
 #--------------------------------------------------------------------
 & "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/10-configure.ps1"
+& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/10-identify.ps1"
