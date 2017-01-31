@@ -144,35 +144,48 @@ $libtimestamp = "locker-libs-timestamps.txt"
 # xargs -P to run in parallel; match nunber of cpu cores
 #cat $lockerlibs\$liblist | xargs -n 1 curl -LO
 #Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Processors" -n 1 curl -LO
-Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl -LO
+Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl --progress-bar -k -LO
 
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Install LockerLife Services"
 #--------------------------------------------------------------------
 
-WriteInfoHighlighted "$basename -- INSTALL SCANNER.JAR AS SERVICE"
-#CALL %LOCKERINSTALL%\build\new-service-scanner.bat
-#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
-Start-Process -FilePath $Env:local\src\install\build\new-service-scanner.bat -Verb RunAs -Wait
-
+$chkservice = Get-Service -Name scanner -ErrorAction SilentlyContinue
+if ($chkservice.Length -gt 0) {
+	WriteInfoHighlighted "`t $basename -- INSTALL SCANNER AS SERVICE"
+	#CALL %LOCKERINSTALL%\build\new-service-scanner.bat
+	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
+	Start-Process -FilePath $Env:local\src\install\build\new-service-scanner.bat -Verb RunAs -Wait
+}
 Write-Host "."
-WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
-#CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
-#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
-Start-Process -FilePath $Env:local\src\install\build\new-service-kioskserver.bat -Verb RunAs -Wait
 
-Write-Host "."
-WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION.JAR AS SERVICE"
-#CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
-#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
-Start-Process -FilePath $Env:local\src\install\build\new-service-datacollection.bat -Verb RunAs -Wait
 
-Write-Host "."
-WriteInfoHighlighted "$basename -- INSTALL CORE.JAR AS SERVICE"
-## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
-Start-Process -FilePath $Env:local\src\install\build\new-service-core.bat -Verb RunAs -Wait
+$chkservice = Get-Service -Name kioskserver -ErrorAction SilentlyContinue
+if ($chkservice.Length -gt 0) {
+	WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
+	#CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
+	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
+	Start-Process -FilePath $Env:local\src\install\build\new-service-kioskserver.bat -Verb RunAs -Wait
+	Write-Host "."
+}
 
+$chkservice = Get-Service -Name "data-collection" -ErrorAction SilentlyContinue
+if ($chkservice.Length -gt 0) {
+	WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION AS SERVICE"
+	#CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
+	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
+	Start-Process -FilePath $Env:local\src\install\build\new-service-datacollection.bat -Verb RunAs -Wait
+	Write-Host "."
+}
+
+$chkservice = Get-Service -Name core -ErrorAction SilentlyContinue
+if ($chkservice.Length -gt 0) {
+	WriteInfoHighlighted "$basename -- INSTALL CORE AS SERVICE"
+	## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
+	Start-Process -FilePath $Env:local\src\install\build\new-service-core.bat -Verb RunAs -Wait
+	Write-Host "."
+}
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Manage LockerLife User Accounts"
@@ -257,6 +270,13 @@ Write-Host "$basename - Setting up kiosk user environment"
 
 
 # --------------------------------------------------------------------------------------------
+Write-Host "$basename -- final hardening ..."
+
+Write-Host "$basename - disable admin user"
+## generate random password for administrator
+# -join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})
+net user administrator /active:no
+
 # set autologin to kiosk user, reboot computer ...
 WriteInfoHighlighted "SETUP AUTOLOGON"
 #Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
@@ -273,15 +293,39 @@ Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 
 
-Write-Host "`n $basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
+cleanmgr.exe /verylowdisk
+
+
+# Internet Explorer: All:
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
+
+# Internet Explorer: History:
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 1
+
+# Internet Explorer:Cookies:
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 2
+
+# Internet Explorer: Temp Internet Files:
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 8
+
+# Internet Explorer: Form Data:
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 16
+
+# Internet Explorer: Passwords:
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 32
+
+# Internet Explorer: All:
+#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
+
+
 # last chance to reboot before next step ...
-Reboot-IfRequired
+#Reboot-IfRequired
 
 # cleanup desktop
-CleanupDesktop
-
-RefreshEnv
+#CleanupDesktop
+#RefreshEnv
 
 # touch $Env:local\status\30-lockerlife.done file

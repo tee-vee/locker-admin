@@ -108,8 +108,6 @@ cinst boxstarter.WinConfig
 cinst Boxstarter.Chocolatey
 cinst chocolatey-core.extension
 cinst chocolatey-uninstall.extension
-
-#if (Test-PendingReboot) { Invoke-Reboot }
 Reboot-IfRequired
 
 cinst teamviewer.host --version 12.0.72365
@@ -118,7 +116,6 @@ Reboot-IfRequired
 # gow installer is easily confused ... only run if gow isn't installed ..
 if (!(Test-Path "$Env:ProgramFiles\Gow"))
 {
-    #choco feature enable -n allowEmptyChecksums
     cinst gow --ignore-checksums
 }
 
@@ -128,45 +125,39 @@ cinst curl
 cinst nssm --ignore-checksums
 Reboot-IfRequired
 
-cinst ie11 --ignore-checksums -y
+cinst ie11 --ignore-checksums
 Reboot-IfRequired
 
-cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"' -y
+cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 Reboot-IfRequired
 
 cinst powershell -version 3.0.20121027
-
-Write-Host "$basename -- Fixing critical Windows svchost.exe memory leak -- KB2889748"
+#schtasks /Run /TN "\Microsoft\Windows\.NET Framework\.NET Framework NGEN v4.0.30319"
+Write-Host "$basename -- Temporarily enable Windows Update"
 Enable-MicrosoftUpdate
+Write-Host "$basename -- Fixing critical Windows svchost.exe memory leak -- KB2889748"
 & "$Env:curl" -Ss -k -o "$Env:_tmp\Windows6.1-KB2889748-x86.msu" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu"
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
-
 Breathe
-Reboot-IfRequired
-
-# usually machine rebooted ...
 Write-Host "$basename -- Disable Windows Update"
 Disable-MicrosoftUpdate
 
-#Write-Host "$basename -- installing a known-good version of 7z"
-#& "$Env:curl" -Ss -o "$Env:_tmp\7z1604.exe" --url "http://www.7-zip.org/a/7z1604.exe"
-#& "$Env:_tmp\7z1604.exe" /S
+Reboot-IfRequired
 
 Write-Host "$basename -- Installing Powershell 4"
 cinst powershell4 --ignore-checksums
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
-if (!(Test-Path "$Env:local\bin\fix-powershell4-performance.ps1") -Or !(Test-Path "$Env:local\status\powershell4-ngen.ok"))
+if (!( Test-Path "$env:local\status\powershell4-ngen.ok" -ErrorAction SilentlyContinue))
 {
-  ##& "$Env:curl" -Ss -k -o "$Env:local\bin\fix-powershell4-performance.ps1" --url "$Env:deployurl/fix-powershell4-performance.ps1"
-  #& "$Env:local\bin\fix-powershell4-performance.ps1" -Verb runAs
+  New-Item -Type File -Path "$env:local\status\powershell4-ngen.ok" -Force -Verbose
   iex ((New-Object System.Net.WebClient).DownloadString('http://lockerlife.hk/deploy/fix-powershell4-performance.ps1'))
-  #(new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+
 }
 
-Write-Host "$basename -- test-reboot"
+Write-Host "$basename -- test-reboot check"
 Reboot-IfRequired
 
 Write-Host "$basename -- installing psget"
@@ -178,14 +169,18 @@ Reboot-IfRequired
 Write-Host "."
 
 # --------------------------------------------------------------------------------------------
-WriteInfo "Temporarily stop antivirus"
+WriteInfo "$basename -- Temporarily stop antivirus"
 # --------------------------------------------------------------------------------------------
-Write-Host "`n $basename -- Temporarily disabling antivirus"
 & "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
 & "$Env:SystemRoot\System32\timeout.exe" /t 5 /nobreak
 & "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
+Write-Host "$basename -- Update MSAV Signature"
+# https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396
+& "$envProgramFiles\Windows Defender\MpCmdRun.exe" -SignatureUpdate
+& "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
-Write-Host "`n $basename installing additional tools"
+
+Write-Host "`n $basename -- Installing additional tools"
 cinst bginfo
 #cinst vim
 cinst jq --ignore-checksums
@@ -210,18 +205,14 @@ if (!(Test-Path "$JAVA_HOME\java.exe")) {
   & "$Env:curl" --progress-bar -k -Ss -o "$Env:_tmp\jre-install.properties" --url "$Env:deployurl/_pkg/jre-install.properties"
   & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
   # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
-} else { Write-Host "`n $basename -- java already installed, skipping ..." }
-#& "$Env:curl" -k -Ss -o c:\local\bin\nssm-2.24.zip --url https://nssm.cc/release/nssm-2.24.zip
-#"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nssm-2.24.zip -y
+} else { Write-Host "`n $basename -- Java already installed, skipping ..." }
 
 
 Write-Host "`n $basename -- Applying Windows Update KB2889748 "
 & "$Env:curl" -k -Ss -o "$Env:_tmp\Windows6.1-KB2889748-x86.msu"  --url "$Env:deployurl/Windows6.1-KB2889748-x86.msu"
 & "$Env:curl" -k -Ss -o "$Env:_tmp\402810_intl_i386_zip.exe" --url "$Env:deployurl/402810_intl_i386_zip.exe"
 
-#"$Env:programfiles\7-Zip\7z.exe" e c:\local\bin\nircmd.zip -y
-
-cinst dropbox
+cinst dropbox --ignore-checksums
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Out of band Installers"
@@ -314,7 +305,6 @@ Write-Host "$basename - Cleanup"
 
 # Cleanup Desktop
 CleanupDesktop
-
 Create-DeploymentLinks
 
 # Internet Explorer: Temp Internet Files:
@@ -322,7 +312,7 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
-New-Item -Path "$local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
+New-Item -Path "$local\status\$basename.done" -ItemType File | Out-Null
 
 & "$env:curl" -Ss -k --url "https://api.github.com/zen"
 Write-Host "."
@@ -331,7 +321,7 @@ Write-Host "."
 Write-Host "$basename - Next stage ... "
 #--------------------------------------------------------------------
 #& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
-#Stop-Process -Name iexplore -ErrorAction SilentlyContinue
+#Stop-Process -Name iexplore
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1"
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/02-bootstrap.ps1"
 & "$Env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/10-identify.ps1"

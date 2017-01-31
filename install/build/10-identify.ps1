@@ -123,21 +123,21 @@ if (!$Env:sitename) {
       $Env:UfoIccid = $Env:iccid.SubString($Env:iccid.Length-5)
       Write-Host "$Env:UfoIccid"
       Rename-Computer -NewName "UFO-$Env:UfoIccid" -Force -PassThru -Restart
+			#(Get-WmiObject Win32_ComputerSystem).Rename("MyMachineName") | Out-Null
     }
     else
     {
       Uninstall-ChocolateyEnvironmentVariable -VariableName 'UfoIccid'
       Rename-Computer -NewName "$Env:sitename" -Force -PassThru -Restart
+			#(Get-WmiObject Win32_ComputerSystem).Rename("MyMachineName") | Out-Null
     }
 
     Add-Computer -WorkGroupName "LOCKERLIFE.HK"
     Write-Host ""
+    Write-Host "`tSIM ICCID $Env:iccid authorized for LockerLife Locker Deployment"
+    Write-Host "`tLocker sitename: $Env:sitename"
     Write-Host ""
-    Write-Host "SIM ICCID $Env:iccid authorized for LockerLife Locker Deployment"
-    Write-Host "Locker sitename: $Env:sitename"
-    Write-Host ""
-    Write-Host "Proceeding to Stage 2"
-    Write-Host ""
+    Write-Host "`tProceeding to Stage 2"
 }
 
 #if (Test-PendingReboot) { Invoke-Reboot }
@@ -183,7 +183,6 @@ Write-Host "$basename - Cleanup"
 
 # Cleanup Desktop
 CleanupDesktop
-
 Create-DeploymentLinks
 
 # Internet Explorer: Temp Internet Files:

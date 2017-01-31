@@ -20,6 +20,8 @@ Write-Host "$basename - in" -ForegroundColor Green
 Write-Host "$basename - Variables"
 #--------------------------------------------------------------------
 
+$ErrorActionPreference = 'SilentlyContinue'
+
 # Allow unattended reboots
 $Boxstarter.RebootOk=$true
 $Boxstarter.NoPassword=$false
@@ -41,7 +43,10 @@ $pswindow.buffersize = $newsize
 #& cmd /c mode con: cols=150  >nul 2>nul
 
 Write-Host "$basename -- Setting local variables ..."
+# easy add to %path% to the path based on finding the executable.
+#if(!(where.exe chocolatey)){ $env:Path += ';C:\Chocolatey\bin;' }
 $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
+
 
 # Fix SSH-Agent error by adding the bin directory to the `Path` environment variable
 #$Env:PSModulePath = $Env:PSModulePath + ";${Env:ProgramFiles(x86)}\Git\bin"
@@ -92,7 +97,7 @@ $RouterInternalIpAddress = $env:RouterInternalIpAddress
 
 Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"               # router external ip address
 
-if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
+if (Get-Command ConvertFrom-JSON) {
   $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | convertfrom-json).origin
   $RouterExternalIpAddress = $env:RouterExternalIpAddress
   Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
@@ -125,6 +130,8 @@ $curl = $env:curl
 
 Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
 
+Install-ChocolateyEnvironmentVariable "kioskprofile" "c:\users\kiosk"
+
 # determine user ...
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 
@@ -148,6 +155,16 @@ Write-Host "$basename - Get updated SSL Certificate store"
 #--------------------------------------------------------------------
 Write-Host "$basename - Functions"
 #--------------------------------------------------------------------
+
+function Download-File
+{
+  param ([string]$url,[string]$file)
+  Write-Host "Downloading $url to $file"
+  $downloader = new-object System.Net.WebClient
+  $downloader.DownloadFile($url, $file)
+}
+
+
 function Get-SystemDrive
 {
     return $env:SystemDrive[0]
@@ -155,17 +172,17 @@ function Get-SystemDrive
 
 function Test-IsAdministrator
 {
-    <#
-    .Synopsis
-        Tests if the user is an administrator
-    .Description
-        Returns true if a user is an administrator, false if the user is not an administrator
-    .Example
-        Test-IsAdministrator
-    #>
-    param()
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    (New-Object Security.Principal.WindowsPrincipal $currentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+  <#
+  .Synopsis
+      Tests if the user is an administrator
+  .Description
+      Returns true if a user is an administrator, false if the user is not an administrator
+  .Example
+      Test-IsAdministrator
+  #>
+  param()
+  $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+  (New-Object Security.Principal.WindowsPrincipal $currentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 } #end function Test-IsAdministrator
 
 function OkToDeploy
@@ -175,7 +192,6 @@ function OkToDeploy
   #   WriteError "Contact email: locker-admin@lockerlife.hk
   #   WriteErrorAndExit "Exiting ..."
   #}
-
 }
 
 function ConfigureDisk
@@ -268,7 +284,8 @@ function Create-DeploymentLinks
 }  #end function Create-DeploymentLinks
 
 
-function Get-UserSID {
+function Get-UserSID
+{
   $PatternSID = 'S-1-5-21-\d+-\d+\-\d+\-\d+$'
   Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*' | Where-Object {$_.PSChildName -match $PatternSID} |
      select  @{name="SID";expression={$_.PSChildName}},
@@ -315,14 +332,13 @@ Function Rename-ComputerName ([string]$NewComputerName)
 
 ## cleanup desktop
 function CleanupDesktop {
-  Write-Host "$basename -- Clean up ..." -ForegroundColor Green
-  Remove-Item "$env:UserProfile\LockerDeployment" -Recurse -Force -ErrorAction SilentlyContinue
-  Remove-Item "$env:UserProfile\Desktop\LockerDeployment" -Recurse -Force -ErrorAction SilentlyContinue
-  Remove-Item "$env:Public\LockerDeployment" -Recurse -Force -ErrorAction SilentlyContinue
-  Remove-Item "$env:Public\Desktop\LockerDeployment" -Recurse -Force -ErrorAction SilentlyContinue
-  Remove-Item "$env:UserProfile\Desktop\*.lnk" -Force -ErrorAction SilentlyContinue
-  Remove-Item "$env:Public\Desktop\*.lnk" -Force -ErrorAction SilentlyContinue
-  Remove-Item "C:\99-DeploymentConfig.ps1" -Force -ErrorAction SilentlyContinue | Out-Null
+  Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
+  "LockerDeployment","Desktop\LockerDeployment","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
+    if (Test-Path -Path "$env:UserProfile\$_") { Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force }
+    if (Test-Path -Path "$env:Public\$_") { Remove-Item -Path "$env:Public\$_" -Recurse -Force }
+    if (Test-Path -Path "C:\Users\kiosk\$_" ) { Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force }
+  }
+  Remove-Item "C:\99-DeploymentConfig.ps1" -Force -Verbose | Out-Null
 }  #end function CleanupDesktop
 
 # Helper functions for user/computer session management
