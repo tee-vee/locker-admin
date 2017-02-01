@@ -185,6 +185,7 @@ cinst bginfo
 #cinst vim
 cinst jq --ignore-checksums
 cinst clink
+cinst wincommandpaste --ignore-checksums
 #cinst webpicmd
 #cinst putty
 #cinst rsync
@@ -236,7 +237,7 @@ Write-Host "$basename -- GAC Update ..."
 & "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
 
 #--------------------------------------------------------------------
-Write-Host "`n $basename -- Downloading Drivers"
+Write-Host "$basename -- Downloading Drivers"
 Set-Location -Path "$Env:local\drivers"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "$Env:deployurl/printer-filter.zip"
@@ -265,9 +266,9 @@ Copy-Item "$local\etc\pantone-process-black-c.bmp" "C:\Windows\System32\oobe\bac
 & "$Env:curl" -Ss -k -o "$Env:local\etc\production-gpo.zip" --url "$Env:deployurl/etc/production-gpo.zip"
 
 #--------------------------------------------------------------------
-Write-Host "`n $basename -- download teamviewer Settings"
+Write-Host "$basename -- download teamviewer Settings"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
-Write-Host "`n $basename -- install teamviewer Settings"
+Write-Host "$basename -- install teamviewer Settings"
 net stop teamviewer
 reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
 net start teamviewer
@@ -293,7 +294,7 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
   $Shortcut.Save()
 }
 
-Write-Host "`n $basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
 # last chance to reboot before next step ...

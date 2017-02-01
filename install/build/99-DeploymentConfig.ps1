@@ -44,11 +44,11 @@ $pswindow.buffersize = $newsize
 
 Write-Host "$basename -- Setting local variables ..."
 # easy add to %path% to the path based on finding the executable.
-#if(!(where.exe chocolatey)){ $env:Path += ';C:\Chocolatey\bin;' }
+#if(!(where.exe chocolatey)) { $env:Path += ';C:\Chocolatey\bin;' }
 $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
 
 
-# Fix SSH-Agent error by adding the bin directory to the `Path` environment variable
+# Fix SSH-Agent error by adding the bin directory to the Path environment variable
 #$Env:PSModulePath = $Env:PSModulePath + ";${Env:ProgramFiles(x86)}\Git\bin"
 
 $WebClient = New-Object System.Net.WebClient
@@ -233,6 +233,32 @@ function Breathe
   1..5 | % { Write-Host " -- "}
 }
 
+function AddTo-7zip($zipFileName) {
+    BEGIN {
+        #$7zip = "$($env:ProgramFiles)\7-zip\7z.exe"
+        $7zip = Find-Program "\7-zip\7z.exe"
+		if(!([System.IO.File]::Exists($7zip))){
+			throw "7zip not found";
+		}
+    }
+    PROCESS {
+        & $7zip a -tzip $zipFileName $_
+    }
+    END {
+    }
+}
+
+function touch($file) {
+    if(test-path $file) {
+        $f = get-item $file;
+        $d = get-date
+        $f.LastWriteTime = $d
+    }
+    else
+    {
+        "" | out-file -FilePath $file -Encoding ASCII
+    }
+}
 function WriteInfo($message)
 {
   Write-Host $message

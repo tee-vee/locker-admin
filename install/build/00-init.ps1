@@ -106,7 +106,22 @@ Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off' -Wait -Verbose
 #powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 03680956-93bc-4294-bba6-4e0f09bb717f 2
 #powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 03680956-93bc-4294-bba6-4e0f09bb717f 2
 
-
+## SAMPLE ...
+#$RegistryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+#$Name = "NoLockScreen"
+#$value = "1"
+#
+#if(!(Test-Path $registryPath))
+#        {
+#            New-Item -Path $RegistryPath -Force | Out-Null
+#            New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -Force | Out-Null
+#        }
+#else
+#        {
+#            New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -Force | Out-Null
+#        }
+#
+#Get-ItemProperty $RegistryPath
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - SOFTWARE CONFIGURATION"
@@ -223,10 +238,10 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalizatio
 
 
 #Set the Screen Saver Settings
-#REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v ScreenSaveActive /t REG_SZ /d 1 /f
-#reg add "hku\.DEFAULT\Control Panel\Desktop" /v ScreenSaverIsSecure /t REG_SZ /d 1 /f
-#reg add "hku\.DEFAULT\Control Panel\Desktop" /v ScreenSaveTimeOut /t REG_SZ /d 900 /f
-#reg add "hku\.DEFAULT\Control Panel\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d "$env:SystemRoot\System32\YOUR_FILE.scr" /f
+#REG ADD "HKU\.DEFAULT\Control Panel\Desktop" /v ScreenSaveActive /t REG_SZ /d 1 /f
+#reg add "HKU\.DEFAULT\Control Panel\Desktop" /v ScreenSaverIsSecure /t REG_SZ /d 1 /f
+#reg add "HKU\.DEFAULT\Control Panel\Desktop" /v ScreenSaveTimeOut /t REG_SZ /d 900 /f
+#reg add "HKU\.DEFAULT\Control Panel\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d "$env:SystemRoot\System32\YOUR_FILE.scr" /f
 
 
 #[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation] "DisableStartupSound"=dword:00000001
@@ -470,13 +485,13 @@ net user Administrator /active:yes
 
 $U = gwmi -class Win32_UserAccount | Where { $_.Name -eq "AAICON" }
 if ($U) {
-	WriteInfo "$basename -- AAICON exists"
+	WriteInfo "$basename -- AAICON user exists"
 	WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
 	net user AAICON Locision123
 }
 else
 {
-	Write-Host "$basename -- fixing AAICON account ..."
+	Write-Host "$basename -- fixing AAICON user account ..."
 	#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123' -NoNewWindow
 	#& "c:\local\bin\autologon.exe" AAICON Locision123
 	#[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]
