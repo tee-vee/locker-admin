@@ -11,6 +11,8 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-init"
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
 
+$ErrorActionPreference = "Continue"
+
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
@@ -133,9 +135,10 @@ Write-Host "$basename - SOFTWARE CONFIGURATION"
 Write-Host "$basename -- Hide boot"
 Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set bootux disabled' -Wait -Verbose
 
+Write-Host "$basename -- disable boot startup repair mode for current mode"
+bcdedit /set {current} bootstatuspolicy ignoreallfailures
 
-Write-Host "$basename -- Disable Boot Recovery Mode"
-# disable booting into recovery mode
+Write-Host "$basename -- Set Boot startup repair mode as disabled as default"
 # undo: bcdedit /deletevalue {current} bootstatuspolicy
 Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} recoveryenabled No' -Wait -Verbose
 Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures' -Wait -Verbose
@@ -159,27 +162,33 @@ Set-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name Nation -Val
 
 # --------------------------------------------------------------------------------------------
 # Disable Location Tracking
-Write-Host "$basename - Disabling Location Tracking..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Verbose
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Verbose
+#Write-Host "$basename - Disabling Location Tracking..."
+#Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Verbose
+#Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Verbose
 
 
-# Disable Advertising ID
-Write-Host "$basename - Disabling Advertising ID..."
-If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo")) {
-    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" | Out-Null
-}
-
-# Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Type DWord -Value 0
+## Disable Advertising ID
+#Write-Host "$basename - Disabling Advertising ID..."
+#If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo")) {
+#    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" | Out-Null
+#}
+#
+#Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Type DWord -Value 0
 
 #--------------------------------------------------------------------
 Write-Host "$basename -- Set Sound Volume to minimum"
 $obj = new-object -com wscript.shell
 $obj.SendKeys([char]173)
 
-# turn off startup sounds
-#reg add "[HKEY_CURRENT_USER\Control Panel\Sound]" "Beep"=No
-#REG ADD "HKLM\System\CurrentControlSet\Services\Beep" /v start /t REG_DWORD /d 4 /f
+#  Disable user from enabling the startup sound
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
+
+# Somehow setting DisableStartupSound = 0 here actually disables the sound
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 0 /f
+
+# And finally, change the sound scheme to No Sound:
+# Set the sound scheme to No Sound
+# reg add "HKCU\AppEvents\Schemes" /t REG_SZ /d ".None" /f 2>nul >nul
 
 Write-Host "$basename -- Set File Associations"
 Install-ChocolateyFileAssociation ".err" "${Env:SystemRoot}\System32\notepad.exe"
@@ -210,6 +219,8 @@ Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 Write-Host "$basename - Set UI to Classic Theme"
 #& "$Env:SystemRoot\System32\rundll32.exe" "$Env:SystemRoot\system32\shell32.dll,Control_RunDLL" "$Env:SystemRoot\system32\desk.cpl" desk,@Themes /Action:OpenTheme /file:"$Env:SystemRoot\Resources\Ease of Access Themes\classic.theme"
 Start-Process -Wait -FilePath "rundll32.exe" -ArgumentList "$env:SystemRoot\system32\shell32.dll,Control_RunDLL $env:SystemRoot\system32\desk.cpl desk,@Themes /Action:OpenTheme /file:""C:\Windows\Resources\Ease of Access Themes\classic.theme"""
+# close Personalization window ...
+(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationName -eq "Personalization" } | ForEach-Object { $_.quit() }
 
 Write-Host "$basename - Set Desktop Background to solid colors"
 New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name System -Verbose -Force
@@ -384,6 +395,17 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 
 
 #--------------------------------------------------------------------
+Write-Host "$basename -- Windows Networking Configuration"
+
+Write-Host "$basename -- speed up network copies"
+netsh int tcp set glocal autotuninglevel=disabled
+
+Write-Host "$basename -- disable the network location prompt"
+## reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\FirstNetwork" /v Category /t REG_DWORD /d 00000001 /f
+Write-Host "$basename -- disable netbios"
+wmic nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
+wmic nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2
+
 ## Windows Firewall
 WriteInfoHighlighted "$basename -- Configure Windows Firewall"
 WriteInfoHighlighted "$basename -- turn on firewall"

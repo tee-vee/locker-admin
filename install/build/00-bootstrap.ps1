@@ -11,6 +11,8 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-bootstrap"
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
 
+$ErrorActionPreference = "Continue"
+
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
@@ -123,6 +125,7 @@ cinst nircmd
 cinst xmlstarlet
 cinst curl
 cinst nssm --ignore-checksums
+# cinst f.lux
 Reboot-IfRequired
 
 cinst ie11 --ignore-checksums
@@ -180,12 +183,12 @@ Write-Host "$basename -- Update MSAV Signature"
 & "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
 
-Write-Host "`n $basename -- Installing additional tools"
+Write-Host "$basename -- Installing additional tools"
 cinst bginfo
 #cinst vim
 cinst jq --ignore-checksums
 cinst clink
-cinst wincommandpaste --ignore-checksums
+#cinst wincommandpaste --ignore-checksums
 #cinst webpicmd
 #cinst putty
 #cinst rsync
