@@ -11,6 +11,8 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 10-identify"
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
 
+$ErrorActionPreference = "Continue"
+
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
@@ -63,9 +65,6 @@ $pswindow.buffersize = $newsize
 #
 #--------------------------------------------------------------------
 
-# disable netbios
-wmic nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
-wmic nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2
 
 # find for camera
 #"$Env:CameraIpAddress" = "$Env:local\bin\UPnPScan.exe" -m -i a

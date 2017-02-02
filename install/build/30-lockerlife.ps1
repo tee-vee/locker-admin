@@ -176,8 +176,8 @@ if ($chkservice.Length -gt 0) {
 	#CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
 	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
 	Start-Process -FilePath $Env:local\src\install\build\new-service-datacollection.bat -Verb RunAs -Wait
-	Write-Host "."
 }
+Write-Host "."
 
 $chkservice = Get-Service -Name core -ErrorAction SilentlyContinue
 if ($chkservice.Length -gt 0) {
@@ -298,34 +298,42 @@ Stop-Transcript
 
 cleanmgr.exe /verylowdisk
 
-
+Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
+$kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+if (!(Test-Path -Path $kioskstartup)) {
+	Set-Location $kioskstartup
+	Copy-Item -Path "d:\run.bat" -Destination $kioskstartup
+}
 # Internet Explorer: All:
-& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
+#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
 
 # Internet Explorer: History:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 1
 
 # Internet Explorer:Cookies:
-& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 2
+#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 2
 
 # Internet Explorer: Temp Internet Files:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 8
 
 # Internet Explorer: Form Data:
-& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 16
+#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 16
 
 # Internet Explorer: Passwords:
-& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 32
+#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 32
 
 # Internet Explorer: All:
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
+touch "$Env:local\status\30-lockerlife.done"
 
-# last chance to reboot before next step ...
-#Reboot-IfRequired
+RefreshEnv
 
 # cleanup desktop
-#CleanupDesktop
-#RefreshEnv
+CleanupDesktop
 
-# touch $Env:local\status\30-lockerlife.done file
+
+
+
+# last chance to reboot before next step ...
+Reboot-IfRequired

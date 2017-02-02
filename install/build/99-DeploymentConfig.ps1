@@ -20,7 +20,7 @@ Write-Host "$basename - in" -ForegroundColor Green
 Write-Host "$basename - Variables"
 #--------------------------------------------------------------------
 
-$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = "Continue"
 
 # Allow unattended reboots
 $Boxstarter.RebootOk=$true

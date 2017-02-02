@@ -11,6 +11,8 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 20-setup"
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
 
+$ErrorActionPreference = "Continue"
+
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
