@@ -392,6 +392,8 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}"
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{374DE290-123F-4565-9164-39C4925E467B}"
 
+# Internet Explorer customizations ...
+REG ADD "HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Internet Explorer\Main" /v DisableFirstRunCustomize /t REG_DWORD /d 1 /f
 
 
 #--------------------------------------------------------------------
