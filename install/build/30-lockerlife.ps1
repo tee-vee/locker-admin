@@ -37,6 +37,8 @@ Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
 
+Import-Module -Verbose BitsTransfer
+
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
 $StartDateTime = Get-Date
@@ -91,10 +93,18 @@ WriteInfo "$basename -- set up git"
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- LockerLife -> Setup D drive ..."
 # --------------------------------------------------------------------------------------------
+Set-Location -Verbose -Path "D:\"
 
 # lockerlife production
 "RunLockerLifeConsole.bat","RunLockerLifeTV.bat","core.jar","data-collection.jar","run-manual.bat","run-test.bat","run.bat","scanner.jar","production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-	& "$Env:curl" --progress-bar -Ss -k -o "D:\$_" --url "$env:deployurl/PRODUCTION/$_"
+	#& "$Env:curl" --progress-bar -Ss -k -o "D:\$_" --url "$env:deployurl/PRODUCTION/$_"
+	Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/PRODUCTION/$_" -Destination "D:\" -TransferType Download -RetryInterval 60 -Verbose
+}
+Get-BitsTransfer | Complete-BitsTransfer
+
+"production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
+  c:\ProgramData\chocolatey\bin\unzip.exe $_
+	Remove-Item $_ -Force -Confirm:$false
 }
 
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
@@ -116,9 +126,6 @@ Write-Host "$basename -- LockerLife -> Setup D drive ..."
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Install LockerLife Libraries"
-#--------------------------------------------------------------------
-
-# --------------------------------------------------------------------------------------------
 Write-Host "$basename -- LockerLife -> Get lockerlife libraries ..."
 # --------------------------------------------------------------------------------------------
 
@@ -126,7 +133,7 @@ Write-Host "$basename -- LockerLife -> Get lockerlife libraries ..."
 
 #$jqopts = " '.[].url' "
 $lockercloudhost = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com"
-$lockercloudlibpath= "/dev/lockers/libs"
+$lockercloudlibpath = "/dev/lockers/libs"
 
 $lockerlibs = "D:\locker-libs"
 $liblist = "locker-libs-list.txt"
@@ -134,7 +141,7 @@ $libtimestamp = "locker-libs-timestamps.txt"
 
 #locate locker-libs first; then send output to locker-lib
 ## & "$Env:curl" -Ss -R -k --url "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs" | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
-& "$env:curl" -RSs -k --cacert ~\cacert.pem --url "$lockercloudhost$lockercloudlibpath" | jq '.[].url' > $lockerlibs\$liblist
+& "$env:curl" -RSs -k --url "$lockercloudhost$lockercloudlibpath" | jq '.[].url' >> $lockerlibs\$liblist
 
 # create timestamps file
 # fetch Last-Modified header for specific file; only donwload if-modified
@@ -144,8 +151,17 @@ $libtimestamp = "locker-libs-timestamps.txt"
 # xargs -P to run in parallel; match nunber of cpu cores
 #cat $lockerlibs\$liblist | xargs -n 1 curl -LO
 #Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Processors" -n 1 curl -LO
-Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl --progress-bar -k -LO
+Set-Location -Path d:\locker-libs
 
+#Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl --progress-bar -k -LO
+Get-Content -Path "D:\locker-libs\locker-libs-list.txt" | ForEach-Object {
+	Add-Content -Path "D:\locker-libs\locker-libs-list-transfer.ps1" "Start-BitsTransfer -DisplayName LockerLifeLibraryDownload -Verbose -TransferType Download -RetryInterval 60 -Source $_ -Destination D:\locker-libs"
+}
+
+D:\locker-libs\locker-libs-list-transfer.ps1
+Get-BitsTransfer | ? { $_.jobstate -ne 'transferred'}
+
+Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Install LockerLife Services"
@@ -188,8 +204,7 @@ if ($chkservice.Length -gt 0) {
 }
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Manage LockerLife User Accounts"
-#--------------------------------------------------------------------
+Write-Host "$basename - Manage LockerLife User Accounts ..."
 
 # add user
 Write-Host "$basename -- ADD KIOSK USER"
@@ -200,16 +215,19 @@ net user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullnam
 #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
 net localgroup "kiosk-group" "kiosk" /add
 
+#--------------------------------------------------------------------
+Write-Host "$basename - Setting up kiosk user environment"
+
 # [] auto create user profile (super quick, super dirty!)
 Write-Host "$basename -- Create kiosk user profile"
 Start-Process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow -Wait
 psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
 Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow
 psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
-
-# psexec -u kiosk to use bginfo to change background to black
-#Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0' -NoNewWindow
-#psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c bginfo c:\local\etc\kiosk-production-black.bgi /silent /NOLICPROMPT /TIMER:0
+Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat'
+Copy-Item -Path "D:\run.bat" -Destination 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\run.bat'
+Set-Location -Verbose "C:\local\etc"
+Start-BitsTransfer -Source "http://lockerlife.hk/deploy/2017-01-gpo.zip" -Destination "C:\local\etc"
 
 
 # set autologon to kiosk user
@@ -264,10 +282,6 @@ Register-ScheduledJob -Verbose -Name UpdatePowerShellHelpJob -ScriptBlock { Upda
 
 
 
-#--------------------------------------------------------------------
-Write-Host "$basename - Setting up kiosk user environment"
-#--------------------------------------------------------------------
-
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- final hardening ..."
@@ -276,12 +290,12 @@ Write-Host "$basename - disable admin user"
 ## generate random password for administrator
 # -join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})
 net user administrator /active:no
+net user administrator /active:no
 
 # set autologin to kiosk user, reboot computer ...
 WriteInfoHighlighted "SETUP AUTOLOGON"
 #Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
 & "$env:local\bin\autologon.exe" /accepteula kiosk $env:computername locision123
-
 Write-Host "."
 
 ### Use New-GPO ???
@@ -289,8 +303,8 @@ Write-Host "."
 
 
 # Reset for kiosk user -> Small taskbar
-Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
-Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
+#Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
+#Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 
 
 Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
@@ -298,10 +312,12 @@ Stop-Transcript
 
 cleanmgr.exe /verylowdisk
 
+# purple screen
 Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
 $kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 if (!(Test-Path -Path $kioskstartup)) {
-	Set-Location $kioskstartup
+	Set-Location $kioskstartup -Verbose
+	Remove-Item -Path $kioskstartup\* -Force -Verbose
 	Copy-Item -Path "d:\run.bat" -Destination $kioskstartup
 }
 # Internet Explorer: All:
@@ -331,9 +347,3 @@ RefreshEnv
 
 # cleanup desktop
 CleanupDesktop
-
-
-
-
-# last chance to reboot before next step ...
-Reboot-IfRequired
