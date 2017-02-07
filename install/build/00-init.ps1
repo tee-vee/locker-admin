@@ -10,10 +10,9 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-init"
 #--------------------------------------------------------------------
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
-
 $ErrorActionPreference = "Continue"
 
-# Verify Running as Admin
+## Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
 	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
@@ -21,6 +20,10 @@ If (!( $isAdmin )) {
 	1..5 | % { Write-Host }
 	exit
 }
+
+# backup
+Enable-ComputerRestore -Verbose -Drive "C:\" -Confirm:$false
+Checkpoint-Computer -Description "Pre-Deployment" -Verbose
 
 # close previous IE windows ...
 Stop-Process -Name iexplore -Verbose
@@ -79,7 +82,27 @@ if ($BuildNumber -le 7601)
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Setup D drive ..."
 # --------------------------------------------------------------------------------------------
-WriteInfo "$basename -- Not Yet Implemented ... Skipping"
+$diskpartD = @"
+select disk=1
+clean
+create partition primary
+select partition=1
+format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
+assign letter=D
+"@
+Set-Content -Path C:\diskpartD.txt -Value $diskpartD
+diskpart /s C:\diskpartD.txt
+
+$diskpartE = @"
+select disk=2
+clean
+create partition primary
+select partition=1
+format FS=NTFS LABEL="logs" QUICK
+assign letter=E
+"@
+Set-Content -Path C:\diskpartE.txt -Value $diskpartE
+diskpart /s C:\diskpartE.txt
 
 #--------------------------------------------------------------------
 Write-Host "$basename - General Windows Configuration"
@@ -88,7 +111,7 @@ Write-Host "$basename - General Windows Configuration"
 #--------------------------------------------------------------------
 Write-Host "$basename -- HARDWARE CONFIGURATION"
 Write-Host "$basename -- Disable hibernate"
-Start-Process 'powercfg.exe' -Verb runAs -ArgumentList '/h off' -Wait -Verbose
+Start-Process 'powercfg.exe' -Verb RunAs -ArgumentList '/h off' -Wait -Verbose
 
 #power plan type (0=power saver, 1=high performance, 2=balanced)
 #powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c fea3413e-7e05-4911-9a71-700331f1c294 245d8541-3943-4422-b025-13a784f679b7 1
@@ -133,16 +156,17 @@ Write-Host "$basename - SOFTWARE CONFIGURATION"
 # & "$Env:local\bin\BootUpdCmd20.exe" "$Env:local\etc\build\lockerlife-boot-custom.bs7"
 
 Write-Host "$basename -- Hide boot"
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set bootux disabled' -Wait -Verbose
+Start-Process 'bcdedit.exe' -Verb RunAs -ArgumentList '/set bootux disabled' -Wait -Verbose
 
 Write-Host "$basename -- disable boot startup repair mode for current mode"
 bcdedit /set {current} bootstatuspolicy ignoreallfailures
 
 Write-Host "$basename -- Set Boot startup repair mode as disabled as default"
 # undo: bcdedit /deletevalue {current} bootstatuspolicy
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} recoveryenabled No' -Wait -Verbose
-Start-Process 'bcdedit.exe' -Verb runAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures' -Wait -Verbose
+Start-Process 'bcdedit.exe' -Verb RunAs -ArgumentList '/set {default} recoveryenabled No' -Wait -Verbose
+Start-Process 'bcdedit.exe' -Verb RunAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures' -Wait -Verbose
 
+Stop-Service CscService -Confirm:$False -Verbose
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Configure Windows Time Services"
 # stop windows time service
@@ -181,10 +205,10 @@ $obj = new-object -com wscript.shell
 $obj.SendKeys([char]173)
 
 #  Disable user from enabling the startup sound
-reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
+REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
 
 # Somehow setting DisableStartupSound = 0 here actually disables the sound
-reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 0 /f
+REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 0 /f
 
 # And finally, change the sound scheme to No Sound:
 # Set the sound scheme to No Sound
@@ -212,9 +236,22 @@ REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dont
 #--------------------------------------------------------------------
 Write-Host "$basename - After login ..."
 #--------------------------------------------------------------------
+New-Item -ItemType File "C:\local\bin\autologon.bat" -ErrorAction SilentlyContinue -Verbose
+
 # Windows Explorer Settings through Choco
 #Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
+
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename --  Adjust UI for Best Performance"
+REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v "VisualFXSetting" /t REG_DWORD /d 2 /f
+
+# kill aero and visual effects
+WriteInfoHighlighted "$basename -- Stopping uxsms"
+Get-Service uxsms
+Stop-Service -Verbose uxsms -ErrorAction SilentlyContinue
+net stop uxsms
 
 Write-Host "$basename - Set UI to Classic Theme"
 #& "$Env:SystemRoot\System32\rundll32.exe" "$Env:SystemRoot\system32\shell32.dll,Control_RunDLL" "$Env:SystemRoot\system32\desk.cpl" desk,@Themes /Action:OpenTheme /file:"$Env:SystemRoot\Resources\Ease of Access Themes\classic.theme"
@@ -225,9 +262,9 @@ Start-Process -Wait -FilePath "rundll32.exe" -ArgumentList "$env:SystemRoot\syst
 Write-Host "$basename - Set Desktop Background to solid colors"
 New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name System -Verbose -Force
 #Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
-Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
-Write-Host "$basename - Set Desktop Background color "
-
+#New-Item -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Verbose
+#Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
+Write-Host "$basename - Set Desktop Background color"
 Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
 Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
 
@@ -242,8 +279,21 @@ Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -V
 #REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v TileWallpaper /t REG_SZ /d "0" /f
 
 
+#--------------------------------------------------------------------
+# Disable Lock screen
+#Write-Host "$basename -- Disabling Lock screen..."
+#If (!(Test-Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization")) {
+#    New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Verbose -ErrorAction SilentlyContinue
+#}
+#Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -Type DWord -Value 1
+
+
+# Enable Lock screen
+# Remove-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen"
+
+
 WriteInfo "$basename - Set lock screen background image"
-New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Verbose
+New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Verbose -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose
 
 
@@ -262,6 +312,11 @@ REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Disa
 Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Verbose -Force
 
 
+#--------------------------------------------------------------------
+# Enable Action Center
+# Remove-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter"
+# Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled"
+
 # Disable Action Center
 Write-Host "$basename - Disabling Action Center..."
 If (!(Test-Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer")) {
@@ -272,6 +327,7 @@ Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Nam
 # Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -Type DWord -Value 0
 
 
+# --------------------------------------------------------------------
 # Disable Autoplay
 Write-Host "$basename - Disabling Autoplay..."
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 1
@@ -281,6 +337,7 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 0
 
 
+#--------------------------------------------------------------------
 # Disable Autorun for all drives
 Write-Host "$basename - Disabling Autorun for all drives..."
 If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")) {
@@ -293,14 +350,16 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies
 # Enable Autorun for all drives
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun"
 
+#--------------------------------------------------------------------
 # Disable Sticky keys prompt
 Write-Host "$basename - Disabling Sticky keys prompt..."
-Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Type String -Value "506" -Verbose -Force
+Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name Flags -Type String -Value 506 -Verbose -Force
 
 
 # Enable Sticky keys prompt
 # Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Type String -Value "510"
 
+#--------------------------------------------------------------------
 # Hide Search button / box
 #Write-Host "$basename - Hiding Search Box / Button..."
 #Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 0
@@ -309,6 +368,7 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Fla
 # Show Search button / box
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode"
 
+#--------------------------------------------------------------------
 # Hide Task View button
 #Write-Host "$basename - Hiding Task View button..."
 #Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Type DWord -Value 0
@@ -317,6 +377,7 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Fla
 # Show Task View button
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton"
 
+#--------------------------------------------------------------------
 # Show large icons in taskbar
 #Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons"
 
@@ -353,6 +414,7 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 #“{208D2C60-3AEA-1069-A2D7-08002B30309D}”=dword:00000000
 
 
+# --------------------------------------------------------------------
 # Hide Computer shortcut from desktop
 #   ; Computer = {20D04FE0-3AEA-1069-A2D8-08002B30309D}
 #Remove-ItemProperty -Path "[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons]" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
@@ -362,6 +424,7 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 #Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 
 
+# --------------------------------------------------------------------
 # Remove Desktop icon from computer namespace
 #Write-Host "Removing Desktop icon from computer namespace..."
 #Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" -Recurse -ErrorAction SilentlyContinue
@@ -371,10 +434,11 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}"
 
 
+# --------------------------------------------------------------------
 # Remove Documents icon from computer namespace
 Write-Host "$basename - Removing Documents icon from computer namespace..."
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{d3162b92-9365-467a-956b-92703aca08af}" -Recurse -Verbose -ErrorAction SilentlyContinue
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A8CDFF1C-4878-43be-B5FD-F8091C1C60D0}" -Recurse -Verbose -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{d3162b92-9365-467a-956b-92703aca08af}" -Recurse -Verbose
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A8CDFF1C-4878-43be-B5FD-F8091C1C60D0}" -Recurse -Verbose
 
 
 # Add Documents icon to computer namespace
@@ -382,6 +446,7 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A8CDFF1C-4878-43be-B5FD-F8091C1C60D0}"
 
 
+# --------------------------------------------------------------------
 # Remove Downloads icon from computer namespace
 #Write-Host "Removing Downloads icon from computer namespace..."
 #Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}" -Recurse -ErrorAction SilentlyContinue
@@ -392,9 +457,52 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}"
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{374DE290-123F-4565-9164-39C4925E467B}"
 
+#--------------------------------------------------------------------
+# Remove Music icon from computer namespace
+Write-Host "$basename -- Removing Music icon from computer namespace..."
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Recurse -ErrorAction SilentlyContinue
+
+
+# Add Music icon to computer namespace
+# New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}"
+# New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}"
+
+
+#--------------------------------------------------------------------
+# Remove Pictures icon from computer namespace
+Write-Host "$basename -- Removing Pictures icon from computer namespace..."
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Recurse -ErrorAction SilentlyContinue
+
+
+# Add Pictures icon to computer namespace
+# New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}"
+# New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}"
+
+
+#--------------------------------------------------------------------
+# Remove Videos icon from computer namespace
+Write-Host "$basename -- Removing Videos icon from computer namespace..."
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}" -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}" -Recurse -ErrorAction SilentlyContinue
+
+
+# Add Videos icon to computer namespace
+# New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}"
+# New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}"
+
+
+#--------------------------------------------------------------------
+# shorten shutdown wait time - WaitToKillServiceTimeout
+REG ADD "HKLM\SYSTEM\CurrentControlSet\Control" /v Start /t REG_DWORD /d 4 /f
+
+
+
+# --------------------------------------------------------------------
 # Internet Explorer customizations ...
 REG ADD "HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Internet Explorer\Main" /v DisableFirstRunCustomize /t REG_DWORD /d 1 /f
-
+REG ADD "HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Main" /v "Start Page" /t REG_SZ /d "http://lockerlife.hk/deploy" /f
 
 #--------------------------------------------------------------------
 Write-Host "$basename -- Windows Networking Configuration"
@@ -441,10 +549,15 @@ WriteInfoHighlighted "$basename -- turn on firewall"
 # Allow connections from computers running any version of Remote Desktop (less secure)
 # REG ADD "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
 
-# Disable Remote Assistance
-Write-Host "$basename - Disabling Remote Assistance..."
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0 -Verbose
+## Disable Remote Assistance
+#Write-Host "$basename - Disabling Remote Assistance..."
+#Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0 -Verbose
+#
 
+# --------------------------------------------------------------------------------------------
+# Disable Remote Assistance
+Write-Host "$basename -- Disabling Remote Assistance..."
+Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0 -Verbose
 
 
 #--------------------------------------------------------------------
@@ -470,9 +583,9 @@ Write-Host "$basename - Get some basic tools"
 #--------------------------------------------------------------------
 
 $WebClient = New-Object System.Net.WebClient
-#Import-Module BitsTransfer
-#Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
-(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/curl.exe","c:\local\bin\curl.exe")
+
+Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
+#(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/curl.exe","c:\local\bin\curl.exe")
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/Bginfo.exe","c:\local\bin\Bginfo.exe")
 
 #& "$env:curl" --progress-bar -Ss -k --url "https://live.sysinternals.com/Autologon.exe" -o "$Env:local\bin\Autologon.exe"
@@ -481,7 +594,7 @@ $WebClient.DownloadFile("$env:deployurl/bin/Autologon.exe","$local\bin\Autologon
 #& "$Env:curl" --progress-bar -Ss -k -o "$Env:local\bin\devcon.exe" --url "$Env:deployurl/bin/devcon.exe"
 $WebClient.DownloadFile("$env:deployurl/bin/devcon.exe","$local\bin\devcon.exe")
 & "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\hstart.exe" --url "$env:deployurl/bin/hstart.exe"
-& "$env:curl" --progress-bar -Ss -k -o "$local\bin\nircmd.exe" --url "$env:deployurl/bin/nircmd.exe"
+& "$env:curl" --progress-bar -Ss -k -o "C:\Windows\nircmd.exe" --url "$env:deployurl/bin/nircmd.exe"
 & "$env:curl" --progress-bar -Ss -k -o "$local\bin\nircmdc.exe" --url "$env:deployurl/bin/nircmdc.exe"
 $WebClient.DownloadFile("$env:deployurl/bin/nssm.exe","$local\bin\nssm.exe")
 #& "$env:curl" --progress-bar -Ss -k -o "$Env:local\bin\sendEmail.exe" --url "$Env:deployurl/bin/sendEmail.exe"
@@ -501,13 +614,14 @@ Write-Host "$basename - Manage System User Accounts (no lockerlife accounts)"
 WriteInfoHighlighted "$basename - DISABLE GUEST USER"
 # https://technet.microsoft.com/en-us/library/ff687018.aspx
 net user guest /active:no
+
 & "$Env:SystemRoot\System32\WinSAT.exe" -v forgethistory
 
 Write-Host "$basename -- Enable Administrator"
 net user Administrator /active:yes
 #net user administrator /active:no
 
-$U = gwmi -class Win32_UserAccount | Where { $_.Name -eq "AAICON" }
+$U = Get-WmiObject -class Win32_UserAccount | Where-Object { $_.Name -eq "AAICON" }
 if ($U) {
 	WriteInfo "$basename -- AAICON user exists"
 	WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
@@ -524,10 +638,11 @@ else
 	#"DefaultPassword"="P@$$w0rd"
 	#"DefaultDomainName"="contoso"
 	#Start-ChocolateyProcessAsAdmin -statements $args -exeToRun $vcdmount
-	net user AAICON Locision123 /add /expires:never /passwordchg:no
 	net user AAICON Locision123
+	net user AAICON Locision123 /add /expires:never /passwordchg:no
 }
 
+Get-BitsTransfer | Complete-BitsTransfer
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
@@ -537,9 +652,6 @@ CleanupDesktop
 Create-DeploymentLinks
 Update-Help -Verbose
 
-# Internet Explorer: Temp Internet Files:
-RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
-
 # touch $Env:local\status\00-init.done file
 New-Item -Path "$local\status\$basename.done" -ItemType File -Verbose -Force -ErrorAction SilentlyContinue | Out-Null
 
@@ -548,4 +660,5 @@ Write-Host "."
 
 Write-Host "$basename -- done"
 Write-Host "$basename - Next stage ..."
-& "$env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1"
+#& "$env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1"
+START http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1
