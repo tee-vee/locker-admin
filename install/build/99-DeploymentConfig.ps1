@@ -8,8 +8,9 @@
 
 $basename = "99-DeploymentConfig"
 #--------------------------------------------------------------------
-Write-Host "$basename - Lets start"
+Write-Host "99-DeploymentConfig - Lets start"
 #--------------------------------------------------------------------
+Import-Module BitsTransfer
 
 # make an entrance ...
 1..5 | % { Write-Host }
@@ -97,7 +98,7 @@ $RouterInternalIpAddress = $env:RouterInternalIpAddress
 
 Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"               # router external ip address
 
-if (Get-Command ConvertFrom-JSON) {
+if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
   $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | convertfrom-json).origin
   $RouterExternalIpAddress = $env:RouterExternalIpAddress
   Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
@@ -105,7 +106,7 @@ if (Get-Command ConvertFrom-JSON) {
 
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
 #Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
-Install-ChocolateyEnvironmentVariable "JAVA_HOME" "d:\java\jre\bin"
+Install-ChocolateyEnvironmentVariable "JAVA_HOME" "D:\java\jre\bin"
 $JAVA_HOME = $Env:JAVA_HOME
 
 $_tmp = "C:\temp"
@@ -139,18 +140,18 @@ $user = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 #--------------------------------------------------------------------
 Write-Host "$basename - Aliases"
 #--------------------------------------------------------------------
-Set-Alias -Name curl -Value C:\local\bin\curl.exe -Option AllScope
-Set-Alias logout invoke-userLogout
-Set-Alias halt invoke-systemShutdown
-Set-Alias restart invoke-systemReboot
-Set-Alias iexplore 'C:\Program Files\Internet Explorer\iexplore.exe'
-
+Set-Alias -Name "iexplore" "C:\Program Files\Internet Explorer\iexplore.exe" -Option AllScope
+Set-Alias -Name "zip" "C:\Program Files\7-Zip\7z.exe" -Option AllScope -Force
+Set-Alias -Name "curl" -Value "C:\local\bin\curl.exe" -Option AllScope -Force
+Set-Alias -Name "logout" invoke-userLogout
+Set-Alias -Name "halt" invoke-systemShutdown
+Set-Alias -Name "restart" invoke-systemReboot
 #--------------------------------------------------------------------
 Write-Host "$basename - Get updated SSL Certificate store"
 #--------------------------------------------------------------------
 
-& "$env:curl" --progress-bar --url https://curl.haxx.se/ca/cacert.pem > ~\cacert.pem
-
+& "$env:curl" --progress-bar --url "https://curl.haxx.se/ca/cacert.pem" > $ALLUSERSPROFILE\cacert.pem
+Install-ChocolateyEnvironmentVariable "CURL_CA_BUNDLE" "$ALLUSERSPROFILE\cacert.pem"
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Functions"
@@ -196,6 +197,13 @@ function OkToDeploy
 
 function ConfigureDisk
 {
+  # list disks (raw disks)
+  # wmic diskdrive list brief
+  Get-WmiObject -Class Win32_DiskDrive | Where-Object { $_.Partitions -eq 0 }
+
+  # list volumes
+  # wmic volume list brief
+
   # using diskpart
   Write-Host "$basename -- Setup D drive"
   #select disk=1
@@ -203,29 +211,33 @@ function ConfigureDisk
   #select partition=1
   #format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
   #assign letter="D"
+  #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/9b597a682a2fe6fee417be5039445da7/raw/20430a6353efa49f2cb8f03a3c75ecef009a2e9e/diskpart-d.txt","C:\local\etc\diskpart-d.txt")
+
 
   # using diskpart
   Write-Host "$basename -- Setup E drive"
   #select disk=2
   #create partition primary
   #select partition=1
-  #format FS=NTFS UNIT=4906 LABEL="logs" QUICK COMPRESS
+  #format FS=NTFS UNIT=4906 LABEL="logs" QUICK
   #assign letter=E
+  #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/ef21fd19a8e91c0cc3eef37a9557ad49/raw/b22394680129ffc07e1ff76685427319a5f704bd/diskpart-e.txt","C:\local\etc\diskpart-e.txt")
+
 }
 
-
-function Reboot-IfRequired()
-{
-  if(Test-PendingReboot)
-  {
-    Write-Host "$basename -- Test-PendingReboot -- Reboot is required. Rebooting now"
-		Invoke-Reboot
-	}
-	else
-  {
-		Write-Host "$basename -- No reboot is required. Continuing ..."
-	}
-} #end function Reboot-IfRequired
+#
+#function Reboot-IfRequired()
+#{
+#  if(Test-PendingReboot)
+#  {
+#    Write-Host "$basename -- Reboot required. Rebooting now"
+#		Invoke-Reboot
+#	}
+#	else
+#  {
+#		Write-Host "$basename -- No reboot is required. Continuing ..."
+#	}
+#} #end function Reboot-IfRequired
 
 function Breathe
 {
@@ -359,12 +371,18 @@ Function Rename-ComputerName ([string]$NewComputerName)
 ## cleanup desktop
 function CleanupDesktop {
   Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
-  "LockerDeployment","Desktop\LockerDeployment","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
-    if (Test-Path -Path "$env:UserProfile\$_") { Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force }
-    if (Test-Path -Path "$env:Public\$_") { Remove-Item -Path "$env:Public\$_" -Recurse -Force }
-    if (Test-Path -Path "C:\Users\kiosk\$_" ) { Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force }
+
+  # Internet Explorer: Temp Internet Files:
+  RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
+
+  "AppData\Roaming\Microsoft\Windows\Libraries\*","AppData\Roaming\Microsoft\Windows\SendTo\*.lnk","SendTo\*.lnk","Recent\*.lnk","LockerDeployment","Desktop\LockerDeployment","Links\*.lnk","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
+    if (Test-Path -Path "$env:UserProfile\$_" -Verbose) { Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force -Verbose }
+    if (Test-Path -Path "$env:Public\$_" -Verbose) { Remove-Item -Path "$env:Public\$_" -Recurse -Force -Verbose }
+    if (Test-Path -Path "C:\Users\kiosk\$_" -Verbose) { Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force -Verbose }
   }
-  Remove-Item "C:\99-DeploymentConfig.ps1" -Force -Verbose | Out-Null
+  Remove-Item "C:\99-DeploymentConfig.ps1" -Force | Out-Null
+  Enable-UAC
+  Disable-MicrosoftUpdate
 }  #end function CleanupDesktop
 
 # Helper functions for user/computer session management
