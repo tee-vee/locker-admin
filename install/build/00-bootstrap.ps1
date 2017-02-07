@@ -10,7 +10,6 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-bootstrap"
 #--------------------------------------------------------------------
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
-
 $ErrorActionPreference = "Continue"
 
 # Verify Running as Admin
@@ -80,6 +79,10 @@ if ($BuildNumber -le 7601)
 
 
 #--------------------------------------------------------------------
+# get updated root certificates
+#msiexec /i http://www.cacert.org/certs/CAcert_Root_Certificates.msi /quiet /passive
+
+#--------------------------------------------------------------------
 Write-Host "$basename - Install some software"
 #--------------------------------------------------------------------
 
@@ -87,7 +90,6 @@ choco feature enable -n=allowGlobalConfirmation
 
 cinst chocolatey
 cinst Boxstarter
-Reboot-IfRequired
 
 # fix mis-versioned 7z.exe x64 binary
 #Move-Item -Path "$Env:ProgramData\chocolatey\tools\7z.exe" "$Env:ProgramData\chocolatey\tools\7z-x64.exe" -Force
@@ -96,13 +98,11 @@ Reboot-IfRequired
 cinst 7zip --forcex86
 cinst 7zip.commandline
 cinst unzip --ignore-checksums
-Reboot-IfRequired
 
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1
 
 cinst dotnet4.6.2 --version 4.6.01590.0
 #if (Test-PendingReboot) { Invoke-Reboot }
-Reboot-IfRequired
 
 # below: requires .Net 4+ to run
 cinst Boxstarter.Common
@@ -110,10 +110,8 @@ cinst boxstarter.WinConfig
 cinst Boxstarter.Chocolatey
 cinst chocolatey-core.extension
 cinst chocolatey-uninstall.extension
-Reboot-IfRequired
 
 cinst teamviewer.host --version 12.0.72365
-Reboot-IfRequired
 
 # gow installer is easily confused ... only run if gow isn't installed ..
 if (!(Test-Path "$Env:ProgramFiles\Gow"))
@@ -123,16 +121,13 @@ if (!(Test-Path "$Env:ProgramFiles\Gow"))
 
 cinst nircmd
 cinst xmlstarlet
-cinst curl
+## cinst curl
 cinst nssm --ignore-checksums
 # cinst f.lux
-Reboot-IfRequired
 
 cinst ie11 --ignore-checksums
-Reboot-IfRequired
 
 cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
-Reboot-IfRequired
 
 cinst powershell -version 3.0.20121027
 #schtasks /Run /TN "\Microsoft\Windows\.NET Framework\.NET Framework NGEN v4.0.30319"
@@ -142,12 +137,11 @@ Write-Host "$basename -- Fixing critical Windows svchost.exe memory leak -- KB28
 & "$Env:curl" -Ss -k -o "$Env:_tmp\Windows6.1-KB2889748-x86.msu" --url "https://github.com/lockerlife-kiosk/deployment/raw/master/Windows6.1-KB2889748-x86.msu"
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
-& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
+#& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 Breathe
 Write-Host "$basename -- Disable Windows Update"
 Disable-MicrosoftUpdate
 
-Reboot-IfRequired
 
 Write-Host "$basename -- Installing Powershell 4"
 cinst powershell4 --ignore-checksums
@@ -155,32 +149,29 @@ cinst powershell4 --ignore-checksums
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
 if (!( Test-Path "$env:local\status\powershell4-ngen.ok" -ErrorAction SilentlyContinue))
 {
-  New-Item -Type File -Path "$env:local\status\powershell4-ngen.ok" -Force -Verbose
+  New-Item -Type File -Path "$env:local\status\powershell4-ngen.ok" -Force
   iex ((New-Object System.Net.WebClient).DownloadString('http://lockerlife.hk/deploy/fix-powershell4-performance.ps1'))
 
 }
 
-Write-Host "$basename -- test-reboot check"
-Reboot-IfRequired
 
 Write-Host "$basename -- installing psget"
 cinst powershell-packagemanagement
 
 Write-Host "$basename -- Installing Microsoft Security Essentials (antivirus)"
 cinst microsoftsecurityessentials -version 4.5.0216.0 --ignore-checksums
-Reboot-IfRequired
 Write-Host "."
-
-# --------------------------------------------------------------------------------------------
-WriteInfo "$basename -- Temporarily stop antivirus"
-# --------------------------------------------------------------------------------------------
-& "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
-& "$Env:SystemRoot\System32\timeout.exe" /t 5 /nobreak
-& "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
-Write-Host "$basename -- Update MSAV Signature"
-# https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396
-& "$envProgramFiles\Windows Defender\MpCmdRun.exe" -SignatureUpdate
-& "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
+#
+## --------------------------------------------------------------------------------------------
+#WriteInfo "$basename -- Temporarily stop antivirus"
+## --------------------------------------------------------------------------------------------
+#& "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
+#& "$Env:SystemRoot\System32\timeout.exe" /t 5 /nobreak
+#& "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
+#Write-Host "$basename -- Update MSAV Signature"
+## https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396
+#& "$envProgramFiles\Windows Defender\MpCmdRun.exe" -SignatureUpdate
+#& "$Env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 2
 
 
 Write-Host "$basename -- Installing additional tools"
@@ -201,7 +192,6 @@ cinst psexec
 
 Write-Host "$basename -- Installing Telnet Client (dism/windowsfeatures)"
 cinst TelnetClient -source windowsfeatures
-Reboot-IfRequired
 
 if (!(Test-Path "$JAVA_HOME\java.exe")) {
   Write-Host "`n $basename -- Installing Java jre"
@@ -228,11 +218,11 @@ msiexec /i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /
 #--------------------------------------------------------------------
 Write-Host "$basename -- Begin -- Remove unnecessary Windows components"
 
-dism /online /disable-feature /featurename:InboxGames
-dism /online /disable-feature /featurename:FaxServicesClientPackage
-dism /online /disable-feature /featurename:WindowsGadgetPlatform
-dism /online /disable-feature /featurename:OpticalMediaDisc
-dism /online /disable-feature /featurename:Xps-Foundation-Xps-Viewer
+dism /online /disable-feature /featurename:InboxGames /NoRestart
+dism /online /disable-feature /featurename:FaxServicesClientPackage /NoRestart
+dism /online /disable-feature /featurename:WindowsGadgetPlatform /NoRestart
+dism /online /disable-feature /featurename:OpticalMediaDisc /NoRestart
+dism /online /disable-feature /featurename:Xps-Foundation-Xps-Viewer /NoRestart
 Write-Host "$basename -- End -- Remove unnecessary Windows components"
 
 #--------------------------------------------------------------------
@@ -252,7 +242,8 @@ Set-Location -Path "$Env:local\drivers"
 
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "$Env:deployurl/scanner.zip"
 cd "$local\drivers"
-unzip.exe -o "scanner.zip"
+c:\ProgramData\chocolatey\bin\unzip.exe scanner.zip
+remove-item -Path scanner.zip
 
 Write-Host "$basename -- local\etc stuff"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\kiosk-production-black.bgi" --url "$Env:deployurl/etc/kiosk-production-black.bgi"
@@ -269,21 +260,22 @@ Copy-Item "$local\etc\pantone-process-black-c.bmp" "C:\Windows\System32\oobe\bac
 & "$Env:curl" -Ss -k -o "$Env:local\etc\production-gpo.zip" --url "$Env:deployurl/etc/production-gpo.zip"
 
 #--------------------------------------------------------------------
-Write-Host "$basename -- download teamviewer Settings"
+Write-Host "$basename -- Download TeamViewer Settings"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 Write-Host "$basename -- install teamviewer Settings"
 net stop teamviewer
 reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
-net start teamviewer
 
 Write-Host "$basename -- GPO"
 Set-Location -Path "$Env:SystemRoot\System32"
 ## make backup of GroupPolicy directories
-c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicy-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicy\"
-c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicyUsers-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicyUsers\"
+#c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicy-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicy\"
+#c:\programdata\chocolatey\tools\7za a -t7z "$Env:SystemRoot\System32\GroupPolicyUsers-BACKUP.7z" "$Env:SystemRoot\System32\GroupPolicyUsers\"
 
 chocolatey feature disable -n=allowGlobalConfirmation
 
+
+Get-BitsTransfer | Complete-BitsTransfer
 
 #--------------------------------------------------------------------
 # Make bginfo run on startup/login
@@ -300,23 +292,18 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
 Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
-# last chance to reboot before next step ...
-Reboot-IfRequired
-
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 #--------------------------------------------------------------------
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue -Verbose
 
 # Cleanup Desktop
 CleanupDesktop
 Create-DeploymentLinks
 
-# Internet Explorer: Temp Internet Files:
-RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
-
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
-New-Item -Path "$local\status\$basename.done" -ItemType File | Out-Null
+New-Item -ItemType File -Path "$env:local\status\$basename.done" | Out-Null
 
 & "$env:curl" -Ss -k --url "https://api.github.com/zen"
 Write-Host "."
@@ -328,4 +315,6 @@ Write-Host "$basename - Next stage ... "
 #Stop-Process -Name iexplore
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1"
 #& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff "http://boxstarter.org/package/url?$Env:deployurl/02-bootstrap.ps1"
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/10-identify.ps1"
+
+#& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/10-identify.ps1"
+START http://boxstarter.org/package/url?http://lockerlife.hk/deploy/10-identify.ps1
