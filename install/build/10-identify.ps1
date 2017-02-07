@@ -121,27 +121,25 @@ if (!$Env:sitename) {
       Install-ChocolateyEnvironmentVariable "UfoIccid" "NULL"
       $Env:UfoIccid = $Env:iccid.SubString($Env:iccid.Length-5)
       Write-Host "$Env:UfoIccid"
-      Rename-Computer -NewName "UFO-$Env:UfoIccid" -Force -PassThru -Restart
+      Rename-Computer -NewName "UFO-$Env:UfoIccid" -Force -Confirm:$false -Restart
 			#(Get-WmiObject Win32_ComputerSystem).Rename("MyMachineName") | Out-Null
     }
     else
     {
       Uninstall-ChocolateyEnvironmentVariable -VariableName 'UfoIccid'
-      Rename-Computer -NewName "$Env:sitename" -Force -PassThru -Restart
+      Rename-Computer -NewName "$Env:sitename" -Force -Confirm:$false -Restart
 			#(Get-WmiObject Win32_ComputerSystem).Rename("MyMachineName") | Out-Null
     }
 
     Add-Computer -WorkGroupName "LOCKERLIFE.HK"
-    Write-Host ""
+    Write-Host "."
     Write-Host "`tSIM ICCID $Env:iccid authorized for LockerLife Locker Deployment"
     Write-Host "`tLocker sitename: $Env:sitename"
-    Write-Host ""
+    Write-Host "."
     Write-Host "`tProceeding to Stage 2"
 }
 
-#if (Test-PendingReboot) { Invoke-Reboot }
-Reboot-IfRequired
-
+Get-BitsTransfer | Complete-BitsTransfer
 
 #--------------------------------------------------------------------
 # finishing #
@@ -170,8 +168,6 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
 
 
-Write-Host "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
-Stop-Transcript
 Write-Host "Mistake with Locker registration? Double-click the register-locker icon on the desktop..."
 #Write-Host "`t Or Continue to the next step ..."
 #$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
@@ -184,26 +180,22 @@ Write-Host "$basename - Cleanup"
 CleanupDesktop
 Create-DeploymentLinks
 
-# Internet Explorer: Temp Internet Files:
-RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
-
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
 New-Item -Path "$Env:local\status\$basename.done" -ItemType File -ErrorAction SilentlyContinue | Out-Null
 
-& "$Env:curl" -Ss -k https://api.github.com/zen ; Write-Host ""
+& "$Env:curl" -Ss -k --url https://api.github.com/zen ; Write-Host ""
 Write-Host "."
 
 
 Write-Host "`n $basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
-# last chance to reboot before next step ...
-Reboot-IfRequired
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Next stage ... "
 #--------------------------------------------------------------------
 #& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
 Stop-Process -Name iexplore -ErrorAction SilentlyContinue
-& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/20-setup.ps1
+#& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/20-setup.ps1
+START http://boxstarter.org/package/url?http://lockerlife.hk/deploy/20-setup.ps1
