@@ -189,7 +189,7 @@ Set-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name Nation -Val
 #Write-Host "$basename - Disabling Location Tracking..."
 #Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Verbose
 #Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Verbose
-
+#Set-ItemProperty -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Diagnostics" -Name "GPSvcDebugLevel" -Type DWord -Value "GPSvcDebugLevel"=dword:00030002
 
 ## Disable Advertising ID
 #Write-Host "$basename - Disabling Advertising ID..."
@@ -245,7 +245,11 @@ Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename --  Adjust UI for Best Performance"
-REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v "VisualFXSetting" /t REG_DWORD /d 2 /f
+reg load "hku\temp" "%USERPROFILE%\..\Default User\NTUSER.DAT"
+REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
+Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
+
+reg unload "hku\temp"
 
 # kill aero and visual effects
 WriteInfoHighlighted "$basename -- Stopping uxsms"
@@ -266,7 +270,6 @@ New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name 
 #Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
 Write-Host "$basename - Set Desktop Background color"
 Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
-Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
 
 
 #Write-Host "$basename -- Set Desktop Wallpaper"
@@ -295,7 +298,6 @@ Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -V
 WriteInfo "$basename - Set lock screen background image"
 New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Verbose -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose
-
 
 
 #Set the Screen Saver Settings
@@ -565,9 +567,9 @@ Write-Host "$basename - Make some directories"
 #--------------------------------------------------------------------
 
 # important directories - create directories as early as possible ...
-"E:\images\archive","$Env:SystemRoot\System32\oobe\info\backgrounds","$local\status","$local\src","$local\gpo","$local\etc","$Env:local\drivers","$Env:local\bin","$Env:imagesarchive","$Env:images","~\Documents\WindowsPowerShell","~\Desktop\LockerDeployment","~\Documents\PSConfiguration","D:\locker-libs","$Env:_tmp","$Env:logs" | ForEach-Object {
+"E:\images\archive","$Env:SystemRoot\System32\oobe\info\backgrounds","$env:local\status","$env:local\logs","$env:local\src","$env:local\gpo","$env:local\etc","$Env:local\drivers","$Env:local\bin","$Env:imagesarchive","$Env:images","~\Documents\WindowsPowerShell","~\Desktop\LockerDeployment","~\Documents\PSConfiguration","D:\locker-libs","$Env:_tmp","$Env:logs" | ForEach-Object {
   if (!( Test-Path "$_" )) { New-Item -ItemType Directory -Path "$_" -Verbose}
-}
+} # ForEach-Object ...
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Make some Files"
@@ -576,36 +578,42 @@ Write-Host "$basename - Make some Files"
 "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" | ForEach-Object {
 	#New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File | Out-Null
   if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" -Verbose }
-}
+} # ForEach-Object ...
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Get some basic tools"
 #--------------------------------------------------------------------
 
-$WebClient = New-Object System.Net.WebClient
-
-Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
+#$WebClient = New-Object System.Net.WebClient
 #(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/curl.exe","c:\local\bin\curl.exe")
-(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/Bginfo.exe","c:\local\bin\Bginfo.exe")
-
-#& "$env:curl" --progress-bar -Ss -k --url "https://live.sysinternals.com/Autologon.exe" -o "$Env:local\bin\Autologon.exe"
-$WebClient.DownloadFile("$env:deployurl/bin/Autologon.exe","$local\bin\Autologon.exe")
 #$WebClient.DownloadFile("$Env:deployurl/bin/Bginfo.exe","$Env:local\bin\Bginfo.exe")
 #& "$Env:curl" --progress-bar -Ss -k -o "$Env:local\bin\devcon.exe" --url "$Env:deployurl/bin/devcon.exe"
-$WebClient.DownloadFile("$env:deployurl/bin/devcon.exe","$local\bin\devcon.exe")
-& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\hstart.exe" --url "$env:deployurl/bin/hstart.exe"
-& "$env:curl" --progress-bar -Ss -k -o "C:\Windows\nircmd.exe" --url "$env:deployurl/bin/nircmd.exe"
-& "$env:curl" --progress-bar -Ss -k -o "$local\bin\nircmdc.exe" --url "$env:deployurl/bin/nircmdc.exe"
-$WebClient.DownloadFile("$env:deployurl/bin/nssm.exe","$local\bin\nssm.exe")
-#& "$env:curl" --progress-bar -Ss -k -o "$Env:local\bin\sendEmail.exe" --url "$Env:deployurl/bin/sendEmail.exe"
-$WebClient.DownloadFile("$env:deployurl/bin/sendEmail.exe","$env:local\bin\sendEmail.exe")
-$WebClient.DownloadFile("$env:deployurl/bin/UPnPScan.exe","$env:local\bin\UPnPScan.exe")
-& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\xml.exe" --url "$env:deployurl/bin/xml.exe"
-& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\du.exe" --url "$env:deployurl/bin/du.exe"
-& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\LGPO.exe" --url "$env:deployurl/bin/LGPO.exe"
-& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\psexec.exe" --url "$env:deployurl/bin/psexec.exe"
-& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\BootUpdCmd20.exe" --url "$env:deployurl/bin/BootUpdCmd20.exe"
+#& "$env:curl" --progress-bar -Ss -k --url "https://live.sysinternals.com/Autologon.exe" -o "$Env:local\bin\Autologon.exe"
+#& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\xml.exe" --url "$env:deployurl/bin/xml.exe"
 
+
+if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
+	Import-Module BitsTransfer -Verbose
+} else {
+	# BitsTransfer module already loaded ... clear queue
+	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+}
+
+"mailsend.exe","Bginfo.exe","Autologon.exe","curl.exe","speedtest-cli.exe","devcon.exe","hstart.exe","nircmd.exe","nircmdc.exe","nssm.exe","sendEmail.exe","UPnPScan.exe","xml.exe","du.exe","LGPO.exe","BootUpdCmd20.exe","psexec.exe" | ForEach-Object {
+	#Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
+	Start-BitsTransfer -DisplayName "LockerLifeLocalBin" -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -TransferType Download -RetryInterval 60 -Verbose
+}
+Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+
+Write-Host "$basename -- GAC Update ..."
+& "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
+
+
+Write-Host "$basename -- Download System Settings Files ..."
+
+"kiosk-production-black.bgi","lockerlife-boot.bs7","lockerlife-boot-custom.bs7","pantone-classic-blue.bmp","pantone-classic-blue.jpg","pantone-process-black-c.bmp","pantone-process-black-c.jpg","production-admin.bgi","production-kiosk.bgi","PRODUCTION-201701-TEAMVIEWER-HOST.reg","production-gpo.zip" | ForEach-Object {
+	Start-BitsTransfer -DisplayName "LockerLifeLocalEtc" -Source "http://lockerlife.hk/deploy/etc/$_" -Destination "$env:local\etc\$_" -TransferType Download -RetryInterval 60 -Verbose
+} # ForEach-Object ...
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Manage System User Accounts (no lockerlife accounts)"
@@ -619,6 +627,7 @@ net user guest /active:no
 
 Write-Host "$basename -- Enable Administrator"
 net user Administrator /active:yes
+NET USER Administrator Locision123
 #net user administrator /active:no
 
 $U = Get-WmiObject -class Win32_UserAccount | Where-Object { $_.Name -eq "AAICON" }
@@ -626,9 +635,7 @@ if ($U) {
 	WriteInfo "$basename -- AAICON user exists"
 	WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
 	net user AAICON Locision123
-}
-else
-{
+} else {
 	Write-Host "$basename -- fixing AAICON user account ..."
 	#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123' -NoNewWindow
 	#& "c:\local\bin\autologon.exe" AAICON Locision123
@@ -647,6 +654,14 @@ Get-BitsTransfer | Complete-BitsTransfer
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 #--------------------------------------------------------------------
+
+Write-Host "."
+Write-Host "$basename -- Running Internet Connection Speed Test ..."
+$SpeedTestResults = C:\local\bin\speedtest-cli.exe
+$SpeedTestResults
+C:\local\bin\mailsend.exe -t locker-admin@lockerlife.hk -f locker-deploy@locision.com -name "locker-deployment speed test" -rp pi-admin@locision.com -rt pi-admin@locision.com -ssl -port 465 -auth -smtp hwsmtp.exmail.qq.com -domain locision.com -user pi-admin@locision.com -pass Locision1707 -sub "4G SpeedTestResults for $Env:ComputerName at $Env:Sitename" -M "$SpeedTestResults"
+
+Write-Host "."
 
 CleanupDesktop
 Create-DeploymentLinks

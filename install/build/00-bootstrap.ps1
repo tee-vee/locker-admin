@@ -208,14 +208,7 @@ Write-Host "`n $basename -- Applying Windows Update KB2889748 "
 
 cinst dropbox --ignore-checksums
 
-#--------------------------------------------------------------------
-Write-Host "$basename - Out of band Installers"
-#--------------------------------------------------------------------
-
-WriteInfoHighlighted "$basename -- Installing QuickSet"
-msiexec /i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive
-
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------
 Write-Host "$basename -- Begin -- Remove unnecessary Windows components"
 
 dism /online /disable-feature /featurename:InboxGames /NoRestart
@@ -225,11 +218,16 @@ dism /online /disable-feature /featurename:OpticalMediaDisc /NoRestart
 dism /online /disable-feature /featurename:Xps-Foundation-Xps-Viewer /NoRestart
 Write-Host "$basename -- End -- Remove unnecessary Windows components"
 
-#--------------------------------------------------------------------
-Write-Host "$basename -- GAC Update ..."
-& "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------
+Write-Host "$basename - Out of band Installers"
+# --------------------------------------------------------------------
+
+WriteInfoHighlighted "$basename -- Installing QuickSet"
+msiexec /i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive
+
+
+# --------------------------------------------------------------------
 Write-Host "$basename -- Downloading Drivers"
 Set-Location -Path "$Env:local\drivers"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
@@ -238,31 +236,28 @@ Set-Location -Path "$Env:local\drivers"
 
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.zip" --url "$Env:deployurl/printer.zip"
 #& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer.zip"
-& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.exe" --url "$Env:deployurl/drivers/printer.exe"
+#& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.exe" --url "$Env:deployurl/drivers/printer.exe"
 
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "$Env:deployurl/scanner.zip"
 cd "$local\drivers"
 c:\ProgramData\chocolatey\bin\unzip.exe scanner.zip
-remove-item -Path scanner.zip
+Remove-Item -Path scanner.zip -Force
 
 Write-Host "$basename -- local\etc stuff"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\kiosk-production-black.bgi" --url "$Env:deployurl/etc/kiosk-production-black.bgi"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot-custom.bs7" --url "$Env:deployurl/etc/lockerlife-boot-custom.bs7"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot.bs7" --url "$Env:deployurl/etc/lockerlife-boot.bs7"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\production-admin.bgi" --url "$Env:deployurl/etc/production-admin.bgi"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\production-kiosk.bgi" --url "$Env:deployurl/etc/production-kiosk.bgi"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-classic-blue.bmp" --url "$Env:deployurl/etc/pantone-classic-blue.bmp"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-classic-blue.jpg" --url "$Env:deployurl/etc/pantone-classic-blue.jpg"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.bmp" --url "$Env:deployurl/etc/pantone-process-black-c.bmp"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\pantone-process-black-c.jpg" --url "$Env:deployurl/etc/pantone-process-black-c.jpg"
-Copy-Item "$local\etc\pantone-process-black-c.jpg" "C:\windows\system32\oobe\info\backgrounds\backgroundDefault.jpg" -Force
-Copy-Item "$local\etc\pantone-process-black-c.bmp" "C:\Windows\System32\oobe\background.bmp" -Force
-& "$Env:curl" -Ss -k -o "$Env:local\etc\production-gpo.zip" --url "$Env:deployurl/etc/production-gpo.zip"
+#& "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot-custom.bs7" --url "$Env:deployurl/etc/lockerlife-boot-custom.bs7"
+#& "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot.bs7" --url "$Env:deployurl/etc/lockerlife-boot.bs7"
+#& "$Env:curl" -Ss -k -o "$Env:local\etc\production-admin.bgi" --url "$Env:deployurl/etc/production-admin.bgi"
+#& "$Env:curl" -Ss -k -o "$Env:local\etc\production-kiosk.bgi" --url "$Env:deployurl/etc/production-kiosk.bgi"
+Copy-Item "$env:local\etc\pantone-process-black-c.jpg" "C:\Windows\System32\oobe\info\backgrounds\backgroundDefault.jpg" -Force
+Copy-Item "$env:local\etc\pantone-process-black-c.bmp" "C:\Windows\System32\oobe\background.bmp" -Force
+Copy-Item "$env:local\etc\pantone-process-black-c.jpg" "C:\Windows\Web\Wallpaper\Windows\img0.jpg" -Force
+#& "$Env:curl" -Ss -k -o "$Env:local\etc\production-gpo.zip" --url "$Env:deployurl/etc/production-gpo.zip"
 
 #--------------------------------------------------------------------
 Write-Host "$basename -- Download TeamViewer Settings"
 & "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 Write-Host "$basename -- install teamviewer Settings"
+net stop teamviewer
 net stop teamviewer
 reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
 

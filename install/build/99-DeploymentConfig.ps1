@@ -10,15 +10,26 @@ $basename = "99-DeploymentConfig"
 #--------------------------------------------------------------------
 Write-Host "99-DeploymentConfig - Lets start"
 #--------------------------------------------------------------------
-Import-Module BitsTransfer
+Write-Host "$basename - in" -ForegroundColor Green
 
 # make an entrance ...
 1..5 | % { Write-Host }
 
-Write-Host "$basename - in" -ForegroundColor Green
+#--------------------------------------------------------------------
+Write-Host "$basename - Loading Modules ..."
+#--------------------------------------------------------------------
+
+# Import BitsTransfer ...
+if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
+	Import-Module BitsTransfer -Verbose
+} else {
+	# BitsTransfer module already loaded ... clear queue
+	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+}
+
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Variables"
+Write-Host "$basename - Setting Variables ..."
 #--------------------------------------------------------------------
 
 $ErrorActionPreference = "Continue"
@@ -43,7 +54,7 @@ $pswindow.buffersize = $newsize
 # the nul ensures window size does not chnage
 #& cmd /c mode con: cols=150  >nul 2>nul
 
-Write-Host "$basename -- Setting local variables ..."
+Write-Host "$basename -- Setting additional local variables ..."
 # easy add to %path% to the path based on finding the executable.
 #if(!(where.exe chocolatey)) { $env:Path += ';C:\Chocolatey\bin;' }
 $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
@@ -52,7 +63,6 @@ $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
 # Fix SSH-Agent error by adding the bin directory to the Path environment variable
 #$Env:PSModulePath = $Env:PSModulePath + ";${Env:ProgramFiles(x86)}\Git\bin"
 
-$WebClient = New-Object System.Net.WebClient
 
 # dot Net method to create Environment Variables:
 # [Environment]::SetEnvironmentVariable("TestVariable", "Test value.", "User")
@@ -99,6 +109,7 @@ $RouterInternalIpAddress = $env:RouterInternalIpAddress
 Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"               # router external ip address
 
 if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
+  $WebClient = New-Object System.Net.WebClient
   $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | convertfrom-json).origin
   $RouterExternalIpAddress = $env:RouterExternalIpAddress
   Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
@@ -109,6 +120,7 @@ if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
 Install-ChocolateyEnvironmentVariable "JAVA_HOME" "D:\java\jre\bin"
 $JAVA_HOME = $Env:JAVA_HOME
 
+Install-ChocolateyEnvironmentVariable "_tmp" "C:\temp"
 $_tmp = "C:\temp"
 $_temp = "C:\temp"                                                              # just in case
 $env:_tmp = $_tmp

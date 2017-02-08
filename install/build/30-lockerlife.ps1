@@ -289,6 +289,8 @@ Write-Host "$basename -- final hardening ..."
 Write-Host "$basename - disable admin user"
 ## generate random password for administrator
 # -join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})
+# Get-Random -Minimum ([Int64]::MinValue)3738173363251507200
+# $Secure_String_Pwd = ConvertTo-SecureString "P@ssW0rD!" -AsPlainText -Force
 net user administrator /active:no
 net user administrator /active:no
 
@@ -311,6 +313,14 @@ Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) -
 Stop-Transcript
 
 cleanmgr.exe /verylowdisk
+
+
+Write-Host "."
+Write-Host "$basename -- Running Internet Connection Speed Test ..."
+$SpeedTestResults = C:\local\bin\speedtest-cli.exe
+$SpeedTestResults
+C:\local\bin\mailsend.exe -t locker-admin@lockerlife.hk -f locker-deploy@locision.com -name "locker-deployment speed test" -rp pi-admin@locision.com -rt pi-admin@locision.com -ssl -port 465 -auth -smtp hwsmtp.exmail.qq.com -domain locision.com -user pi-admin@locision.com -pass Locision1707 -sub "4G SpeedTestResults for $Env:ComputerName at $Env:Sitename" -M "$SpeedTestResults"
+
 
 # purple screen
 Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
@@ -343,7 +353,6 @@ if (!(Test-Path -Path $kioskstartup)) {
 
 touch "$Env:local\status\30-lockerlife.done"
 
-RefreshEnv
 
 # cleanup desktop
 CleanupDesktop
