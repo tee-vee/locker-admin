@@ -82,16 +82,20 @@ if ($BuildNumber -le 7601)
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Setup D drive ..."
 # --------------------------------------------------------------------------------------------
-$diskpartD = @"
-select disk=1
+
+if (wmic computersystem get model | findstr VMware)
+{
+	$diskpartD = @"
+select disk 0
+select partition 2
 clean
 create partition primary
 select partition=1
 format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
 assign letter=D
 "@
-Set-Content -Path C:\diskpartD.txt -Value $diskpartD
-diskpart /s C:\diskpartD.txt
+	Set-Content -Path C:\diskpartD.txt -Value $diskpartD
+	diskpart /s C:\diskpartD.txt
 
 $diskpartE = @"
 select disk=2
@@ -101,8 +105,9 @@ select partition=1
 format FS=NTFS LABEL="logs" QUICK
 assign letter=E
 "@
-Set-Content -Path C:\diskpartE.txt -Value $diskpartE
-diskpart /s C:\diskpartE.txt
+	Set-Content -Path C:\diskpartE.txt -Value $diskpartE
+	diskpart /s C:\diskpartE.txt
+}
 
 #--------------------------------------------------------------------
 Write-Host "$basename - General Windows Configuration"
@@ -242,13 +247,12 @@ New-Item -ItemType File "C:\local\bin\autologon.bat" -ErrorAction SilentlyContin
 #Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 
+REG ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0
 
-# --------------------------------------------------------------------------------------------
 Write-Host "$basename --  Adjust UI for Best Performance"
-reg load "hku\temp" "%USERPROFILE%\..\Default User\NTUSER.DAT"
+reg load "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
 REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
 Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
-
 reg unload "hku\temp"
 
 # kill aero and visual effects
@@ -271,7 +275,6 @@ New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name 
 Write-Host "$basename - Set Desktop Background color"
 Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
 
-
 #Write-Host "$basename -- Set Desktop Wallpaper"
 #Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name Wallpaper -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose -Force
 #Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name Wallpaper -Value "" -Force
@@ -281,8 +284,6 @@ Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -V
 #REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ /d "2" /f
 #REG ADD "hku\.DEFAULT\Control Panel\Desktop" /v TileWallpaper /t REG_SZ /d "0" /f
 
-
-#--------------------------------------------------------------------
 # Disable Lock screen
 #Write-Host "$basename -- Disabling Lock screen..."
 #If (!(Test-Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization")) {
@@ -514,6 +515,7 @@ netsh int tcp set glocal autotuninglevel=disabled
 
 Write-Host "$basename -- disable the network location prompt"
 ## reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\FirstNetwork" /v Category /t REG_DWORD /d 00000001 /f
+
 Write-Host "$basename -- disable netbios"
 wmic nicconfig where TcpipNetbiosOptions=0 call SetTcpipNetbios 2
 wmic nicconfig where TcpipNetbiosOptions=1 call SetTcpipNetbios 2
@@ -599,11 +601,12 @@ if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
 	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
 }
 
-"mailsend.exe","Bginfo.exe","Autologon.exe","curl.exe","speedtest-cli.exe","devcon.exe","hstart.exe","nircmd.exe","nircmdc.exe","nssm.exe","sendEmail.exe","UPnPScan.exe","xml.exe","du.exe","LGPO.exe","BootUpdCmd20.exe","psexec.exe" | ForEach-Object {
+"makecert.exe","pvk2pfx.exe","SysinternalsSuite.zip","mailsend.exe","Bginfo.exe","Autologon.exe","curl.exe","speedtest-cli.exe","devcon.exe","hstart.exe","nircmd.exe","nircmdc.exe","nssm.exe","sendEmail.exe","UPnPScan.exe","xml.exe","du.exe","LGPO.exe","BootUpdCmd20.exe","psexec.exe" | ForEach-Object {
 	#Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
 	Start-BitsTransfer -DisplayName "LockerLifeLocalBin" -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -TransferType Download -RetryInterval 60 -Verbose
 }
 Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+
 
 Write-Host "$basename -- GAC Update ..."
 & "$Env:curl" -Ss -k -o "$Env:local\bin\update-Gac.ps1" --url "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1"
