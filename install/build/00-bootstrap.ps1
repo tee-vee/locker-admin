@@ -114,7 +114,7 @@ cinst chocolatey-uninstall.extension
 cinst teamviewer.host --version 12.0.72365
 
 # gow installer is easily confused ... only run if gow isn't installed ..
-if (!(Test-Path "$Env:ProgramFiles\Gow"))
+if (!(Test-Path "C:\Program Files\Gow\bin"))
 {
     cinst gow --ignore-checksums
 }
@@ -183,7 +183,7 @@ cinst clink
 #cinst webpicmd
 #cinst putty
 #cinst rsync
-cinst wget
+#cinst wget
 cinst which
 cinst nssm
 cinst psexec
@@ -210,7 +210,6 @@ cinst dropbox --ignore-checksums
 
 # --------------------------------------------------------------------
 Write-Host "$basename -- Begin -- Remove unnecessary Windows components"
-
 dism /online /disable-feature /featurename:InboxGames /NoRestart
 dism /online /disable-feature /featurename:FaxServicesClientPackage /NoRestart
 dism /online /disable-feature /featurename:WindowsGadgetPlatform /NoRestart
@@ -226,10 +225,14 @@ Write-Host "$basename - Out of band Installers"
 WriteInfoHighlighted "$basename -- Installing QuickSet"
 msiexec /i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive
 
+# Disable NTFS last access timestamp
+fsutil behavior set disablelastaccess 1  | Out-Host
 
 # --------------------------------------------------------------------
 Write-Host "$basename -- Downloading Drivers"
 Set-Location -Path "$Env:local\drivers"
+Remove-Item -Path scanner.zip -Force -ErrorAction SilentlyContinue
+
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "https://github.com/lockerlife-kiosk/deployment/blob/master/printer-filter.zip"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer-filter.zip" --url "$Env:deployurl/printer-filter.zip"
 #& "$Env:ProgramFiles\GnuWin32\bin\unzip.exe" -o "printer-filter.zip"
@@ -239,9 +242,9 @@ Set-Location -Path "$Env:local\drivers"
 #& "$Env:curl" -Ss -k -o "$Env:local\drivers\printer.exe" --url "$Env:deployurl/drivers/printer.exe"
 
 & "$Env:curl" -Ss -k -o "$Env:local\drivers\scanner.zip" --url "$Env:deployurl/scanner.zip"
-cd "$local\drivers"
+cd "$env:local\drivers"
 c:\ProgramData\chocolatey\bin\unzip.exe scanner.zip
-Remove-Item -Path scanner.zip -Force
+Remove-Item -Path scanner.zip -Force -ErrorAction SilentlyContinue
 
 Write-Host "$basename -- local\etc stuff"
 #& "$Env:curl" -Ss -k -o "$Env:local\etc\lockerlife-boot-custom.bs7" --url "$Env:deployurl/etc/lockerlife-boot-custom.bs7"
