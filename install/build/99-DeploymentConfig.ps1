@@ -91,7 +91,7 @@ $lockertype = $Env:lockertype
 Install-ChocolateyEnvironmentVariable "lockerserialnumber" "NULL"
 $lockerserialnumber = $Env:lockerserialnumber
 
-Install-ChocolateyEnvironmentVariable "hostname" [system.environment]::MachineName                                 # $hostname == $sitename
+Install-ChocolateyEnvironmentVariable "hostname" [system.environment]::MachineName       # $hostname == $sitename
 $hostname = [system.environment]::MachineName
 
 Install-ChocolateyEnvironmentVariable "local" "C:\local"
@@ -101,7 +101,97 @@ $local = $Env:local
 Install-ChocolateyEnvironmentVariable "sitename" "NULL"                                 # $hostname == $sitename
 $sitename = $Env:sitename
 
-Install-ChocolateyEnvironmentVariable "CameraIpAddress" "0.0.0.0"                       # camera ip address
+# camera config
+Write-Host "$basename -- Camera Discovery ..."
+if ( Test-Path -Path "C:\local\bin\upnpscan.exe" ) {
+	$CameraDiscover = ( C:\local\bin\upnpscan.exe -m | Select-String LOCATION ).ToString().Split(" ")
+	# if uPnP Scan success ... found upnp device
+	# now need to verify if it is axis camera ...
+	[xml]$xx = Invoke-WebRequest -Uri $CameraDiscover[1] -DisableKeepAlive -UseBasicParsing -Verbose
+	# if manufacturer = AXIS, yay!
+	if ($xx.root.device.manufacturer = "AXIS") {
+		Write-Host "$basename --- found camera"
+
+		# try defaults
+		$CameraDefaultUser = "root"
+		$CameraDefaultPass = "pass"
+
+		# just use $cred ...
+		$cred = New-Object -Verbose -TypeName "System.Management.Automation.PSCredential" -ArgumentList $CameraDefaultUser, $CameraDefaultPass
+		# $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
+
+
+		# AXIS F34 Network Camera
+		# $xx.root.device.modelDescription
+		Install-ChocolateyEnvironmentVariable "CameraUrl" ""
+		$env:CameraUrl = $xx.root.presentationURL
+
+		Install-ChocolateyEnvironmentVariable "CameraIpAddress" "0.0.0.0"                   # camera ip address
+		$env:CameraIpAddress = ([System.Uri]"$env:CameraUrl").Host
+
+		Install-ChocolateyEnvironmentVariable "CameraManufacturer" ""                       # camera manufacturer
+		$env:CameraManufacturer = "$xx.root.device.manufacturer"
+
+		Install-ChocolateyEnvironmentVariable "CameraSerialNumber" ""
+		$env:CameraSerialNumber = "$xx.root.device.serialNumber"
+
+		# "AXIS F34"
+		Write-Host "$basename --- Camera IP Address: " $CameraDiscover[1]
+		Write-Host "$basename --- Camera friendlyName: " $xx.root.device.friendlyName
+		Write-Host "$basename --- Camera modelName: " $xx.root.device.modelName
+		Write-Host "$basename --- Camera modelDescription: " $xx.root.device.modelDescription
+		Write-Host "$basename --- Camera serialNumber: " $xx.root.device.serialNumber
+
+
+		Write-Host "$basename --- Testing - Rebooting Camera ..."
+		Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/restart.cgi"
+		if ($?) {
+			Write-Host "$basename --- Camera reboot successful ... Proceed to additional configuration"
+
+			# Test ...
+			Invoke-WebRequest -UseBasicParsing -Verbose -Uri $env:CameraUrl
+
+			Write-Host "$basename --- Camera Config - Get server report"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/serverreport.cgi" -Verbose
+
+			Write-Host "$basename --- Camera Config - Set network services ..."
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Network.FTP.Enabled=no"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Network.SSH.Enabled=no"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Network.IPv6.Enabled=yes"
+			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Properties.HTTPS.HTTPS=yes"
+
+			Write-Host "$basename --- Camera Config - Set time"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.ObtainFromDHCP=no"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.SyncSource=NTP"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.DST.Enabled=no"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.POSIXTimeZone=CST-8"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.NTP.Server=hk.pool.ntp.org"
+
+			Write-Host "$basename --- Camera Config - List all params in Network group"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=list&group=Network"
+
+			#Write-Host "$basename --- Camera Config - Enable and configure https"
+			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.AllowSSLV3=no"
+			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Ciphers=AES256-SHA:AES128-SHA:DES-CBC3-SHA"
+			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Enabled=yes"
+			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Port=443"
+
+			Write-Host "$basename --- Camera Config - set image text overlay"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.BGColor=black"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.ClockEnabled=yes"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.Color=white"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.DateEnabled=yes"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.Position=top"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.String=$env:COMPUTERNAME"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.TextEnabled=yes"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.TextSize=small"
+
+		}
+	} else { Write-Host "$basename -- No Axis camera found ... " }
+}
+
+
+
 
 Install-ChocolateyEnvironmentVariable "RouterInternalIpAddress" "0.0.0.0"               # router internal ip address
 $RouterInternalIpAddress = $env:RouterInternalIpAddress
@@ -110,10 +200,14 @@ Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"       
 
 if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
   $WebClient = New-Object System.Net.WebClient
-  $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | convertfrom-json).origin
+  $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | ConvertFrom-JSON).origin
   $RouterExternalIpAddress = $env:RouterExternalIpAddress
   Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
 }
+
+Install-ChocolateyEnvironmentVariable "LocalIPAddress" "0.0.0.0"
+#$LocalIPAddress = ((Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter 'ipenabled = "true"').IPAddress | findstr [0-9].\.)[0]).Split()[-1] )
+$env:LocalIPAddress = ([net.dns]::GetHostAddresses("")| Select -Expa IP* | findstr [0-9].\. )
 
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
 #Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
@@ -168,6 +262,7 @@ Install-ChocolateyEnvironmentVariable "CURL_CA_BUNDLE" "$ALLUSERSPROFILE\cacert.
 #--------------------------------------------------------------------
 Write-Host "$basename - Functions"
 #--------------------------------------------------------------------
+
 
 function Download-File
 {
