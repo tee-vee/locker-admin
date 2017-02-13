@@ -7,10 +7,12 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 00-init"
 
 
 
-#--------------------------------------------------------------------
+$basename = "00-init"
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Lets start"
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 $ErrorActionPreference = "Continue"
+$timer = Start-TimedSection "00-init"
 
 ## Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
@@ -29,13 +31,8 @@ Checkpoint-Computer -Description "Pre-Deployment" -Verbose
 Stop-Process -Name iexplore -Verbose
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
-#$WebClient = New-Object System.Net.WebClient
-#$WebClient.DownloadFile("$Env:deployurl/99-DeploymentConfig.ps1","$Env:temp\99-DeploymentConfig.ps1")
-#. "$Env:temp\99-DeploymentConfig.ps1"
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
 . C:\99-DeploymentConfig.ps1
-
-$basename = "00-init"
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -60,8 +57,12 @@ $newsize.width = 200
 $pswindow.buffersize = $newsize
 
 # the nul ensures window size does not chnage
-#& cmd /c mode con: cols=150  >nul 2>nul
+#& cmd /c mode con: cols=130 lines=50 >nul 2>nul
+#& cmd /c mode con: cols=130 lines=50
+#doskey /listsize=1000
 
+Write-Host "$basename - Update Root Certificates from Microsoft ..."
+certutil.exe -v -syncWithWU -f $env:temp
 
 #--------------------------------------------------------------------
 Write-Host "$basename - System eligibility check"
@@ -71,8 +72,7 @@ Write-Host "$basename - System eligibility check"
 Write-Host "Checking if OS is Windows 7"
 
 $BuildNumber = Get-WindowsBuildNumber
-if ($BuildNumber -le 7601)
-{
+if ($BuildNumber -le 7601) {
     # Windows 7 RTM=7600, SP1=7601
     WriteSuccess "PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
     } else {
@@ -83,11 +83,9 @@ if ($BuildNumber -le 7601)
 Write-Host "$basename -- Setup D drive ..."
 # --------------------------------------------------------------------------------------------
 
-if (wmic computersystem get model | findstr VMware)
-{
-	$diskpartD = @"
-select disk 0
-select partition 2
+if (wmic computersystem get model | findstr VMware) {
+$diskpartD = @"
+select disk=1
 clean
 create partition primary
 select partition=1
@@ -96,6 +94,7 @@ assign letter=D
 "@
 	Set-Content -Path C:\diskpartD.txt -Value $diskpartD
 	diskpart /s C:\diskpartD.txt
+
 
 $diskpartE = @"
 select disk=2
@@ -109,10 +108,147 @@ assign letter=E
 	diskpart /s C:\diskpartE.txt
 }
 
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- Camera Discovery ..."
+# --------------------------------------------------------------------------------------------
+
+if (Test-Path -Path "C:\local\bin\upnpscan.exe") {
+
+	# logic too tricky to implement ... just do it by force
+	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ")
+	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
+	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
+	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
+	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
+	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
+
+	# if uPnP Scan success ... found upnp device - now need to verify if it is axis camera ...
+	if ($CameraDiscover[1]) {
+		$uri = ([uri]$CameraDiscover[1]).AbsoluteURI
+		[xml]$xx = Invoke-WebRequest -Uri $uri -DisableKeepAlive -UseBasicParsing -Verbose
+		# if manufacturer = AXIS, yay!
+		if ($xx.root.device.manufacturer = "AXIS") {
+			Write-Host "$basename --- found camera"
+
+			# try defaults
+			$CameraDefaultUser = "root"
+			$CameraDefaultPass = ConvertTo-SecureString -String "pass" -AsPlainText -Force
+
+			# just use $cred ...
+			$cred = New-Object -Verbose -TypeName "System.Management.Automation.PSCredential" -ArgumentList $CameraDefaultUser, $CameraDefaultPass
+			# $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
+
+			# AXIS F34 Network Camera - $xx.root.device.modelDescription
+			Install-ChocolateyEnvironmentVariable "CameraUrl" "NULL"
+			$env:CameraUrl = $xx.root.device.presentationURL
+
+			Install-ChocolateyEnvironmentVariable "CameraIpAddress" "0.0.0.0"
+			$env:CameraIpAddress = ([Uri]"$env:CameraUrl").Host
+
+			Install-ChocolateyEnvironmentVariable "CameraManufacturer" "NULL"
+			$env:CameraManufacturer = "$xx.root.device.manufacturer"
+
+			Install-ChocolateyEnvironmentVariable "CameraSerialNumber" "NULL"
+			$env:CameraSerialNumber = "$xx.root.device.serialNumber"
+
+			# "AXIS F34"
+			Write-Host "$basename --- Camera IP Address: " ([Uri]$CameraDiscover[1]).Host
+			Write-Host "$basename --- Camera friendlyName: " $xx.root.device.friendlyName
+			Write-Host "$basename --- Camera modelName: " $xx.root.device.modelName
+			Write-Host "$basename --- Camera modelDescription: " $xx.root.device.modelDescription
+			Write-Host "$basename --- Camera serialNumber: " $xx.root.device.serialNumber
+
+			$CameraUrl = $xx.root.device.presentationURL
+
+			# Test ...
+			#Invoke-WebRequest -UseBasicParsing -Verbose -Uri $env:CameraUrl
+
+			Write-Host "$basename --- Testing - Rebooting Camera ..."
+			$CameraUrlReboot = $CameraUrl + "axis-cgi/restart.cgi"
+			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlReboot"
+			if ($?) {
+				Write-Host "$basename --- Camera reboot successful ... Proceed to additional configuration"
+				$CameraUrlJpg = $CameraUrl + "jpg/image.jpg"
+				Invoke-WebRequest -Credential $cred -Uri $CameraUrlJpg -OutFile "e:\images\image.jpg"
+
+				Write-Host "$basename --- Camera Config - Get server report"
+				$CameraUrlSrvRpt = $CameraUrl + "axis-cgi/serverreport.cgi"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlSrvRpt" -Verbose
+
+				Write-Host "$basename --- Camera Config - List all params in Network group"
+				$CameraUrlCfg = $CameraUrl + "axis-cgi/param.cgi?action=list&group=Network"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlCfg"
+
+				Write-Host "$basename --- Camera Config - Set network services ..."
+				$CameraUrlFtp = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.FTP.Enabled=no"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlFtp"
+
+				$CameraUrlSsh = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.SSH.Enabled=no"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlSsh"
+
+				$CameraUrlIpV6 = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.IPv6.Enabled=yes"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlIpV6"
+				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Properties.HTTPS.HTTPS=yes"
+
+				Write-Host "$basename --- Camera Config - Set time"
+				$CameraUrlTime1 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.ObtainFromDHCP=no"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime1"
+
+				$CameraUrlTime2 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.SyncSource=NTP"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime2"
+
+				$CameraUrlTime3 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.DST.Enabled=no"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime3"
+
+				$CameraUrlTime4 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.POSIXTimeZone=CST-8"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime4"
+
+				$CameraUrlTime5 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.NTP.Server=hk.pool.ntp.org"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime5"
+
+				#Write-Host "$basename --- Camera Config - Enable and configure https"
+				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.AllowSSLV3=no"
+				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Ciphers=AES256-SHA:AES128-SHA:DES-CBC3-SHA"
+				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Enabled=yes"
+				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Port=443"
+
+				Write-Host "$basename --- Camera Config - set image text overlay"
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.BGColor=black"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.ClockEnabled=yes"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.Color=white"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.DateEnabled=yes"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.Position=top"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.String=$env:COMPUTERNAME"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.TextEnabled=yes"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.TextSize=small"
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+
+				# done, now reboot camera
+				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlReboot"
+
+			}
+		} else { Write-Host "$basename -- No Axis camera found ... Skipping camera setup" }
+	} else { Write-Host "$basename -- device detected but not a camera" }
+}
+
+
 #--------------------------------------------------------------------
 Write-Host "$basename - General Windows Configuration"
-#--------------------------------------------------------------------
-
 #--------------------------------------------------------------------
 Write-Host "$basename -- HARDWARE CONFIGURATION"
 Write-Host "$basename -- Disable hibernate"
@@ -124,9 +260,6 @@ Start-Process 'powercfg.exe' -Verb RunAs -ArgumentList '/h off' -Wait -Verbose
 
 # sets the power configuration to High Performance -- does this really work?
 #powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-
-# turns hibernation off
-#powercfg -hibernate OFF
 
 #monitor timeout
 #powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 0
@@ -172,39 +305,46 @@ Start-Process 'bcdedit.exe' -Verb RunAs -ArgumentList '/set {default} recoveryen
 Start-Process 'bcdedit.exe' -Verb RunAs -ArgumentList '/set {default} bootstatuspolicy ignoreallfailures' -Wait -Verbose
 
 Stop-Service CscService -Confirm:$False -Verbose
+
+### Disable memory dumps (system crashes, BSOD)
+Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "CrashDumpEnabled" -Value 0
+Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "LogEvent" -Value 0
+Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "SendAlert" -Value 0
+Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1
+
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Configure Windows Time Services"
 # stop windows time service
-Stop-Service w32time -Confirm:$False -Verbose
-Write-Host "$basename -- Set Time Zone"
-& "$Env:SystemRoot\System32\tzutil.exe" /s "China Standard Time"
-& "$Env:SystemRoot\System32\w32tm.exe" /tz
-Write-Host "$basename -- Set Nearby NTP Servers"
-& "$Env:SystemRoot\System32\w32tm.exe" /config /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
-Start-Service w32time -Confirm:$False -Verbose
-& "$Env:SystemRoot\System32\w32tm.exe" /query /status /verbose
+Stop-Service w32time -Verbose
 
-#--------------------------------------------------------------------
+# Get existing type, run the following command and look for Type
+Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters"
+# Change the server type to NTP
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters" Type -Value NTP -Force -Verbose
+# Get NTP server status
+Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpServer"
+# Enable NTP
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpServer" Enabled -Value 1 -Force -Verbose
+
+Write-Host "$basename -- Set Time Zone"
+tzutil.exe /s "China Standard Time"
+w32tm.exe /tz
+Write-Host "$basename -- Set Nearby NTP Servers"
+& "$Env:SystemRoot\System32\w32tm.exe" /config /reliable:YES /syncfromflags:manual /manualpeerlist:"stdtime.gov.hk 0.asia.pool.ntp.org 3.asia.pool.ntp.org"
+w32tm.exe /resync /rediscover /nowait
+Start-Service w32time -Verbose
+w32tm.exe /query /status /verbose
+
 Write-Host "$basename -- Set Language and Region"
 Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sLanguage -Value ENU
 Set-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name Nation -Value 104
 
-# --------------------------------------------------------------------------------------------
 # Disable Location Tracking
 #Write-Host "$basename - Disabling Location Tracking..."
-#Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Verbose
-#Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Verbose
-#Set-ItemProperty -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Diagnostics" -Name "GPSvcDebugLevel" -Type DWord -Value "GPSvcDebugLevel"=dword:00030002
+#Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Force -Verbose
+#Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Force -Verbose
+#Set-ItemProperty -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Diagnostics" -Name "GPSvcDebugLevel" -Type DWord -Value "GPSvcDebugLevel"=dword:00030002 -Force
 
-## Disable Advertising ID
-#Write-Host "$basename - Disabling Advertising ID..."
-#If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo")) {
-#    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" | Out-Null
-#}
-#
-#Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Type DWord -Value 0
-
-#--------------------------------------------------------------------
 Write-Host "$basename -- Set Sound Volume to minimum"
 $obj = new-object -com wscript.shell
 $obj.SendKeys([char]173)
@@ -222,14 +362,15 @@ REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentica
 Write-Host "$basename -- Set File Associations"
 Install-ChocolateyFileAssociation ".err" "${Env:SystemRoot}\System32\notepad.exe"
 
-
-#--------------------------------------------------------------------
 Write-Host "$basename - Before login ..."
 Write-Host "$basename - set logon UI Background image"
 # enable custom logon background
 #HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1 -Verbose -Force
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1 -Force -Verbose
 WriteInfoHighlighted "."
+
+# Change LogonUI wallpaper
+Copy-Item "$Env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\logon-background-black.jpg" -Force | Out-Null
 
 # Disable Welcome logon screen & require CTRL+ALT+DEL
 REG ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" /v LogonType /t REG_DWORD /d 0 /f
@@ -237,6 +378,17 @@ REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Disa
 
 # Interactive logon: Do not display last user name
 REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dontdisplaylastusername /t REG_DWORD /d 1 /f
+
+# suppress errors (production) - need watchdog
+# REG add "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Windows" /v ErrorMode /t REG_DWORD /d 2 /f
+
+### Set PopUp Error Mode to "Neither"
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Windows" -Name ErrorMode -Value 2 -Force -Verbose
+
+# REG add "HKEY_CURRENT_USER\Software\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
+# Disable Error Reporting
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PCHealth\ErrorReporting" -Name "DoReport" -Value 0 -Force -Verbose
+
 
 #--------------------------------------------------------------------
 Write-Host "$basename - After login ..."
@@ -247,33 +399,40 @@ New-Item -ItemType File "C:\local\bin\autologon.bat" -ErrorAction SilentlyContin
 #Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 
-REG ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0
+REG ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0 /f
 
 Write-Host "$basename --  Adjust UI for Best Performance"
-reg load "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
+REG LOAD "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
 REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
-Set-ItemProperty "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
+Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Force -Verbose
 reg unload "hku\temp"
 
 # kill aero and visual effects
 WriteInfoHighlighted "$basename -- Stopping uxsms"
 Get-Service uxsms
-Stop-Service -Verbose uxsms -ErrorAction SilentlyContinue
-net stop uxsms
+Stop-Service -Verbose uxsms
+Stop-Service -Verbose uxsms
+sc.exe config uxsms start= disabled
 
 Write-Host "$basename - Set UI to Classic Theme"
 #& "$Env:SystemRoot\System32\rundll32.exe" "$Env:SystemRoot\system32\shell32.dll,Control_RunDLL" "$Env:SystemRoot\system32\desk.cpl" desk,@Themes /Action:OpenTheme /file:"$Env:SystemRoot\Resources\Ease of Access Themes\classic.theme"
 Start-Process -Wait -FilePath "rundll32.exe" -ArgumentList "$env:SystemRoot\system32\shell32.dll,Control_RunDLL $env:SystemRoot\system32\desk.cpl desk,@Themes /Action:OpenTheme /file:""C:\Windows\Resources\Ease of Access Themes\classic.theme"""
 # close Personalization window ...
+
+(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationName -eq "Personalization" } | ForEach-Object { $_.quit() }
+(New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationName -eq "Personalization" } | ForEach-Object { $_.quit() }
 (New-Object -ComObject Shell.Application).Windows() | Where-Object { $_.LocationName -eq "Personalization" } | ForEach-Object { $_.quit() }
 
+Stop-Service Themes -Verbose
+sc.exe config Themes start= disabled
+
 Write-Host "$basename - Set Desktop Background to solid colors"
-New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name System -Verbose -Force
+New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name System -Force -Verbose
 #Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
 #New-Item -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Verbose
 #Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Desktop" -Name Wallpaper -Value "" -Verbose -Force
 Write-Host "$basename - Set Desktop Background color"
-Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -Verbose
+Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -Force -Verbose
 
 #Write-Host "$basename -- Set Desktop Wallpaper"
 #Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name Wallpaper -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose -Force
@@ -291,15 +450,12 @@ Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -V
 #}
 #Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -Type DWord -Value 1
 
-
 # Enable Lock screen
 # Remove-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen"
 
-
 WriteInfo "$basename - Set lock screen background image"
-New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Verbose -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Verbose
-
+New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Force -Verbose -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Force -Verbose
 
 #Set the Screen Saver Settings
 #REG ADD "HKU\.DEFAULT\Control Panel\Desktop" /v ScreenSaveActive /t REG_SZ /d 1 /f
@@ -310,9 +466,9 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalizatio
 
 #[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation] "DisableStartupSound"=dword:00000001
 REG ADD "HKLM\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 1 /f
-Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" "DisableStartupSound" 1 -Verbose -Force
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" "DisableStartupSound" 1 -Force -Verbose
 REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
-Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Verbose -Force
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Force -Verbose
 
 
 #--------------------------------------------------------------------
@@ -331,14 +487,12 @@ Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Nam
 
 
 # --------------------------------------------------------------------
-# Disable Autoplay
-Write-Host "$basename - Disabling Autoplay..."
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 1
-
-
 # Enable Autoplay
 # Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 0
 
+# Disable Autoplay
+Write-Host "$basename - Disabling Autoplay..."
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 1
 
 #--------------------------------------------------------------------
 # Disable Autorun for all drives
@@ -346,9 +500,7 @@ Write-Host "$basename - Disabling Autorun for all drives..."
 If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")) {
     New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" | Out-Null
 }
-
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 255
-
 
 # Enable Autorun for all drives
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun"
@@ -358,7 +510,6 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies
 Write-Host "$basename - Disabling Sticky keys prompt..."
 Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name Flags -Type String -Value 506 -Verbose -Force
 
-
 # Enable Sticky keys prompt
 # Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Type String -Value "510"
 
@@ -367,7 +518,6 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name Flag
 #Write-Host "$basename - Hiding Search Box / Button..."
 #Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 0
 
-
 # Show Search button / box
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode"
 
@@ -375,7 +525,6 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name Flag
 # Hide Task View button
 #Write-Host "$basename - Hiding Task View button..."
 #Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Type DWord -Value 0
-
 
 # Show Task View button
 # Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton"
@@ -388,17 +537,14 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name Flag
 Write-Host "$basename - Showing small icons in taskbar ..."
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Type DWord -Value 1 -Verbose -Force
 
-
 # ;Adjust the system tray icons – 0 = Display inactive tray icons
 #[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer]
 #“EnableAutoTray”=dword:00000000
-
 
 # ;Clear Most Frequently Used items
 #[-HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{75048700-EF1F-11D0-9888-006097DEACF9}]
 #[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{75048700-EF1F-11D0-9888-006097DEACF9}]
 #@=””
-
 
 # ;Show/Hide desktop icons
 #; Internet Explorer = {871C5380-42A0-1069-A2EA-08002B30309D}
@@ -426,12 +572,10 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 #Remove-ItemProperty -Path "[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel]" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 #Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 
-
 # --------------------------------------------------------------------
 # Remove Desktop icon from computer namespace
 #Write-Host "Removing Desktop icon from computer namespace..."
 #Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" -Recurse -ErrorAction SilentlyContinue
-
 
 # Add Desktop icon to computer namespace
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}"
@@ -442,7 +586,6 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 Write-Host "$basename - Removing Documents icon from computer namespace..."
 Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{d3162b92-9365-467a-956b-92703aca08af}" -Recurse -Verbose
 Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A8CDFF1C-4878-43be-B5FD-F8091C1C60D0}" -Recurse -Verbose
-
 
 # Add Documents icon to computer namespace
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{d3162b92-9365-467a-956b-92703aca08af}"
@@ -547,7 +690,7 @@ WriteInfoHighlighted "$basename -- turn on firewall"
 & "$Env:SystemRoot\System32\netsh.exe" advfirewall firewall add rule name="Open Port 9012" dir=in action=allow protocol=TCP localport=9012
 
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 # Enable Remote Desktop for locker deployment
 # REG ADD "HKLM\System\Currentcontrolset\control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
 # Allow connections from computers running any version of Remote Desktop (less secure)
@@ -573,26 +716,18 @@ Write-Host "$basename - Make some directories"
   if (!( Test-Path "$_" )) { New-Item -ItemType Directory -Path "$_" -Verbose}
 } # ForEach-Object ...
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Make some Files"
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 
 "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" | ForEach-Object {
 	#New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File | Out-Null
   if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" -Verbose }
 } # ForEach-Object ...
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Get some basic tools"
-#--------------------------------------------------------------------
-
-#$WebClient = New-Object System.Net.WebClient
-#(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/curl.exe","c:\local\bin\curl.exe")
-#$WebClient.DownloadFile("$Env:deployurl/bin/Bginfo.exe","$Env:local\bin\Bginfo.exe")
-#& "$Env:curl" --progress-bar -Ss -k -o "$Env:local\bin\devcon.exe" --url "$Env:deployurl/bin/devcon.exe"
-#& "$env:curl" --progress-bar -Ss -k --url "https://live.sysinternals.com/Autologon.exe" -o "$Env:local\bin\Autologon.exe"
-#& "$env:curl" --progress-bar -Ss -k -o "$env:local\bin\xml.exe" --url "$env:deployurl/bin/xml.exe"
-
+# --------------------------------------------------------------------------------------------
 
 if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
 	Import-Module BitsTransfer -Verbose
@@ -601,10 +736,12 @@ if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
 	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
 }
 
-"makecert.exe","pvk2pfx.exe","SysinternalsSuite.zip","mailsend.exe","Bginfo.exe","Autologon.exe","curl.exe","speedtest-cli.exe","devcon.exe","hstart.exe","nircmd.exe","nircmdc.exe","nssm.exe","sendEmail.exe","UPnPScan.exe","xml.exe","du.exe","LGPO.exe","BootUpdCmd20.exe","psexec.exe" | ForEach-Object {
+"makecert.exe","pvk2pfx.exe","SysinternalsSuite.zip","mailsend.exe","Bginfo.exe","Autologon.exe","curl.exe","speedtest-cli.exe","devcon.exe","hstart.exe","nircmd.exe","nircmdc.exe","nssm.exe","sendEmail.exe","UPnPScan.exe","du.exe","LGPO.exe","BootUpdCmd20.exe","psexec.exe" | ForEach-Object {
 	#Start-Bitstransfer -Source "http://lockerlife.hk/deploy/bin/curl.exe" -Destination "c:\local\bin\curl.exe"
 	Start-BitsTransfer -DisplayName "LockerLifeLocalBin" -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -TransferType Download -RetryInterval 60 -Verbose
 }
+
+#commit the downloaded files
 Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
 
 
@@ -613,14 +750,97 @@ Write-Host "$basename -- GAC Update ..."
 
 
 Write-Host "$basename -- Download System Settings Files ..."
-
 "kiosk-production-black.bgi","lockerlife-boot.bs7","lockerlife-boot-custom.bs7","pantone-classic-blue.bmp","pantone-classic-blue.jpg","pantone-process-black-c.bmp","pantone-process-black-c.jpg","production-admin.bgi","production-kiosk.bgi","PRODUCTION-201701-TEAMVIEWER-HOST.reg","production-gpo.zip" | ForEach-Object {
 	Start-BitsTransfer -DisplayName "LockerLifeLocalEtc" -Source "http://lockerlife.hk/deploy/etc/$_" -Destination "$env:local\etc\$_" -TransferType Download -RetryInterval 60 -Verbose
 } # ForEach-Object ...
 
-#--------------------------------------------------------------------
+#commit the downloaded files
+Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+
+
+Write-Host "$basename -- Download Installers ..."
+"jre-8u111-windows-i586.exe","jre-install.properties","Windows6.1-KB2889748-x86.msu","402810_intl_i386_zip.exe" | ForEach-Object {
+	Start-BitsTransfer -DisplayName "LockerLifeInstaller" -Source "http://lockerlife.hk/deploy/_pkg/$_" -Destination "$Env:_tmp\$_" -TransferType Download -RetryInterval 60 -Verbose
+}
+# commit the downloaded files
+Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- Disable Windows Services"
+# --------------------------------------------------------------------------------------------
+
+$disableServices = @(
+	"SensrSvc", # Adaptive Brightness
+  "ALG", # Application Layer Gateway Service
+  "BITS", # Background Intelligent Transfer Service
+  "BDESVC", # BitLocker Drive Encryption Service
+  "wbengine", # Block Level Backup Engine Service
+  "bthserv", # Bluetooth Support Service
+  "PeerDistSvc", # BranchCache
+  "Browser", # Computer Browser
+  "UxSms", # Desktop Window Manager Session Manager - Disable only if Aero not necessary
+  "DPS", # Diagnostic Policy Service
+  "WdiServiceHost", # Diagnostic Service Host
+  "WdiSystemHost", # Diagnostic System Host
+  #"defragsvc", # Disk Defragmenter
+  "TrkWks", # Distributed Link Tracking Client
+  "EFS", # Encrypting File System (EFS)
+  "Fax", # Fax - Not present in Windows 7 Enterprise
+  "fdPHost", # Function Discovery Provider Host
+  "FDResPub", # Function Discovery Resource Publication
+  "HomeGroupListener", # HomeGroup Listener - Not present in Windows 7 Enterprise
+  "HomeGroupProvider", # HomeGroup Provider
+  "UI0Detect", # Interactive Services Detection
+  "iphlpsvc", # IP Helper
+  "Mcx2Svc", # Media Center Extender Service
+  "MSiSCSI", # Microsoft iSCSI Initiator Service
+  "netprofm", # Network List Service
+  "NlaSvc", # Network Location Awareness
+  "CscService", # Offline Files
+  "WPCSvc", # Parental Controls
+  "wercplsupport", # Problem Reports and Solutions Control Panel Support
+  "SstpSvc", # Secure Socket Tunneling Protocol Service
+  "wscsvc", # Security Center
+  # "ShellHWDetection", # Shell Hardware Detection
+  # "SNMPTRAP", # SNMP Trap
+  "SSDPSRV", # SSDP Discovery
+  "SysMain", # Superfetch
+  #"TabletInputService", # Tablet PC Input Service
+  "TapiSrv", # Telephony
+  "Themes", # Themes - Disable only if you want to run in Classic interface
+  # "upnphost", # UPnP Device Host
+  "SDRSVC", # Windows Backup
+  "WcsPlugInService", # Windows Color System
+  "wcncsvc", # Windows Connect Now - Config Registrar
+  # "WinDefend", # Windows Defender
+  "WerSvc", # Windows Error Reporting Service
+  "ehRecvr", # Windows Media Center Receiver Service
+  "ehSched", # Windows Media Center Scheduler Service
+  "WMPNetworkSvc", # Windows Media Player Network Sharing Service
+  "WSearch", # Windows Search
+	"idsvc", # Windows CardSpace Service
+	"vmictimesync",
+	"vmicvss",
+	"vmickvpexchange",
+	"vmicshutdown",
+	"vmicheartbeat"
+)
+
+foreach ($service in $disableServices) {
+	Stop-Service -Name $service -Force
+	# sc.exe config $service start= disabled
+	# Start-Process "C:\Windows\system32\sc.exe" -ArgumentList "config SensrSvc start= disabled" -PassThru -NoNewWindow -Wait
+	Set-Service -Name $service -StartupType Disabled
+}
+
+
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Manage System User Accounts (no lockerlife accounts)"
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
+
+# Unpin from taskbar
+#Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Windows Media Player.lnk"
 
 WriteInfoHighlighted "$basename - DISABLE GUEST USER"
 # https://technet.microsoft.com/en-us/library/ff687018.aspx
@@ -629,7 +849,7 @@ net user guest /active:no
 & "$Env:SystemRoot\System32\WinSAT.exe" -v forgethistory
 
 Write-Host "$basename -- Enable Administrator"
-net user Administrator /active:yes
+NET USER Administrator /active:yes
 NET USER Administrator Locision123
 #net user administrator /active:no
 
@@ -654,29 +874,32 @@ if ($U) {
 
 Get-BitsTransfer | Complete-BitsTransfer
 
+
 #--------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 #--------------------------------------------------------------------
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue -Verbose
 
-Write-Host "."
-Write-Host "$basename -- Running Internet Connection Speed Test ..."
-$SpeedTestResults = C:\local\bin\speedtest-cli.exe
-$SpeedTestResults
-C:\local\bin\mailsend.exe -t locker-admin@lockerlife.hk -f locker-deploy@locision.com -name "locker-deployment speed test" -rp pi-admin@locision.com -rt pi-admin@locision.com -ssl -port 465 -auth -smtp hwsmtp.exmail.qq.com -domain locision.com -user pi-admin@locision.com -pass Locision1707 -sub "4G SpeedTestResults for $Env:ComputerName at $Env:Sitename" -M "$SpeedTestResults"
-
-Write-Host "."
-
+# Cleanup Desktop
 CleanupDesktop
 Create-DeploymentLinks
-Update-Help -Verbose
+cleanmgr.exe /verylowdisk
 
 # touch $Env:local\status\00-init.done file
-New-Item -Path "$local\status\$basename.done" -ItemType File -Verbose -Force -ErrorAction SilentlyContinue | Out-Null
+# echo date/time into file, add lines ...
+New-Item -ItemType File -Path "$env:local\status\$basename.done" | Out-Null
 
-& "$env:curl" --progress-bar -Ss -k --url "https://api.github.com/zen"
+Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Stop-Transcript
+
+
+Invoke-RestMethod -Uri "https://api.github.com/zen"
 Write-Host "."
 
-Write-Host "$basename -- done"
-Write-Host "$basename - Next stage ..."
+Stop-TimedSection $timer
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Next stage ... "
+#--------------------------------------------------------------------
 #& "$env:ProgramFiles\Internet Explorer\iexplore.exe" "http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1"
 START http://boxstarter.org/package/url?http://lockerlife.hk/deploy/00-bootstrap.ps1

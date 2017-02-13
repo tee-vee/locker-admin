@@ -7,9 +7,12 @@ $host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 30-lockerlife"
 #$basename = Split-Path -Leaf $PSCommandPath
 #Set-PSDebug -Trace 1
 
+$basename = "30-lockerlife"
 #--------------------------------------------------------------------
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
+$ErrorActionPreference = "Continue"
+$timer = Start-TimedSection "30-lockerlife"
 
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
@@ -30,14 +33,11 @@ If (!( $isAdmin )) {
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
 . C:\99-DeploymentConfig.ps1
 
-$basename = "30-lockerlife"
-
 # remove limitations
 Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
 
-Import-Module -Verbose BitsTransfer
 
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
@@ -237,6 +237,12 @@ Start-BitsTransfer -Source "http://lockerlife.hk/deploy/2017-01-gpo.zip" -Destin
 
 # create finish-locker-setup.ps1 on kiosk\desktop, reboot
 
+
+
+#WriteInfoHighlighted "$basename -- Disable Automatic Updates"
+#REG ADD "HKLM\Software\Policies\Microsoft\Windows\WindowsUpdate\AU" /v NoAutoUpdate /t REG_DWORD /d 1 /f
+
+
 #$WUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
 #$WUSettings
 #$WUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
@@ -286,6 +292,7 @@ Register-ScheduledJob -Verbose -Name UpdatePowerShellHelpJob -ScriptBlock { Upda
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- final hardening ..."
 
+
 Write-Host "$basename - disable admin user"
 ## generate random password for administrator
 # -join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})
@@ -309,18 +316,6 @@ Write-Host "."
 #Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 
 
-Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
-Stop-Transcript
-
-cleanmgr.exe /verylowdisk
-
-
-Write-Host "."
-Write-Host "$basename -- Running Internet Connection Speed Test ..."
-$SpeedTestResults = C:\local\bin\speedtest-cli.exe
-$SpeedTestResults
-C:\local\bin\mailsend.exe -t locker-admin@lockerlife.hk -f locker-deploy@locision.com -name "locker-deployment speed test" -rp pi-admin@locision.com -rt pi-admin@locision.com -ssl -port 465 -auth -smtp hwsmtp.exmail.qq.com -domain locision.com -user pi-admin@locision.com -pass Locision1707 -sub "4G SpeedTestResults for $Env:ComputerName at $Env:Sitename" -M "$SpeedTestResults"
-
 
 # purple screen
 Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
@@ -328,8 +323,9 @@ $kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Pro
 if (!(Test-Path -Path $kioskstartup)) {
 	Set-Location $kioskstartup -Verbose
 	Remove-Item -Path $kioskstartup\* -Force -Verbose
-	Copy-Item -Path "d:\run.bat" -Destination $kioskstartup
+	Copy-Item -Path "d:\run.bat" -Destination $kioskstartup\run.bat
 }
+
 # Internet Explorer: All:
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
 
@@ -351,8 +347,31 @@ if (!(Test-Path -Path $kioskstartup)) {
 # Internet Explorer: All:
 #& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
-touch "$Env:local\status\30-lockerlife.done"
 
 
-# cleanup desktop
+# --------------------------------------------------------------------
+Write-Host "$basename - Cleanup"
+# --------------------------------------------------------------------
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue -Verbose
+
+# Cleanup Desktop
 CleanupDesktop
+Create-DeploymentLinks
+cleanmgr.exe /verylowdisk
+
+# touch $Env:local\status\00-init.done file
+# echo date/time into file, add lines ...
+New-Item -ItemType File -Path "$env:local\status\$basename.done" | Out-Null
+
+Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Stop-Transcript
+
+
+Invoke-RestMethod -Uri "https://api.github.com/zen"
+Write-Host "."
+
+Stop-TimedSection $timer
+
+# --------------------------------------------------------------------
+Write-Host "$basename - Next stage ... "
+# --------------------------------------------------------------------

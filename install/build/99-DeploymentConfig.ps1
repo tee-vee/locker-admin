@@ -6,6 +6,7 @@
 #$basename = $MyInvocation.MyCommand.Name
 
 
+
 $basename = "99-DeploymentConfig"
 #--------------------------------------------------------------------
 Write-Host "99-DeploymentConfig - Lets start"
@@ -21,7 +22,7 @@ Write-Host "$basename - Loading Modules ..."
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
-	Import-Module BitsTransfer -Verbose
+	Import-Module BitsTransfer
 } else {
 	# BitsTransfer module already loaded ... clear queue
 	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
@@ -69,7 +70,7 @@ $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
 
 #$userName = $env:UserName
 #$userDomain = $env:UserDomain
-## REMINDER: either set both $Env:variable only set $Env:variable!!
+## REMINDER: either set both $Env:variable only set $Env:variable
 
 Install-ChocolateyEnvironmentVariable "baseurl" "http://lockerlife.hk"
 $env:baseurl = "http://lockerlife.hk"
@@ -91,112 +92,23 @@ $lockertype = $Env:lockertype
 Install-ChocolateyEnvironmentVariable "lockerserialnumber" "NULL"
 $lockerserialnumber = $Env:lockerserialnumber
 
-Install-ChocolateyEnvironmentVariable "hostname" [system.environment]::MachineName       # $hostname == $sitename
-$hostname = [system.environment]::MachineName
+Install-ChocolateyEnvironmentVariable "hostname" "NULL"
+$env:hostname = [System.Environment]::MachineName
+$hostname = [System.Environment]::MachineName
 
 Install-ChocolateyEnvironmentVariable "local" "C:\local"
 $env:local = "C:\local"
 $local = $Env:local
 
-Install-ChocolateyEnvironmentVariable "sitename" "NULL"                                 # $hostname == $sitename
+Install-ChocolateyEnvironmentVariable "sitename" "NULL"
 $sitename = $Env:sitename
 
-# camera config
-Write-Host "$basename -- Camera Discovery ..."
-if ( Test-Path -Path "C:\local\bin\upnpscan.exe" ) {
-	$CameraDiscover = ( C:\local\bin\upnpscan.exe -m | Select-String LOCATION ).ToString().Split(" ")
-	# if uPnP Scan success ... found upnp device
-	# now need to verify if it is axis camera ...
-	[xml]$xx = Invoke-WebRequest -Uri $CameraDiscover[1] -DisableKeepAlive -UseBasicParsing -Verbose
-	# if manufacturer = AXIS, yay!
-	if ($xx.root.device.manufacturer = "AXIS") {
-		Write-Host "$basename --- found camera"
-
-		# try defaults
-		$CameraDefaultUser = "root"
-		$CameraDefaultPass = "pass"
-
-		# just use $cred ...
-		$cred = New-Object -Verbose -TypeName "System.Management.Automation.PSCredential" -ArgumentList $CameraDefaultUser, $CameraDefaultPass
-		# $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
-
-
-		# AXIS F34 Network Camera
-		# $xx.root.device.modelDescription
-		Install-ChocolateyEnvironmentVariable "CameraUrl" ""
-		$env:CameraUrl = $xx.root.presentationURL
-
-		Install-ChocolateyEnvironmentVariable "CameraIpAddress" "0.0.0.0"                   # camera ip address
-		$env:CameraIpAddress = ([System.Uri]"$env:CameraUrl").Host
-
-		Install-ChocolateyEnvironmentVariable "CameraManufacturer" ""                       # camera manufacturer
-		$env:CameraManufacturer = "$xx.root.device.manufacturer"
-
-		Install-ChocolateyEnvironmentVariable "CameraSerialNumber" ""
-		$env:CameraSerialNumber = "$xx.root.device.serialNumber"
-
-		# "AXIS F34"
-		Write-Host "$basename --- Camera IP Address: " $CameraDiscover[1]
-		Write-Host "$basename --- Camera friendlyName: " $xx.root.device.friendlyName
-		Write-Host "$basename --- Camera modelName: " $xx.root.device.modelName
-		Write-Host "$basename --- Camera modelDescription: " $xx.root.device.modelDescription
-		Write-Host "$basename --- Camera serialNumber: " $xx.root.device.serialNumber
-
-
-		Write-Host "$basename --- Testing - Rebooting Camera ..."
-		Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/restart.cgi"
-		if ($?) {
-			Write-Host "$basename --- Camera reboot successful ... Proceed to additional configuration"
-
-			# Test ...
-			Invoke-WebRequest -UseBasicParsing -Verbose -Uri $env:CameraUrl
-
-			Write-Host "$basename --- Camera Config - Get server report"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/serverreport.cgi" -Verbose
-
-			Write-Host "$basename --- Camera Config - Set network services ..."
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Network.FTP.Enabled=no"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Network.SSH.Enabled=no"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Network.IPv6.Enabled=yes"
-			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Properties.HTTPS.HTTPS=yes"
-
-			Write-Host "$basename --- Camera Config - Set time"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.ObtainFromDHCP=no"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.SyncSource=NTP"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.DST.Enabled=no"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.POSIXTimeZone=CST-8"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Time.NTP.Server=hk.pool.ntp.org"
-
-			Write-Host "$basename --- Camera Config - List all params in Network group"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=list&group=Network"
-
-			#Write-Host "$basename --- Camera Config - Enable and configure https"
-			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.AllowSSLV3=no"
-			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Ciphers=AES256-SHA:AES128-SHA:DES-CBC3-SHA"
-			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Enabled=yes"
-			#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Port=443"
-
-			Write-Host "$basename --- Camera Config - set image text overlay"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.BGColor=black"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.ClockEnabled=yes"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.Color=white"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.DateEnabled=yes"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.Position=top"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.String=$env:COMPUTERNAME"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.TextEnabled=yes"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&Image.I0.Text.TextSize=small"
-
-		}
-	} else { Write-Host "$basename -- No Axis camera found ... " }
-}
-
-
-
-
-Install-ChocolateyEnvironmentVariable "RouterInternalIpAddress" "0.0.0.0"               # router internal ip address
+Write-Host "$basename -- Router Internal IP Address Discovery ..."
+Install-ChocolateyEnvironmentVariable "RouterInternalIpAddress" "0.0.0.0"
 $RouterInternalIpAddress = $env:RouterInternalIpAddress
 
-Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"               # router external ip address
+Write-Host "$basename -- External IP Address Discovery ..."
+Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"
 
 if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
   $WebClient = New-Object System.Net.WebClient
@@ -205,9 +117,11 @@ if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
   Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
 }
 
+Write-Host "$basename -- Console PC Internal IP Address Discovery ..."
 Install-ChocolateyEnvironmentVariable "LocalIPAddress" "0.0.0.0"
 #$LocalIPAddress = ((Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter 'ipenabled = "true"').IPAddress | findstr [0-9].\.)[0]).Split()[-1] )
 $env:LocalIPAddress = ([net.dns]::GetHostAddresses("")| Select -Expa IP* | findstr [0-9].\. )
+Write-Host "$basename -- Console PC Internal IP Address: $env:LocalIPAddress"
 
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
 #Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
@@ -216,12 +130,12 @@ $JAVA_HOME = $Env:JAVA_HOME
 
 Install-ChocolateyEnvironmentVariable "_tmp" "C:\temp"
 $_tmp = "C:\temp"
-$_temp = "C:\temp"                                                              # just in case
+$_temp = "C:\temp"
 $env:_tmp = $_tmp
 
 Install-ChocolateyEnvironmentVariable "logs" "E:\logs"
 $env:logs = "E:\logs"
-$logs = $Env:logs
+$logs = $env:logs
 
 Install-ChocolateyEnvironmentVariable "images" "E:\images"
 $env:images = "E:\images"
@@ -239,8 +153,27 @@ Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
 
 Install-ChocolateyEnvironmentVariable "kioskprofile" "c:\users\kiosk"
 
+Install-ChocolateyEnvironmentVariable "smtphost" "hwsmtp.exmail.qq.com"
+$env:smtphost = $smtphost
+
+Install-ChocolateyEnvironmentVariable "smtpport" "465"
+$smtpport = "465"
+$env:smtpport = $smtpport
+
+Install-ChocolateyEnvironmentVariable "emailUser" "pi-admin@locision.com"
+$emailUser = "pi-admin@locision.com"
+$env:emailUser = $emailUser
+
+Install-ChocolateyEnvironmentVariable "SMTP_USER_PASS" "Locision1707"
+$SMTP_USER_PASS = "Locision1707"
+$env:SMTP_USER_PASS = $SMTP_USER_PASS
+
 # determine user ...
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+
+# Get TeamViewer Client ID
+Install-ChocolateyEnvironmentVariable "TeamViewerClientID" "0"
+#$TeamViewerClientID = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
 
 
 #--------------------------------------------------------------------
@@ -252,34 +185,53 @@ Set-Alias -Name "curl" -Value "C:\local\bin\curl.exe" -Option AllScope -Force
 Set-Alias -Name "logout" invoke-userLogout
 Set-Alias -Name "halt" invoke-systemShutdown
 Set-Alias -Name "restart" invoke-systemReboot
+
+
 #--------------------------------------------------------------------
 Write-Host "$basename - Get updated SSL Certificate store"
 #--------------------------------------------------------------------
 
-& "$env:curl" --progress-bar --url "https://curl.haxx.se/ca/cacert.pem" > $ALLUSERSPROFILE\cacert.pem
-Install-ChocolateyEnvironmentVariable "CURL_CA_BUNDLE" "$ALLUSERSPROFILE\cacert.pem"
+#& "$env:curl" --progress-bar --url "https://curl.haxx.se/ca/cacert.pem" > $ALLUSERSPROFILE\cacert.pem
+#Install-ChocolateyEnvironmentVariable "CURL_CA_BUNDLE" "$ALLUSERSPROFILE\cacert.pem"
+
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Functions"
 #--------------------------------------------------------------------
 
+function Test-4G {
+	Write-Host "$basename -- Running Internet Connection Speed Test ..."
+	$SpeedTestResults = "c:\temp\speedtest.txt"
+	C:\local\bin\speedtest-cli.exe | Out-File -Encoding utf8 $SpeedTestResults
+	Get-Content $SpeedTestResults | Select -Skip 1 | Out-File -Encoding utf8 c:\temp\speedtest8.txt
+	Move-Item c:\temp\speedtest8.txt $SpeedTestResults -Force
+	$ehlo_domain = "locision.com"
+	$to = "derekyuen@lockerlife.hk"
+	$replyto = "pi-admin@locision.com"
+	$from = "locker-deploy@locision.com"
+	$fromname = "Locker Deployment"
+	$returnpath = "pi-admin@locision.com"
+	$subject = "testing"
+	$attach = "c:\temp\speedtest.txt"
+	$mailbody = "message body"
+	$mimetype = "text/plain"
+	#$extargs = " -ehlo -info"
+	#Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer $smtphost -Port $smtpport -UseSsl -Credential (Get-Credential) -Verbose -Debug
+	C:\local\bin\mailsend.exe -4 -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment speed test" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
+}
 
-function Download-File
-{
+function Download-File {
   param ([string]$url,[string]$file)
   Write-Host "Downloading $url to $file"
   $downloader = new-object System.Net.WebClient
   $downloader.DownloadFile($url, $file)
 }
 
-
-function Get-SystemDrive
-{
+function Get-SystemDrive {
     return $env:SystemDrive[0]
 }
 
-function Test-IsAdministrator
-{
+function Test-IsAdministrator {
   <#
   .Synopsis
       Tests if the user is an administrator
@@ -302,8 +254,7 @@ function OkToDeploy
   #}
 }
 
-function ConfigureDisk
-{
+function ConfigureDisk {
   # list disks (raw disks)
   # wmic diskdrive list brief
   Get-WmiObject -Class Win32_DiskDrive | Where-Object { $_.Partitions -eq 0 }
@@ -332,22 +283,7 @@ function ConfigureDisk
 
 }
 
-#
-#function Reboot-IfRequired()
-#{
-#  if(Test-PendingReboot)
-#  {
-#    Write-Host "$basename -- Reboot required. Rebooting now"
-#		Invoke-Reboot
-#	}
-#	else
-#  {
-#		Write-Host "$basename -- No reboot is required. Continuing ..."
-#	}
-#} #end function Reboot-IfRequired
-
-function Breathe
-{
+function Breathe {
   # Let libs/modules load ...
   1..5 | % { Write-Host " -- "}
 }
@@ -378,28 +314,23 @@ function touch($file) {
         "" | out-file -FilePath $file -Encoding ASCII
     }
 }
-function WriteInfo($message)
-{
+function WriteInfo($message) {
   Write-Host $message
 }  #end function WriteInfo
 
-function WriteInfoHighlighted($message)
-{
+function WriteInfoHighlighted($message) {
   Write-Host $message -ForegroundColor Cyan
 }  #end function WriteInfoHighlighted
 
-function WriteSuccess($message)
-{
+function WriteSuccess($message) {
   Write-Host $message -ForegroundColor Green
 }  #end function WriteSuccess
 
-function WriteError($message)
-{
+function WriteError($message) {
   Write-Host $message -ForegroundColor Red
  }  #end function WriteError
 
-function WriteErrorAndExit($message)
-{
+function WriteErrorAndExit($message) {
   Write-Host $message -ForegroundColor Red
   Write-Host "Press any key to continue ..."
   $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
@@ -407,21 +338,19 @@ function WriteErrorAndExit($message)
   Exit
 }  #end function WriteErrorAndExit
 
-function Get-WindowsBuildNumber
-{
+function Get-WindowsBuildNumber {
     $os = Get-WmiObject -Class Win32_OperatingSystem
     return [int]($os.BuildNumber)
 }  #end function Get-WindowsBuildNumber
 
-function Create-DeploymentLinks
-{
+function Create-DeploymentLinks {
   Write-Host "$basename -- Create-DeploymentLinks"
   Set-Alias InstChocoSCut Install-ChocolateyShortcut
   ## create shortcut to deployment - 00-bootstrap
   InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$env:deployurl" -Description "Locker Deployment Website"
   InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
   InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-bootstrap.ps1" -Description "00-bootstrap"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
+#  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
   InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-20.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/10-identify.ps1" -Description "10-identify"
   InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/20-setup.ps1" -Description "20-setup"
   InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-30.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/30-lockerlife.ps1" -Description "30-lockerlife"
@@ -469,8 +398,7 @@ Start-Process "$env:temp\net45.exe" -verb runas -wait -argumentList "/quiet /nor
     }
 }
 
-Function Rename-ComputerName ([string]$NewComputerName)
-{
+Function Rename-ComputerName ([string]$NewComputerName) {
  	$ComputerInfo = Get-WmiObject -Class Win32_ComputerSystem
 	$ComputerInfo.Rename($NewComputerName)
 }
@@ -478,6 +406,9 @@ Function Rename-ComputerName ([string]$NewComputerName)
 ## cleanup desktop
 function CleanupDesktop {
   Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
+	w32tm /query /configuration
+	w32tm /query /status
+	w32tm /resync /rediscover /nowait
 
   # Internet Explorer: Temp Internet Files:
   RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
@@ -499,7 +430,5 @@ function invoke-systemReboot { shutdown /r /t 5 }
 function invoke-systemSleep { RunDll32.exe PowrProf.dll,SetSuspendState }
 function invoke-terminalLock { RunDll32.exe User32.dll,LockWorkStation }
 
-# Make an exit ....
-Breathe
 
 Write-Host "$basename - out" -ForegroundColor Green
