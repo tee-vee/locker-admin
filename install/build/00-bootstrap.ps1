@@ -75,6 +75,19 @@ if ($BuildNumber -le 7601)
 }
 
 
+#--------------------------------------------------------------------
+Write-Host "$basename - Loading Modules ..."
+#--------------------------------------------------------------------
+
+# Import BitsTransfer ...
+if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
+	Import-Module BitsTransfer
+} else {
+	# BitsTransfer module already loaded ... clear queue
+	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+}
+
+
 # --------------------------------------------------------------------------------------------
 # get updated root certificates
 #msiexec /i http://www.cacert.org/certs/CAcert_Root_Certificates.msi /quiet /passive
@@ -100,8 +113,7 @@ cinst 7zip --forcex86
 cinst 7zip.commandline
 cinst unzip --ignore-checksums
 
-#& "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -extoff http://boxstarter.org/package/url?$Env:deployurl/01-bootstrap.ps1
-
+cinst dotnet4.5.1 --ignore-checksums
 cinst dotnet4.6.2 --version 4.6.01590.0
 
 # below: requires .Net 4+ to run
@@ -112,10 +124,10 @@ cinst chocolatey-core.extension
 cinst chocolatey-uninstall.extension
 
 cinst teamviewer.host --version 12.0.72365
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 5
 Restart-Service TeamViewer -Verbose
 Write-Host "$basename -- Download TeamViewer Settings"
-& "$Env:curl" -Ss -k -o "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" --url "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg"
+Start-BitsTransfer -Source "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg" -Destination "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg"
 Write-Host "$basename -- Install teamviewer Settings"
 Stop-Service TeamViewer -Verbose
 Stop-Service TeamViewer -Verbose
@@ -138,8 +150,9 @@ cinst ie11 --ignore-checksums
 
 cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 
-cinst powershell -version 3.0.20121027
+#cinst powershell -version 3.0.20121027
 #schtasks /Run /TN "\Microsoft\Windows\.NET Framework\.NET Framework NGEN v4.0.30319"
+
 Write-Host "$basename -- Temporarily enable Windows Update"
 Enable-MicrosoftUpdate
 Write-Host "$basename -- Fixing critical Windows svchost.exe memory leak -- KB2889748"
@@ -147,13 +160,13 @@ Write-Host "$basename -- Fixing critical Windows svchost.exe memory leak -- KB28
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet
 & "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
 #& "$Env:SystemRoot\System32\wusa.exe" c:\temp\Windows6.1-KB2889748-x86.msu /quiet /forcereboot
+
 Breathe
 Write-Host "$basename -- Disable Windows Update"
 Disable-MicrosoftUpdate
 
-
-Write-Host "$basename -- Installing Powershell 4"
-cinst powershell4 --ignore-checksums
+Write-Host "$basename -- Installing Powershell 5"
+cinst powershell
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
 if (!( Test-Path "$env:local\status\powershell4-ngen.ok" -ErrorAction SilentlyContinue)) {
@@ -165,8 +178,9 @@ if (!( Test-Path "$env:local\status\powershell4-ngen.ok" -ErrorAction SilentlyCo
 # check for powershell 5
 # $PSVersionTable.PSVersion
 # if not installed, install
-# Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-# Install-Module PSWindowsUpdate -Verbose -Confirm:$false
+#install-PackageProvider -Name NuGet -Confirm:$false -Force
+#Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+#Install-Module PSWindowsUpdate -Verbose -Confirm:$false
 # Import-Module PSWindowsUpdate
 # if version 5
 # Import-Module PSWindowsUpdate
@@ -243,7 +257,7 @@ Write-Host "$basename - Out of band Installers"
 # --------------------------------------------------------------------------------------------
 
 WriteInfoHighlighted "$basename -- Installing QuickSet"
-msiexec /i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive
+Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive /L*v e:\logs\quickset-install.log' -Wait
 
 
 # --------------------------------------------------------------------
@@ -278,9 +292,10 @@ Copy-Item "$env:local\etc\pantone-process-black-c.jpg" "C:\Windows\Web\Wallpaper
 # after drivers, hardware ...
 
 # Disable NTFS last access timestamp
-fsutil behavior set disablelastaccess 1  | Out-Host
+fsutil.exe behavior set disablelastaccess 1
 
-powercfg -change -monitor-timeout-ac 0
+# disable monitor timeout
+powercfg.exe -change -monitor-timeout-ac 0
 
 # --------------------------------------------------------------------------------------------
 # Install scanner driver
@@ -289,7 +304,7 @@ powercfg -change -monitor-timeout-ac 0
 # takes 3-5 minutes to install
 Write-Host "20-setup: installing usb virtual com interface for driver"
 #& "$Env:local\drivers\scanner\udp_and_vcom_drv211Setup\udp_and_vcom_drv.2.1.1.Setup.exe" /S
-msiexec /i http://lockerlife.hk/deploy/drivers/udp_and_vcom_drv_v2.0.1.msi /quiet /passive
+Start-Process "msiexec.exe" -ArgumentList "/i http://lockerlife.hk/deploy/drivers/udp_and_vcom_drv_v2.0.1.msi /quiet /passive /L*v c:\logs\udp_and_vcom_drv-install.log" -Wait
 
 # windows should look in IOUSB for remainder; 00-bootstrap
 
