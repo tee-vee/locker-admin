@@ -283,6 +283,33 @@ function ConfigureDisk {
 
 }
 
+
+# Function to set a registry property value and create the registry key if it doesn't exist
+Function Set-RegistryKey {
+	[CmdletBinding()]
+	Param(
+		[Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Item Path",Position=1)]
+		$Path,
+		[Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Item Name",Position=2)]
+		$Name,
+		[Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Property Item Value",Position=3)]
+		$Value,
+		[Parameter(Mandatory=$False,HelpMessage="Please Enter Registry Property Type",Position=4)]
+		$PropertyType = "DWORD"
+	)
+	# If path does not exist, create it
+	if ((Test-Path $Path) -eq $False ) {
+		$newItem = New-Item -Path $Path -Force
+	}
+	# Update registry value, create it if does not exist (DWORD is default)
+	$itemProperty = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+	if($itemProperty -ne $null) {
+		$itemProperty = Set-ItemProperty -Path $Path -Name $Name -Value $Value
+	} else {
+		$itemProperty = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $PropertyType
+	}
+}
+
 function Breathe {
   # Let libs/modules load ...
   1..5 | % { Write-Host " -- "}
