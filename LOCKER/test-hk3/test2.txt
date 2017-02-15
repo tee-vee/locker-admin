@@ -1,0 +1,9 @@
+INSTALL_SILENT=Enable
+INSTALLDIR=D:\java\jre
+AUTO_UPDATE=Disable
+NOSTARTMENU=Enable
+WEB_ANALYTICS=Disable
+WEB_JAVA=Disable
+EULA=Disable
+REBOOT=Disable
+SPONSORS=Enable
