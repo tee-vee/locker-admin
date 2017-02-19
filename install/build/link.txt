@@ -1,3 +1,0 @@
-C:\Users\kiosk.AAICON-PC\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\S
-tartup>mklink %USERPROFILE%\AppData\Roaming\Microsoft\Windows\startm~1\programs\
-startup\lockerlife_tv.exe d:\Locker-Slider\LockerLife_TV.exe
