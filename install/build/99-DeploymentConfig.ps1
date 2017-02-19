@@ -2,7 +2,7 @@
 # January 2017
 
 # 99-DeploymentConfig - setup variables, functions
-#$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 99-DeploymentConfig"
+$host.ui.RawUI.WindowTitle = "99-DeploymentConfig"
 #$basename = $MyInvocation.MyCommand.Name
 
 
@@ -16,6 +16,10 @@ Write-Host "$basename - in" -ForegroundColor Green
 # make an entrance ...
 1..5 | % { Write-Host }
 
+Write-Host "$basename -- Set Sound Volume to minimum"
+$obj = new-object -com wscript.shell
+$obj.SendKeys([char]173)
+
 #--------------------------------------------------------------------
 Write-Host "$basename - Loading Modules ..."
 #--------------------------------------------------------------------
@@ -25,7 +29,7 @@ if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
 	Import-Module BitsTransfer
 } else {
 	# BitsTransfer module already loaded ... clear queue
-	Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+	Get-BitsTransfer | Complete-BitsTransfer
 }
 
 
@@ -34,6 +38,11 @@ Write-Host "$basename - Setting Variables ..."
 #--------------------------------------------------------------------
 
 $ErrorActionPreference = "Continue"
+$PSDefaultParameterValues += @{'*:Verbose' = $true}
+$PSDefaultParameterValues += @{'*:Confirm' = $false}
+$PSDefaultParameterValues.Add("*:ErrorAction","SilentlyContinue")
+
+$now = Get-Date -Format "yyyy-MM-ddTHH:mm"
 
 # Allow unattended reboots
 $Boxstarter.RebootOk=$true
@@ -48,7 +57,7 @@ $newsize.height = 5500
 # reminder: you can’t have a screen width that’s bigger than the buffer size.
 # Therefore, before we can increase our window size we need to increase the buffer size
 # powershell screen width and the buffer size are set to 150.
-$newsize.width = 200
+$newsize.width = 205
 $pswindow.buffersize = $newsize
 #$pswindow.windowtitle = "LockerLife Locker Deployment 99-DeploymentConfig"
 
@@ -198,6 +207,63 @@ Write-Host "$basename - Get updated SSL Certificate store"
 #--------------------------------------------------------------------
 Write-Host "$basename - Functions"
 #--------------------------------------------------------------------
+function SetConsoleWindow {
+
+	# set window size
+	$H = Get-Host
+	$Win = $H.UI.RawUI.WindowSize
+	$Win.Width = 150
+	$Win.Height = 50
+	$H.UI.RawUI.Set_WindowSize($Win)
+
+	$H = Get-Host
+	$Win = $H.UI.RawUI.BufferSize
+	$Win.Width = 150
+	$Win.height = 5000
+	$H.UI.RawUI.Set_BufferSize($Win)
+	$host.UI.RawUI.ForegroundColor = "DarkYellow"
+	$host.UI.RawUI.BackgroundColor = "Black"
+}
+
+function NewScheduledTask {
+	$jobname = "Recurring PowerShell Task"
+	# make sure script returns $true or $false or else scheduling won't work properly
+	$script =  "C:\local\bin\Test-ExampleScript.ps1 -Server $env:computername"
+	$repeat = (New-TimeSpan -Minutes 5)
+
+	# The script below will run as the specified user (you will be prompted for credentials)
+	# and is set to be elevated to use the highest privileges.
+	# In addition, the task will run every 5 minutes or however long specified in $repeat.
+	$action = New-ScheduledTaskAction –Execute "$pshome\powershell.exe" -Argument  "$script; quit"
+	$duration = ([timeSpan]::maxvalue)
+	$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval $repeat -RepetitionDuration $duration
+
+	$msg = "Enter the username and password that will run the task";
+	$credential = $Host.UI.PromptForCredential("Task username and password",$msg,"$env:userdomain\$env:username",$env:userdomain)
+	$username = $credential.UserName
+	$password = $credential.GetNetworkCredential().Password
+	$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -DontStopOnIdleEnd
+
+	Register-ScheduledTask -TaskName $jobname -Action $action -Trigger $trigger -RunLevel Highest -User $username -Password $password -Settings $settings
+}
+
+function NewScheduledJob {
+	# Change these three variables to whatever you want
+	$jobname = "Recurring PowerShell Task"
+	$script =  "C:\local\bin\Test-ExampleScript.ps1 -Server server1"
+	$repeat = (New-TimeSpan -Minutes 5)
+
+	# The script below will run as the specified user (you will be prompted for credentials)
+	# and is set to be elevated to use the highest privileges.
+	# In addition, the task will run every 5 minutes or however long specified in $repeat.
+	$scriptblock = [scriptblock]::Create($script)
+	$trigger = New-JobTrigger -Once -At (Get-Date).Date -RepeatIndefinitely -RepetitionInterval $repeat
+	$msg = "Enter the username and password that will run the task";
+	$credential = $Host.UI.PromptForCredential("Task username and password",$msg,"$env:userdomain\$env:username",$env:userdomain)
+
+	$options = New-ScheduledJobOption -RunElevated
+	Register-ScheduledJob -Name $jobname -ScriptBlock $scriptblock -Trigger $trigger -ScheduledJobOption $options -Credential $credential
+}
 
 function Test-4G {
 	Write-Host "$basename -- Running Internet Connection Speed Test ..."
@@ -216,8 +282,8 @@ function Test-4G {
 	$mailbody = "message body"
 	$mimetype = "text/plain"
 	#$extargs = " -ehlo -info"
-	#Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer $smtphost -Port $smtpport -UseSsl -Credential (Get-Credential) -Verbose -Debug
-	C:\local\bin\mailsend.exe -4 -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment speed test" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
+	#Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer $smtphost -Port $smtpport -UseSsl -Credential (Get-Credential) -Debug
+	C:\local\bin\mailsend.exe -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment speed test" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
 }
 
 function Download-File {
@@ -280,9 +346,7 @@ function ConfigureDisk {
   #format FS=NTFS UNIT=4906 LABEL="logs" QUICK
   #assign letter=E
   #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/ef21fd19a8e91c0cc3eef37a9557ad49/raw/b22394680129ffc07e1ff76685427319a5f704bd/diskpart-e.txt","C:\local\etc\diskpart-e.txt")
-
 }
-
 
 # Function to set a registry property value and create the registry key if it doesn't exist
 Function Set-RegistryKey {
@@ -331,16 +395,16 @@ function AddTo-7zip($zipFileName) {
 }
 
 function touch($file) {
-    if(test-path $file) {
-        $f = get-item $file;
-        $d = get-date
-        $f.LastWriteTime = $d
-    }
-    else
-    {
-        "" | out-file -FilePath $file -Encoding ASCII
-    }
+	if (Test-Path $file) {
+		$f = get-item $file;
+		$d = get-date
+		$f.LastWriteTime = $d
+	} else {
+		"" | out-file -FilePath $file -Encoding ASCII
+	} #else
 }
+
+
 function WriteInfo($message) {
   Write-Host $message
 }  #end function WriteInfo
@@ -354,44 +418,40 @@ function WriteSuccess($message) {
 }  #end function WriteSuccess
 
 function WriteError($message) {
-  Write-Host $message -ForegroundColor Red
- }  #end function WriteError
+	Write-Host $message -ForegroundColor Red
+}
 
 function WriteErrorAndExit($message) {
-  Write-Host $message -ForegroundColor Red
-  Write-Host "Press any key to continue ..."
-  $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
-  $HOST.UI.RawUI.Flushinputbuffer()
-  Exit
+	Write-Host $message -ForegroundColor Red
+	Write-Host "Press any key to continue ..."
+	$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
+	$host.UI.RawUI.Flushinputbuffer()
+	Exit
 }  #end function WriteErrorAndExit
 
 function Get-WindowsBuildNumber {
-    $os = Get-WmiObject -Class Win32_OperatingSystem
-    return [int]($os.BuildNumber)
+	$os = Get-WmiObject -Class Win32_OperatingSystem
+	return [int]($os.BuildNumber)
 }  #end function Get-WindowsBuildNumber
 
 function Create-DeploymentLinks {
-  Write-Host "$basename -- Create-DeploymentLinks"
-  Set-Alias InstChocoSCut Install-ChocolateyShortcut
-  ## create shortcut to deployment - 00-bootstrap
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$env:deployurl" -Description "Locker Deployment Website"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-bootstrap.ps1" -Description "00-bootstrap"
-#  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-20.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/10-identify.ps1" -Description "10-identify"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/20-setup.ps1" -Description "20-setup"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-30.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/30-lockerlife.ps1" -Description "30-lockerlife"
-  InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-40.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/complete-locker-setup.ps1" -Description "complete-locker-setup"
+	Write-Host "$basename -- Create-DeploymentLinks"
+	Set-Alias InstChocoSCut Install-ChocolateyShortcut
+	## create shortcut to deployment - 00-bootstrap
+	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$env:deployurl" -Description "Locker Deployment Website"
+	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00bootstrap.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-bootstrap.ps1" -Description "00-bootstrap"
+	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00init.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
+	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/10-identify.ps1" -Description "10-identify"
+	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-30.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/30-lockerlife.ps1" -Description "30-lockerlife"
 }  #end function Create-DeploymentLinks
 
 
-function Get-UserSID
-{
-  $PatternSID = 'S-1-5-21-\d+-\d+\-\d+\-\d+$'
-  Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*' | Where-Object {$_.PSChildName -match $PatternSID} |
-     select  @{name="SID";expression={$_.PSChildName}},
-             @{name="UserHive";expression={"$($_.ProfileImagePath)\ntuser.dat"}},
-             @{name="Username";expression={$_.ProfileImagePath -replace '^(.*[\\\/])', ''}}
+function Get-UserSID {
+	$PatternSID = 'S-1-5-21-\d+-\d+\-\d+\-\d+$'
+	Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*' | Where-Object {$_.PSChildName -match $PatternSID} |
+	select  @{name="SID";expression={$_.PSChildName}},
+          @{name="UserHive";expression={"$($_.ProfileImagePath)\ntuser.dat"}},
+          @{name="Username";expression={$_.ProfileImagePath -replace '^(.*[\\\/])', ''}}
 }
 
 #function Make-Shortcut {
@@ -404,7 +464,7 @@ function Get-UserSID
 #  $Shortcut.Save()
 #}
 
-function Is64Bit {  [IntPtr]::Size -eq 8  }
+function Is64Bit { [IntPtr]::Size -eq 8 }
 
 function Enable-Net40 {
     if(Is64Bit) {$fx="framework64"} else {$fx="framework"}
@@ -432,18 +492,17 @@ Function Rename-ComputerName ([string]$NewComputerName) {
 
 ## cleanup desktop
 function CleanupDesktop {
-  Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
+	Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
 	w32tm /query /configuration
 	w32tm /query /status
 	w32tm /resync /rediscover /nowait
+	# Internet Explorer: Temp Internet Files:
+	RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
-  # Internet Explorer: Temp Internet Files:
-  RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
-
-  "AppData\Roaming\Microsoft\Windows\Libraries\*","AppData\Roaming\Microsoft\Windows\SendTo\*.lnk","SendTo\*.lnk","Recent\*.lnk","LockerDeployment","Desktop\LockerDeployment","Links\*.lnk","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
-    if (Test-Path -Path "$env:UserProfile\$_" -Verbose) { Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force -Verbose }
-    if (Test-Path -Path "$env:Public\$_" -Verbose) { Remove-Item -Path "$env:Public\$_" -Recurse -Force -Verbose }
-    if (Test-Path -Path "C:\Users\kiosk\$_" -Verbose) { Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force -Verbose }
+	"AppData\Roaming\Microsoft\Windows\Libraries\*","AppData\Roaming\Microsoft\Windows\SendTo\*.lnk","SendTo\*.lnk","Recent\*.lnk","LockerDeployment","Desktop\LockerDeployment","Links\*.lnk","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
+		if (Test-Path -Path "$env:UserProfile\$_") { Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force }
+		if (Test-Path -Path "$env:Public\$_") { Remove-Item -Path "$env:Public\$_" -Recurse -Force }
+		if (Test-Path -Path "C:\Users\kiosk\$_") { Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force }
   }
   Remove-Item "C:\99-DeploymentConfig.ps1" -Force | Out-Null
   Enable-UAC
@@ -457,5 +516,6 @@ function invoke-systemReboot { shutdown /r /t 5 }
 function invoke-systemSleep { RunDll32.exe PowrProf.dll,SetSuspendState }
 function invoke-terminalLock { RunDll32.exe User32.dll,LockWorkStation }
 
-
 Write-Host "$basename - out" -ForegroundColor Green
+
+#END OF FILE

@@ -1,17 +1,15 @@
 # Derek Yuen <derekyuen@locision.com>
 # December 2016
 
-# 30-lockerlife - LockerLife Internal Configuration (Preparation for purple console screen)
-# ** autologon as kiosk user after boot
-$host.ui.RawUI.WindowTitle = "LockerLife Locker Deployment 30-lockerlife"
-#$basename = Split-Path -Leaf $PSCommandPath
-#Set-PSDebug -Trace 1
+# 30-lockerlife - LockerLife Internal Configuration (Preparation for purple console screen) *** WILL AUTOLOGON AS KIOSK when done
+$host.ui.RawUI.WindowTitle = "30-lockerlife"
 
 $basename = "30-lockerlife"
+$ErrorActionPreference = "Continue"
+
 #--------------------------------------------------------------------
 Write-Host "$basename - Lets start"
 #--------------------------------------------------------------------
-$ErrorActionPreference = "Continue"
 $timer = Start-TimedSection "30-lockerlife"
 
 # Verify Running as Admin
@@ -23,49 +21,54 @@ If (!( $isAdmin )) {
 	exit
 }
 
-# close previous IE windows ...
-#& "$Env:SystemRoot\System32\taskkill.exe" /t /im iexplore.exe /f
+## backup
+#Enable-ComputerRestore -Drive "C:\" -Confirm:$false
+#Checkpoint-Computer -Description "Before 00-init"
+
+
+#--------------------------------------------------------------------
+Write-Host "$basename - Loading Modules ..."
+#--------------------------------------------------------------------
+
+# Import BitsTransfer ...
+if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
+	Import-Module BitsTransfer
+} else {
+	# BitsTransfer module already loaded ... clear queue
+	Get-BitsTransfer | Complete-BitsTransfer
+}
+
+if (Test-Path C:\local\lib\WASP.dll) {
+  Import-Module C:\local\lib\WASP.dll
+}
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
-#$WebClient = New-Object System.Net.WebClient
-#$WebClient.DownloadFile("$Env:deployurl/99-DeploymentConfig.ps1","$Env:temp\99-DeploymentConfig.ps1")
-#. "$Env:temp\99-DeploymentConfig.ps1"
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
 . C:\99-DeploymentConfig.ps1
+$basename = "30-lockerlife"
+
+SetConsoleWindow
+$host.ui.RawUI.WindowTitle = "30-lockerlife"
+
+# close previous IE windows ...
+Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
 
 # remove limitations
 Disable-MicrosoftUpdate
 Disable-UAC
 Update-ExecutionPolicy Unrestricted
 
-
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
 $StartDateTime = Get-Date
 Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
-
-# set window title
-$pshost = Get-Host
-$pswindow = $pshost.ui.rawui
-$newsize = $pswindow.buffersize
-$newsize.height = 5500
-
-# reminder: you can’t have a screen width that’s bigger than the buffer size.
-# Therefore, before we can increase our window size we need to increase the buffer size
-# powershell screen width and the buffer size are set to 150.
-$newsize.width = 200
-$pswindow.buffersize = $newsize
-
-# the nul ensures window size does not chnage
-#& cmd /c mode con: cols=150  >nul 2>nul
 
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- LockerLife -> Repo Checks ..."
 # --------------------------------------------------------------------------------------------
 
-# check
-& "$Env:curl" --progress-bar -Ss -k --url "https://api.github.com/users/lockerlife-kiosk"
+Invoke-RestMethod -Uri "https://api.github.com/users/lockerlife-kiosk"
 #& "$Env:curl" --progress-bar -Ss -k --include --url "https://api.github.com/users/lockerlife-kiosk"
 #& "$Env:curl" --progress-bar -Ss -k --user "lockerlife-kiosk:Locision123" --url "https://api.github.com/authorizations"
 
@@ -93,18 +96,21 @@ WriteInfo "$basename -- set up git"
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- LockerLife -> Setup D drive ..."
 # --------------------------------------------------------------------------------------------
-Set-Location -Verbose -Path "D:\"
+Set-Location -Path "D:\"
 
 # lockerlife production
 "RunLockerLifeConsole.bat","RunLockerLifeTV.bat","core.jar","data-collection.jar","run-manual.bat","run-test.bat","run.bat","scanner.jar","production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-	#& "$Env:curl" --progress-bar -Ss -k -o "D:\$_" --url "$env:deployurl/PRODUCTION/$_"
-	Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/PRODUCTION/$_" -Destination "D:\" -TransferType Download -RetryInterval 60 -Verbose
+	if (!(Test-Path "$_")) {
+		Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/app/$_" -Destination "D:\$_" -Description "Download LockerLife Console Setup File $_" -TransferType Download -RetryInterval 60
+	} else { WriteInfoHighlighted "$basename -- Skipping $_" }
 }
 Get-BitsTransfer | Complete-BitsTransfer
 
 "production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-  c:\ProgramData\chocolatey\bin\unzip.exe $_
-	Remove-Item $_ -Force -Confirm:$false
+	if (Test-Path $_ -ErrorAction SilentlyContinue) {
+		C:\ProgramData\chocolatey\bin\unzip.exe $_
+		Remove-Item $_ -Force -Confirm:$false
+	} else { Write-Host "$basename --- $_ missing" }
 }
 
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
@@ -134,6 +140,7 @@ Write-Host "$basename -- LockerLife -> Get lockerlife libraries ..."
 #$jqopts = " '.[].url' "
 $lockercloudhost = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com"
 $lockercloudlibpath = "/dev/lockers/libs"
+$lockerlibfullpath = $lockercloudhost + $lockercloudlibpath
 
 $lockerlibs = "D:\locker-libs"
 $liblist = "locker-libs-list.txt"
@@ -151,17 +158,17 @@ $libtimestamp = "locker-libs-timestamps.txt"
 # xargs -P to run in parallel; match nunber of cpu cores
 #cat $lockerlibs\$liblist | xargs -n 1 curl -LO
 #Get-Content D:\locker-libs\locker-libs-list.txt | xargs -P "$Env:Number_Of_Processors" -n 1 curl -LO
-Set-Location -Path d:\locker-libs
+Set-Location -Path "D:\locker-libs"
 
 #Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl --progress-bar -k -LO
 Get-Content -Path "D:\locker-libs\locker-libs-list.txt" | ForEach-Object {
-	Add-Content -Path "D:\locker-libs\locker-libs-list-transfer.ps1" "Start-BitsTransfer -DisplayName LockerLifeLibraryDownload -Verbose -TransferType Download -RetryInterval 60 -Source $_ -Destination D:\locker-libs"
+	Add-Content -Path "D:\locker-libs\locker-libs-list-transfer.ps1" "Start-BitsTransfer -DisplayName LockerLifeLibraryDownload -TransferType Download -RetryInterval 60 -Source $_ -Destination D:\locker-libs"
 }
 
 D:\locker-libs\locker-libs-list-transfer.ps1
 Get-BitsTransfer | ? { $_.jobstate -ne 'transferred'}
 
-Get-BitsTransfer -Verbose | Complete-BitsTransfer -Verbose
+Get-BitsTransfer | Complete-BitsTransfer
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Install LockerLife Services"
@@ -209,25 +216,48 @@ Write-Host "$basename - Manage LockerLife User Accounts ..."
 # add user
 Write-Host "$basename -- ADD KIOSK USER"
 #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
-net localgroup kiosk-group /add
+& net.exe localgroup kiosk-group /add
+net.exe localgroup kiosk-group /add
+
 #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
-net user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no
+& net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no
+net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no
+
 #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
-net localgroup "kiosk-group" "kiosk" /add
+& net.exe localgroup "kiosk-group" "kiosk" /add
+net.exe localgroup "kiosk-group" "kiosk" /add
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Setting up kiosk user environment"
 
+
+$KioskUser = "kiosk"
+$KioskPass = ConvertTo-SecureString -String "locision123" -AsPlainText -Force
+
+# just use $cred ...
+$kioskCred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList $KioskUser, $KioskPass
+# $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
+
 # [] auto create user profile (super quick, super dirty!)
+# redundant because user profile creation isn't always guranteed ...
 Write-Host "$basename -- Create kiosk user profile"
-Start-Process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow -Wait
-psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
-Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow
-psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
-Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat'
-Copy-Item -Path "D:\run.bat" -Destination 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\run.bat'
-Set-Location -Verbose "C:\local\etc"
-Start-BitsTransfer -Source "http://lockerlife.hk/deploy/2017-01-gpo.zip" -Destination "C:\local\etc"
+Invoke-Expression "psexec -accepteula -nobanner -u kiosk -p locision123 cmd /c dir"
+Start-Process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir'
+Start-Process -Credential $kioskCred cmd -ArgumentList "/c"
+Start-Process -Credential $kioskCred -LoadUserProfile cmd -ArgumentList "/c"
+
+Start-Process -Credential $kioskCred "c:\ProgramData\chocolatey\bin\choco.exe" -ArgumentList "-?"
+Start-Process -Credential $kioskCred -LoadUserProfile "c:\ProgramData\chocolatey\bin\choco.exe" -ArgumentList "list -l"
+Start-Process -Credential $kioskCred "c:\windows\system32\calc.exe"
+Start-Process -Credential $kioskCred -LoadUserProfile "c:\windows\system32\calc.exe"
+Stop-Process -Name "Calc" -Force
+Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -ErrorAction SilentlyContinue
+Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -ErrorAction SilentlyContinue
+
+#Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow
+#& psexec.exe -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
+# Copy-Item -Path "D:\run.bat" -Destination 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\run.bat'
+Set-Location "C:\local\etc"
 
 
 # set autologon to kiosk user
@@ -268,7 +298,8 @@ Start-BitsTransfer -Source "http://lockerlife.hk/deploy/2017-01-gpo.zip" -Destin
 
 #Register-ScheduledJob -Name Update-Help -ScriptBlock {Update-Help -Module *} -Trigger ( New-JobTrigger -DaysOfWeek Monday -Weekly -At 8AM) -ScheduledJobOption (New-ScheduledJobOption -RequireNetwork)
 # -Credential $cred
-Register-ScheduledJob -Verbose -Name UpdatePowerShellHelpJob -ScriptBlock { Update-Help -Module * } -Trigger ( New-JobTrigger -Daily -At "1 AM" )
+#Register-ScheduledJob -Name UpdatePowerShellHelpJob -ScriptBlock { Update-Help -Module * } -Trigger ( New-JobTrigger -Daily -At "1 AM" )
+
 # To schedule a command that runs every hour at five minutes past the hour
 # The following command schedules the MyApp program to run hourly beginning at five minutes past midnight.
 # Because the /mo parameter is omitted, the command uses the default value for the hourly schedule, which is every (1) hour.
@@ -282,23 +313,20 @@ Register-ScheduledJob -Verbose -Name UpdatePowerShellHelpJob -ScriptBlock { Upda
 ## schtasks /create /sc hourly /mo 5 /sd 03/01/2001 /tn "My App" /tr c:\apps\myapp.exe
 
 # To schedule a task that runs every day
-# The following example schedules the MyApp program to run once a day, every day, at 8:00 A.M. until December 31, 2001.
+# The following example schedules the MyApp program to run once a day, every day, at 8:00 A.M. until December 31, 2050.
 # Because it omits the /mo parameter, the default interval of 1 is used to run the command every day.
-## schtasks /create /tn "My App" /tr c:\apps\myapp.exe /sc daily /st 08:00:00 /ed 12/31/2001
-
-
+## schtasks /create /tn "My App" /tr c:\apps\myapp.exe /sc daily /st 08:00:00 /ed 12/31/2050
 
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- final hardening ..."
 
+Set-TaskbarOptions -Size Small -Lock -Dock Bottom
+Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
+
 
 Write-Host "$basename - disable admin user"
-## generate random password for administrator
-# -join ((65..90) + (97..122) | Get-Random -Count 5 | % {[char]$_})
-# Get-Random -Minimum ([Int64]::MinValue)3738173363251507200
-# $Secure_String_Pwd = ConvertTo-SecureString "P@ssW0rD!" -AsPlainText -Force
-net user administrator /active:no
+& net.exe user administrator /active:no
 net user administrator /active:no
 
 # set autologin to kiosk user, reboot computer ...
@@ -307,52 +335,45 @@ WriteInfoHighlighted "SETUP AUTOLOGON"
 & "$env:local\bin\autologon.exe" /accepteula kiosk $env:computername locision123
 Write-Host "."
 
-### Use New-GPO ???
-#New-GPO NoDisplay | Set-GPRegistryValue -key “HKCU\Software\Microsoft\Windows\CurrentVersion\Policies \System” -ValueName NoDispCPL -Type DWORD -value 1 | New-GPLink -target “ou=executive,dc=sample,dc=com”
 
-
-# Reset for kiosk user -> Small taskbar
-#Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
-#Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
-
-
-
+# --------------------------------------------------------------------------------------------
 # purple screen
 Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
 $kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-if (!(Test-Path -Path $kioskstartup)) {
-	Set-Location $kioskstartup -Verbose
-	Remove-Item -Path $kioskstartup\* -Force -Verbose
-	Copy-Item -Path "d:\run.bat" -Destination $kioskstartup\run.bat
+if (Test-Path -Path $kioskstartup) {
+	Set-Location $kioskstartup
+	Remove-Item -Path "$kioskstartup\*" -Force -ErrorAction SilentlyContinue
+	Copy-Item -Path "d:\run.bat" -Destination "$kioskstartup\run.bat" -Force
+	Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -ErrorAction SilentlyContinue
 }
 
 # Internet Explorer: All:
-#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
 
 # Internet Explorer: History:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 1
 
 # Internet Explorer:Cookies:
-#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 2
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 2
 
 # Internet Explorer: Temp Internet Files:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 8
 
 # Internet Explorer: Form Data:
-#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 16
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 16
 
 # Internet Explorer: Passwords:
-#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 32
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 32
 
 # Internet Explorer: All:
-#& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
+& "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
 
 
 # --------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue -Verbose
+Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 
 # Cleanup Desktop
 CleanupDesktop
@@ -372,6 +393,8 @@ Write-Host "."
 
 Stop-TimedSection $timer
 
-# --------------------------------------------------------------------
-Write-Host "$basename - Next stage ... "
-# --------------------------------------------------------------------
+
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.SendKeys]::SendWait('~');
+
+#END OF FILE
