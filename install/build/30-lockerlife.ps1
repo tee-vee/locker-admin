@@ -50,9 +50,6 @@ $basename = "30-lockerlife"
 SetConsoleWindow
 $host.ui.RawUI.WindowTitle = "30-lockerlife"
 
-# close previous IE windows ...
-Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
-
 # remove limitations
 Disable-MicrosoftUpdate
 Disable-UAC
@@ -100,16 +97,16 @@ Set-Location -Path "D:\"
 
 # lockerlife production
 "RunLockerLifeConsole.bat","RunLockerLifeTV.bat","core.jar","data-collection.jar","run-manual.bat","run-test.bat","run.bat","scanner.jar","production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-	if (!(Test-Path "$_")) {
+	if (!(Test-Path $_)) {
 		Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/app/$_" -Destination "D:\$_" -Description "Download LockerLife Console Setup File $_" -TransferType Download -RetryInterval 60
-	} else { WriteInfoHighlighted "$basename -- Skipping $_" }
+	} else { Write-Host "$basename -- Skipping $_" }
 }
 Get-BitsTransfer | Complete-BitsTransfer
 
 "production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-	if (Test-Path $_ -ErrorAction SilentlyContinue) {
-		C:\ProgramData\chocolatey\bin\unzip.exe $_
-		Remove-Item $_ -Force -Confirm:$false
+	if (Test-Path $_) {
+		C:\ProgramData\chocolatey\bin\unzip.exe -o $_
+		#Remove-Item $_ -Force -Confirm:$false -Force
 	} else { Write-Host "$basename --- $_ missing" }
 }
 
@@ -146,9 +143,12 @@ $lockerlibs = "D:\locker-libs"
 $liblist = "locker-libs-list.txt"
 $libtimestamp = "locker-libs-timestamps.txt"
 
+Move-Item $lockerlibs\$liblist $lockerlibs\$liblist.old -Force
+Move-Item "D:\locker-libs\locker-libs-list-transfer.ps1" "D:\locker-libs\locker-libs-list-transfer-old.ps1" -Force
 #locate locker-libs first; then send output to locker-lib
 ## & "$Env:curl" -Ss -R -k --url "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs" | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
-& "$env:curl" -RSs -k --url "$lockercloudhost$lockercloudlibpath" | jq '.[].url' >> $lockerlibs\$liblist
+#& "$env:curl" -RSs -k --url "$lockercloudhost$lockercloudlibpath" | jq '.[].url' >> $lockerlibs\$liblist
+(Invoke-RestMethod -Uri "$lockercloudhost$lockercloudlibpath").url | Out-File -FilePath $lockerlibs\$liblist
 
 # create timestamps file
 # fetch Last-Modified header for specific file; only donwload if-modified
@@ -165,8 +165,18 @@ Get-Content -Path "D:\locker-libs\locker-libs-list.txt" | ForEach-Object {
 	Add-Content -Path "D:\locker-libs\locker-libs-list-transfer.ps1" "Start-BitsTransfer -DisplayName LockerLifeLibraryDownload -TransferType Download -RetryInterval 60 -Source $_ -Destination D:\locker-libs"
 }
 
+# Foreach ($file in Get-Content $lockerlibs\$liblist) {
+# 	if (!(Test-Path "$env:local\bin\$_")) {
+# 		Start-BitsTransfer -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -DisplayName "LockerLifeLocalBin" -Description "Download LockerLife Local Tools $_" -TransferType Download -RetryInterval 60
+# 	} else { WriteInfoHighlighted "$basename -- Skipping $_" }
+# 	}
+# #commit the downloaded files
+# Get-BitsTransfer | Complete-BitsTransfer
+
+# }
+
 D:\locker-libs\locker-libs-list-transfer.ps1
-Get-BitsTransfer | ? { $_.jobstate -ne 'transferred'}
+#Get-BitsTransfer | ? { $_.jobstate -ne 'transferred'}
 
 Get-BitsTransfer | Complete-BitsTransfer
 
@@ -175,40 +185,40 @@ Write-Host "$basename - Install LockerLife Services"
 #--------------------------------------------------------------------
 
 $chkservice = Get-Service -Name scanner -ErrorAction SilentlyContinue
-if ($chkservice.Length -gt 0) {
+if (!($?)) {
 	WriteInfoHighlighted "`t $basename -- INSTALL SCANNER AS SERVICE"
 	#CALL %LOCKERINSTALL%\build\new-service-scanner.bat
 	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
-	Start-Process -FilePath $Env:local\src\install\build\new-service-scanner.bat -Verb RunAs -Wait
-}
+	Start-Process -FilePath $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
+} else { Write-Host "Scanner service installed." }
 Write-Host "."
 
 
 $chkservice = Get-Service -Name kioskserver -ErrorAction SilentlyContinue
-if ($chkservice.Length -gt 0) {
+if (!($?)) {
 	WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
 	#CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
 	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
-	Start-Process -FilePath $Env:local\src\install\build\new-service-kioskserver.bat -Verb RunAs -Wait
+	Start-Process -FilePath $Env:local\bin\new-service-kioskserver.bat -Verb RunAs -Wait
 	Write-Host "."
-}
+} else { Write-Host "Kioskserver service installed."}
 
 $chkservice = Get-Service -Name "data-collection" -ErrorAction SilentlyContinue
-if ($chkservice.Length -gt 0) {
+if (!($?)) {
 	WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION AS SERVICE"
 	#CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
 	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
-	Start-Process -FilePath $Env:local\src\install\build\new-service-datacollection.bat -Verb RunAs -Wait
-}
+	Start-Process -FilePath $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
+} else { Write-Host "Data-Collection service installed."}
 Write-Host "."
 
 $chkservice = Get-Service -Name core -ErrorAction SilentlyContinue
-if ($chkservice.Length -gt 0) {
+if (!($?)) {
 	WriteInfoHighlighted "$basename -- INSTALL CORE AS SERVICE"
 	## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
-	Start-Process -FilePath $Env:local\src\install\build\new-service-core.bat -Verb RunAs -Wait
+	Start-Process -FilePath $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
 	Write-Host "."
-}
+} else { Write-Host "Core service installed."}
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Manage LockerLife User Accounts ..."
@@ -246,7 +256,6 @@ Start-Process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision12
 Start-Process -Credential $kioskCred cmd -ArgumentList "/c"
 Start-Process -Credential $kioskCred -LoadUserProfile cmd -ArgumentList "/c"
 
-Start-Process -Credential $kioskCred "c:\ProgramData\chocolatey\bin\choco.exe" -ArgumentList "-?"
 Start-Process -Credential $kioskCred -LoadUserProfile "c:\ProgramData\chocolatey\bin\choco.exe" -ArgumentList "list -l"
 Start-Process -Credential $kioskCred "c:\windows\system32\calc.exe"
 Start-Process -Credential $kioskCred -LoadUserProfile "c:\windows\system32\calc.exe"
@@ -313,9 +322,9 @@ Set-Location "C:\local\etc"
 ## schtasks /create /sc hourly /mo 5 /sd 03/01/2001 /tn "My App" /tr c:\apps\myapp.exe
 
 # To schedule a task that runs every day
-# The following example schedules the MyApp program to run once a day, every day, at 8:00 A.M. until December 31, 2050.
+# The following example schedules the MyApp program to run once a day, every day, at 3:00 A.M.
 # Because it omits the /mo parameter, the default interval of 1 is used to run the command every day.
-## schtasks /create /tn "My App" /tr c:\apps\myapp.exe /sc daily /st 08:00:00 /ed 12/31/2050
+## schtasks /create /tn "My App" /tr "powershell.exe c:\local\bin\update-locker.ps1" /sc daily /st 03:00:00
 
 
 # --------------------------------------------------------------------------------------------
@@ -340,12 +349,10 @@ Write-Host "."
 # purple screen
 Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
 $kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-if (Test-Path -Path $kioskstartup) {
-	Set-Location $kioskstartup
-	Remove-Item -Path "$kioskstartup\*" -Force -ErrorAction SilentlyContinue
-	Copy-Item -Path "d:\run.bat" -Destination "$kioskstartup\run.bat" -Force
-	Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -ErrorAction SilentlyContinue
-}
+Set-Location -Path "$kioskstartup"
+#Copy-Item -Path "d:\run.bat" -Destination "$kioskstartup\run.bat" -Force
+New-Item -ItemType Directory -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup" -Force
+Copy-Item -Path "D:\run.bat" -Destination "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat" -Force
 
 # Internet Explorer: All:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
@@ -373,7 +380,7 @@ if (Test-Path -Path $kioskstartup) {
 # --------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue
+Stop-Process -Name iexplore
 
 # Cleanup Desktop
 CleanupDesktop
