@@ -32,7 +32,7 @@ Write-Host "$basename - Loading Modules ..."
 #--------------------------------------------------------------------
 
 # Import BitsTransfer ...
-if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
+if (!(Get-Module BitsTransfer)) {
 	Import-Module BitsTransfer
 } else {
 	# BitsTransfer module already loaded ... clear queue
@@ -65,7 +65,7 @@ SetConsoleWindow
 $host.ui.RawUI.WindowTitle = "00-init"
 
 # close previous IE windows ...
-Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
+Stop-Process -Name "iexplore"
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -428,7 +428,7 @@ New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowO
 # --------------------------------------------------------------------
 Write-Host "$basename - After login ..."
 # --------------------------------------------------------------------
-New-Item -ItemType File "C:\local\bin\autologon.bat" -ErrorAction SilentlyContinue
+New-Item -ItemType File "C:\local\bin\autologon.bat"
 
 # Windows Explorer Settings through Choco
 #Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
@@ -499,7 +499,7 @@ Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Feeds" -Name "SyncStat
 $psDrive = Remove-PSDrive HKUDefaultUser
 # Clean up references not in use
 $variables = Get-Variable | Where { $_.Name -ne "userLoadPath" } | foreach { $_.Name }
-foreach($var in $variables) { Remove-Variable $var -ErrorAction SilentlyContinue }
+foreach($var in $variables) { Remove-Variable $var }
 [gc]::collect()
 # Unload Hive
 REG unload $userLoadPath | Out-Host
@@ -545,7 +545,7 @@ Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -F
 # Remove-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen"
 
 WriteInfo "$basename - Set lock screen background image"
-New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Force -ErrorAction SilentlyContinue
+New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Force
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Force
 
 #Set the Screen Saver Settings
@@ -665,7 +665,7 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer
 # --------------------------------------------------------------------
 # Remove Desktop icon from computer namespace
 #Write-Host "Removing Desktop icon from computer namespace..."
-#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" -Recurse -ErrorAction SilentlyContinue
+#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" -Recurse
 
 # Add Desktop icon to computer namespace
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}"
@@ -685,8 +685,8 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer
 # --------------------------------------------------------------------
 # Remove Downloads icon from computer namespace
 #Write-Host "Removing Downloads icon from computer namespace..."
-#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}" -Recurse -ErrorAction SilentlyContinue
-#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{374DE290-123F-4565-9164-39C4925E467B}" -Recurse -ErrorAction SilentlyContinue
+#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{088e3905-0323-4b02-9826-5d99428e115f}" -Recurse
+#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{374DE290-123F-4565-9164-39C4925E467B}" -Recurse
 
 
 # Add Downloads icon to computer namespace
@@ -696,8 +696,8 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer
 #--------------------------------------------------------------------
 # Remove Music icon from computer namespace
 Write-Host "$basename -- Removing Music icon from computer namespace..."
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Recurse
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Recurse
 
 
 # Add Music icon to computer namespace
@@ -708,8 +708,8 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 #--------------------------------------------------------------------
 # Remove Pictures icon from computer namespace
 Write-Host "$basename -- Removing Pictures icon from computer namespace..."
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Recurse
+Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Recurse
 
 # Add Pictures icon to computer namespace
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}"
@@ -807,7 +807,7 @@ Write-Host "$basename - Make some Files"
 
 "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" | ForEach-Object {
 	#New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File | Out-Null
-  if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" -Force -ErrorAction SilentlyContinue }
+  if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" -Force }
 } # ForEach-Object ...
 
 # --------------------------------------------------------------------------------------------

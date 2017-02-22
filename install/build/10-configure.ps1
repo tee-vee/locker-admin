@@ -60,7 +60,7 @@ if (!$Env:sitename) {
     WriteError "This SIM card is not authorized for LockerLife Locker Deployment"
     WriteError "Send email to locker-admin@lockerlife.hk for further assistance."
     WriteErrorAndExit "Exiting"
-    New-Item -Path C:\DEPLOYMENT-UNAUTHORIZED -ItemType File -Force -ErrorAction SilentlyContinue | Out-Null
+    New-Item -Path C:\DEPLOYMENT-UNAUTHORIZED -ItemType File -Force | Out-Null
     ## function call to send error email
 
 } else {
@@ -73,7 +73,7 @@ if (!$Env:sitename) {
     #Write-Host "---"
     #Write-Host "GET MAC ADDRESS FOR CLOUD REGISTRATION"
     #Set-Location -Path "$Env:local\src\LOCKER\$Env:sitename"
-    #New-Item -Path "$Env:local\src\LOCKER\$Env:sitename\config\tmp" -ItemType Directory -ErrorAction SilentlyContinue
+    #New-Item -Path "$Env:local\src\LOCKER\$Env:sitename\config\tmp" -ItemType Directory
     #& cmd /c mklink getmac-copy.bat "$Env:local\src\build\getmac-copy.bat"
     #mklink combine-locker-properties.bat %LOCKERINSTALL%\build\combine-locker-properties.bat
     #CALL combine-locker-properties.bat

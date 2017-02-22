@@ -3,7 +3,7 @@
 
 # 99-DeploymentConfig - setup variables, functions
 $host.ui.RawUI.WindowTitle = "99-DeploymentConfig"
-#$basename = $MyInvocation.MyCommand.Name
+
 
 
 
@@ -25,7 +25,7 @@ Write-Host "$basename - Loading Modules ..."
 #--------------------------------------------------------------------
 
 # Import BitsTransfer ...
-if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
+if (!(Get-Module BitsTransfer)) {
 	Import-Module BitsTransfer
 } else {
 	# BitsTransfer module already loaded ... clear queue
@@ -40,7 +40,7 @@ Write-Host "$basename - Setting Variables ..."
 $ErrorActionPreference = "Continue"
 $PSDefaultParameterValues += @{'*:Verbose' = $true}
 $PSDefaultParameterValues += @{'*:Confirm' = $false}
-$PSDefaultParameterValues.Add("*:ErrorAction","SilentlyContinue")
+$PSDefaultParameterValues.Add("*:ErrorAction","Continue")
 
 $now = Get-Date -Format "yyyy-MM-ddTHH:mm"
 
