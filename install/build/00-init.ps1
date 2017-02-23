@@ -16,10 +16,10 @@ $timer = Start-TimedSection "00-init"
 ## Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
-	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
-	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-	1..5 | % { Write-Host }
-	exit
+    Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    1..5 | % { Write-Host }
+    exit
 }
 
 # backup
@@ -33,19 +33,19 @@ Write-Host "$basename - Loading Modules ..."
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer)) {
-	Import-Module BitsTransfer
+    Import-Module BitsTransfer
 } else {
-	# BitsTransfer module already loaded ... clear queue
-	Get-BitsTransfer | Complete-BitsTransfer
+    # BitsTransfer module already loaded ... clear queue
+    Get-BitsTransfer | Complete-BitsTransfer
 }
 
 if (Test-Path "C:\local\lib\WASP.dll") {
-  Import-Module "C:\local\lib\WASP.dll"
+    Import-Module "C:\local\lib\WASP.dll"
 }
 
 if (Test-Path "C:\ProgramData\chocolatey\bin\choco.exe") {
-  # chocolatey already installed .. check for old version pin
-  C:\ProgramData\chocolatey\bin\choco.exe pin remove --name chocolatey
+    # chocolatey already installed .. check for old version pin
+    C:\ProgramData\chocolatey\bin\choco.exe pin remove --name chocolatey
 }
 
 choco feature enable -n=allowGlobalConfirmation
@@ -86,10 +86,10 @@ Write-Host "Checking if OS is Windows 7"
 
 $BuildNumber = Get-WindowsBuildNumber
 if ($BuildNumber -le 7601) {
-	# Windows 7 RTM=7600, SP1=7601
-	WriteSuccess "PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
+    # Windows 7 RTM=7600, SP1=7601
+    WriteSuccess "PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
 } else {
-	WriteErrorAndExit "`t FAIL: Windows version $BuildNumber detected and is not supported. Exiting"
+    WriteErrorAndExit "`t FAIL: Windows version $BuildNumber detected and is not supported. Exiting"
 }
 
 # --------------------------------------------------------------------------------------------
@@ -103,19 +103,19 @@ Write-Host "$basename -- Setup D drive ..."
 
 WriteInfo "$basename --- Debug..."
 Get-WmiObject Win32_Volume | Where-Object { $_.filesystem -Match "ntfs" } | sort { $_.name } | Foreach-Object {
-  Write-Output "$(echo $_.name) [$(echo $_.label)]"
+    Write-Output "$(echo $_.name) [$(echo $_.label)]"
 }
 
 WriteInfo "$basename --- Checking if VM ..."
 if ((Get-WmiObject -Class Win32_ComputerSystem).Model -eq "VMware Virtual Platform") {
-	#New-Item -ItemType Directory -Path "C:\mnt\d" -Force
-	#New-Item -ItemType Directory -Path "C:\mnt\e" -Force
-	#c:\windows\system32\cmd.exe /c 'subst d: "C:\mnt\d"'
-	#c:\windows\system32\cmd.exe /c 'subst e: "C:\mnt\e"'
-	if (!(Test-Path -Path "D:\done.txt")) {
-	Write-Host "$basename -- Prepare D drive"
+    #New-Item -ItemType Directory -Path "C:\mnt\d" -Force
+    #New-Item -ItemType Directory -Path "C:\mnt\e" -Force
+    #c:\windows\system32\cmd.exe /c 'subst d: "C:\mnt\d"'
+    #c:\windows\system32\cmd.exe /c 'subst e: "C:\mnt\e"'
+    if (!(Test-Path -Path "D:\done.txt")) {
+        Write-Host "$basename -- Prepare D drive"
 
-$diskpartD = @"
+        $diskpartD = @"
 select disk=1
 clean
 create partition primary
@@ -123,15 +123,15 @@ select partition=1
 format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
 assign letter=D
 "@
-	Set-Content -Path C:\diskpartD.txt -Value $diskpartD
-	diskpart /s C:\diskpartD.txt
-	New-Item -ItemType File -Path "D:\done"
-}
+        Set-Content -Path C:\diskpartD.txt -Value $diskpartD
+        diskpart /s C:\diskpartD.txt
+        New-Item -ItemType File -Path "D:\done"
+    }
 
-	if (!(Test-Path -Path "e:\done")) {
-		Write-Host "$basename -- Prepare E drive"
+    if (!(Test-Path -Path "e:\done")) {
+        Write-Host "$basename -- Prepare E drive"
 
-$diskpartE = @"
+        $diskpartE = @"
 select disk=2
 clean
 create partition primary
@@ -139,10 +139,10 @@ select partition=1
 format FS=NTFS LABEL="logs" QUICK
 assign letter=E
 "@
-	Set-Content -Path C:\diskpartE.txt -Value $diskpartE
-	diskpart /s C:\diskpartE.txt
-	New-Item -ItemType File -Path "E:\done"
-	}
+        Set-Content -Path C:\diskpartE.txt -Value $diskpartE
+        diskpart /s C:\diskpartE.txt
+        New-Item -ItemType File -Path "E:\done"
+    }
 }
 
 # --------------------------------------------------------------------------------------------
@@ -151,135 +151,152 @@ Write-Host "$basename -- Camera Discovery ..."
 
 if (Test-Path -Path "C:\local\bin\upnpscan.exe") {
 
-	# logic too tricky to implement ... just do it by force
-	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ")
-	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
-	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
-	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
-	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
-	if (!([uri]$CameraDiscover[1])) { Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") }
+    # logic too tricky to implement ... just do it by force
+    $CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ")
+    if (!([uri]$CameraDiscover[1])) {
+        Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") 
+    }
+    if (!([uri]$CameraDiscover[1])) {
+        Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") 
+    }
+    if (!([uri]$CameraDiscover[1])) {
+        Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") 
+    }
+    if (!([uri]$CameraDiscover[1])) {
+        Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") 
+    }
+    if (!([uri]$CameraDiscover[1])) {
+        Start-Sleep -Seconds 2 ; 	$CameraDiscover = (C:\local\bin\upnpscan.exe -m -iA | Select-String LOCATION).ToString().Split(" ") 
+    }
 
-	# if uPnP Scan success ... found upnp device - now need to verify if it is axis camera ...
-	if ($CameraDiscover[1]) {
-		$uri = ([uri]$CameraDiscover[1]).AbsoluteURI
-		[xml]$xx = Invoke-WebRequest -Uri $uri -DisableKeepAlive -UseBasicParsing
-		# if manufacturer = AXIS, yay!
-		if ($xx.root.device.manufacturer = "AXIS") {
-			Write-Host "$basename --- found camera"
+    # if uPnP Scan success ... found upnp device - now need to verify if it is axis camera ...
+    if ($CameraDiscover[1]) {
+        $uri = ([uri]$CameraDiscover[1]).AbsoluteURI
+        [xml]$xx = Invoke-WebRequest -Uri $uri -DisableKeepAlive -UseBasicParsing
+        # if manufacturer = AXIS, yay!
+        if ($xx.root.device.manufacturer = "AXIS") {
+            WriteSuccess "$basename --- found camera"
+            Write-Host "$basename --- found camera"
 
-			# try defaults
-			$CameraDefaultUser = "root"
-			$CameraDefaultPass = ConvertTo-SecureString -String "pass" -AsPlainText -Force
+            # try defaults
+            $CameraDefaultUser = "root"
+            $CameraDefaultPass = ConvertTo-SecureString -String "pass" -AsPlainText -Force
 
-			# just use $cred ...
-			$cred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList $CameraDefaultUser, $CameraDefaultPass
-			# $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
+            # just use $cred ...
+            $cred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList $CameraDefaultUser, $CameraDefaultPass
+            # $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
 
-			# AXIS F34 Network Camera - $xx.root.device.modelDescription
-			Install-ChocolateyEnvironmentVariable "CameraUrl" "NULL"
-			$env:CameraUrl = $xx.root.device.presentationURL
+            # AXIS F34 Network Camera - $xx.root.device.modelDescription
+            Install-ChocolateyEnvironmentVariable "CameraUrl" "NULL"
+            $env:CameraUrl = $xx.root.device.presentationURL
 
-			Install-ChocolateyEnvironmentVariable "CameraIpAddress" "0.0.0.0"
-			$env:CameraIpAddress = ([Uri]"$env:CameraUrl").Host
+            Install-ChocolateyEnvironmentVariable "CameraIpAddress" "0.0.0.0"
+            $env:CameraIpAddress = ([Uri]"$env:CameraUrl").Host
 
-			Install-ChocolateyEnvironmentVariable "CameraManufacturer" "NULL"
-			$env:CameraManufacturer = "$xx.root.device.manufacturer"
+            Install-ChocolateyEnvironmentVariable "CameraManufacturer" "NULL"
+            $env:CameraManufacturer = "$xx.root.device.manufacturer"
 
-			Install-ChocolateyEnvironmentVariable "CameraSerialNumber" "NULL"
-			$env:CameraSerialNumber = "$xx.root.device.serialNumber"
+            Install-ChocolateyEnvironmentVariable "CameraSerialNumber" "NULL"
+            $env:CameraSerialNumber = "$xx.root.device.serialNumber"
 
-			# "AXIS F34"
-			Write-Host "$basename --- Camera IP Address: " ([Uri]$CameraDiscover[1]).Host
-			Write-Host "$basename --- Camera friendlyName: " $xx.root.device.friendlyName
-			Write-Host "$basename --- Camera modelName: " $xx.root.device.modelName
-			Write-Host "$basename --- Camera modelDescription: " $xx.root.device.modelDescription
-			Write-Host "$basename --- Camera serialNumber: " $xx.root.device.serialNumber
+            # "AXIS F34"
+            Write-Host "$basename --- Camera IP Address: " ([Uri]$CameraDiscover[1]).Host
+            Write-Host "$basename --- Camera friendlyName: " $xx.root.device.friendlyName
+            Write-Host "$basename --- Camera modelName: " $xx.root.device.modelName
+            Write-Host "$basename --- Camera modelDescription: " $xx.root.device.modelDescription
+            Write-Host "$basename --- Camera serialNumber: " $xx.root.device.serialNumber
 
-			$CameraUrl = $xx.root.device.presentationURL
+            $CameraUrl = $xx.root.device.presentationURL
 
-			# Test ...
-			#Invoke-WebRequest -UseBasicParsing -Uri $env:CameraUrl
+            # Test ...
+            #Invoke-WebRequest -UseBasicParsing -Uri $env:CameraUrl
 
-			Write-Host "$basename --- Testing - Rebooting Camera ..."
-			$CameraUrlReboot = $CameraUrl + "axis-cgi/restart.cgi"
-			Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlReboot"
-			if ($?) {
-				Write-Host "$basename --- Camera reboot successful ... Proceed to additional configuration"
-				$CameraUrlJpg = $CameraUrl + "jpg/image.jpg"
-				Invoke-WebRequest -Credential $cred -Uri $CameraUrlJpg -OutFile "e:\images\image.jpg"
+            Write-Host "$basename --- Testing - Rebooting Camera ..."
+            $CameraUrlReboot = $CameraUrl + "axis-cgi/restart.cgi"
+            Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlReboot"
+            if ($?) {
+                Write-Host "$basename --- Camera reboot successful ... Proceed to additional configuration"
+                $CameraUrlJpg = $CameraUrl + "jpg/image.jpg"
+                Invoke-WebRequest -Credential $cred -Uri $CameraUrlJpg -OutFile "e:\images\image.jpg"
 
-				Write-Host "$basename --- Camera Config - Get server report"
-				$CameraUrlSrvRpt = $CameraUrl + "axis-cgi/serverreport.cgi"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlSrvRpt"
+                Write-Host "$basename --- Camera Config - Get server report"
+                $CameraUrlSrvRpt = $CameraUrl + "axis-cgi/serverreport.cgi"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlSrvRpt"
 
-				Write-Host "$basename --- Camera Config - List all params in Network group"
-				$CameraUrlCfg = $CameraUrl + "axis-cgi/param.cgi?action=list&group=Network"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlCfg"
+                Write-Host "$basename --- Camera Config - List all params in Network group"
+                $CameraUrlCfg = $CameraUrl + "axis-cgi/param.cgi?action=list&group=Network"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlCfg"
 
-				Write-Host "$basename --- Camera Config - Set network services ..."
-				$CameraUrlFtp = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.FTP.Enabled=no"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlFtp"
+                Write-Host "$basename --- Camera Config - Set network services ..."
+                $CameraUrlFtp = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.FTP.Enabled=no"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlFtp"
 
-				$CameraUrlSsh = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.SSH.Enabled=no"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlSsh"
+                $CameraUrlSsh = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.SSH.Enabled=no"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlSsh"
 
-				$CameraUrlIpV6 = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.IPv6.Enabled=yes"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlIpV6"
-				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Properties.HTTPS.HTTPS=yes"
+                $CameraUrlIpV6 = $CameraUrl + "axis-cgi/param.cgi?action=update&root.Network.IPv6.Enabled=yes"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlIpV6"
+                #Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$env:CameraUrl/axis-cgi/param.cgi?action=update&root.Properties.HTTPS.HTTPS=yes"
 
-				Write-Host "$basename --- Camera Config - Set time"
-				$CameraUrlTime1 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.ObtainFromDHCP=no"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime1"
+                Write-Host "$basename --- Camera Config - Set time"
+                $CameraUrlTime1 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.ObtainFromDHCP=no"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime1"
 
-				$CameraUrlTime2 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.SyncSource=NTP"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime2"
+                $CameraUrlTime2 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.SyncSource=NTP"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime2"
 
-				$CameraUrlTime3 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.DST.Enabled=no"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime3"
+                $CameraUrlTime3 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.DST.Enabled=no"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime3"
 
-				$CameraUrlTime4 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.POSIXTimeZone=CST-8"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime4"
+                $CameraUrlTime4 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.POSIXTimeZone=CST-8"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime4"
 
-				$CameraUrlTime5 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.NTP.Server=hk.pool.ntp.org"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime5"
+                $CameraUrlTime5 = $CameraUrl + "axis-cgi/param.cgi?action=update&Time.NTP.Server=hk.pool.ntp.org"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlTime5"
 
-				#Write-Host "$basename --- Camera Config - Enable and configure https"
-				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.AllowSSLV3=no"
-				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Ciphers=AES256-SHA:AES128-SHA:DES-CBC3-SHA"
-				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Enabled=yes"
-				#Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Port=443"
+                #Write-Host "$basename --- Camera Config - Enable and configure https"
+                #Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.AllowSSLV3=no"
+                #Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Ciphers=AES256-SHA:AES128-SHA:DES-CBC3-SHA"
+                #Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Enabled=yes"
+                #Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrl/axis-cgi/param.cgi?action=update&HTTPS.Port=443"
 
-				Write-Host "$basename --- Camera Config - set image text overlay"
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.BGColor=black"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                Write-Host "$basename --- Camera Config - set image text overlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.BGColor=black"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.ClockEnabled=yes"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.ClockEnabled=yes"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.Color=white"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.Color=white"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.DateEnabled=yes"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.DateEnabled=yes"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.Position=top"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.Position=top"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.String=$env:COMPUTERNAME"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.String=$env:COMPUTERNAME"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.TextEnabled=yes"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.TextEnabled=yes"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				$CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.TextSize=small"
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
+                $CameraUrlOverlay = $CameraUrl + "axis-cgi/param.cgi?action=update&Image.I0.Text.TextSize=small"
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlOverlay"
 
-				# done, now reboot camera
-				Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlReboot"
-			}
-		} else { Write-Host "$basename -- No Axis camera found ... Skipping camera setup" }
-	} else { Write-Host "$basename -- device detected but not a camera" }
-} else { Write-Host "$basename -- tools missing, try again later ..." }
+                # done, now reboot camera
+                Invoke-WebRequest -UseBasicParsing -Credential $cred -Uri "$CameraUrlReboot"
+            }
+        } else {
+            Write-Host "$basename -- No Axis camera found ... Skipping camera setup" 
+        }
+    } else {
+        Write-Host "$basename -- device detected but not a camera" 
+    }
+} else {
+    Write-Host "$basename -- tools missing, try again later ..." 
+}
 
 
 #--------------------------------------------------------------------
@@ -383,9 +400,11 @@ $obj = new-object -com wscript.shell
 $obj.SendKeys([char]173)
 
 #  Disable user from enabling the startup sound
+Set-RegistryKey -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name DisableStartupSound -Value 1
 REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
 
 # Somehow setting DisableStartupSound = 0 here actually disables the sound
+Set-RegistryKey -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" -Name DisableStartupSound -Value 0
 REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 0 /f
 
 # And finally, change the sound scheme to No Sound:
@@ -399,6 +418,7 @@ Write-Host "$basename - Before login ..."
 Write-Host "$basename - set logon UI Background image"
 # enable custom logon background
 #HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background
+Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1 -Force
 WriteInfoHighlighted "."
 
@@ -420,8 +440,8 @@ Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Windows" -Name Er
 # Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PCHealth\ErrorReporting" -Name "DoReport" -Value 0 -Force
 
 # Turn off Windows SideShow
-REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Slideshow" /v Disabled /d 1 /f
 Set-RegistryKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Sideshow" -Name "Disabled" -Value 1
+REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Slideshow" /v Disabled /d 1 /f
 
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowOff" -Force
 
@@ -434,10 +454,12 @@ New-Item -ItemType File "C:\local\bin\autologon.bat"
 #Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 
+Set-RegistryKey -Path "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'EnableBalloonTips' -Value 0
 REG ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0 /f
 
 Write-Host "$basename --  Adjust UI for Best Performance"
 REG LOAD "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
+Set-RegistryKey -Path "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name 'VisualFXSetting' -Value 2
 REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
 # Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Force
 REG UNLOAD "hku\temp"
@@ -499,7 +521,9 @@ Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Feeds" -Name "SyncStat
 $psDrive = Remove-PSDrive HKUDefaultUser
 # Clean up references not in use
 $variables = Get-Variable | Where { $_.Name -ne "userLoadPath" } | foreach { $_.Name }
-foreach($var in $variables) { Remove-Variable $var }
+foreach($var in $variables) {
+    Remove-Variable $var 
+}
 [gc]::collect()
 # Unload Hive
 REG unload $userLoadPath | Out-Host
@@ -589,7 +613,7 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # Disable Autorun for all drives
 Write-Host "$basename - Disabling Autorun for all drives..."
 If (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")) {
-	New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" | Out-Null
+    New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" | Out-Null
 }
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 255
 
@@ -798,7 +822,9 @@ Write-Host "$basename - Make some directories"
 
 # important directories - create directories as early as possible ...
 "E:\images\archive","$Env:SystemRoot\System32\oobe\info\backgrounds","$env:local\status","$env:local\lib","$env:local\logs","$env:local\src","$env:local\gpo","$env:local\etc","$Env:local\drivers","$Env:local\bin","$Env:imagesarchive","$Env:images","~\Documents\WindowsPowerShell","~\Desktop\LockerDeployment","~\Documents\PSConfiguration","D:\locker-libs","$Env:_tmp","$Env:logs" | ForEach-Object {
-  if (!( Test-Path "$_" )) { New-Item -ItemType Directory -Path "$_"}
+    if (!( Test-Path "$_" )) {
+        New-Item -ItemType Directory -Path "$_"
+    }
 } # ForEach-Object ...
 
 # --------------------------------------------------------------------------------------------
@@ -806,20 +832,47 @@ Write-Host "$basename - Make some Files"
 # --------------------------------------------------------------------------------------------
 
 "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" | ForEach-Object {
-	#New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File | Out-Null
-  if (!( Test-Path "$_" )) { New-Item -ItemType File -Path "$_" -Force }
+    #New-Item -Path "~\Documents\PSConfiguration\Microsoft.PowerShell_profile.ps1" -ItemType File | Out-Null
+    if (!( Test-Path "$_" )) {
+        New-Item -ItemType File -Path "$_" -Force 
+    }
 } # ForEach-Object ...
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Get some basic tools"
 # --------------------------------------------------------------------------------------------
 ## ,"SysinternalsSuite.zip"
-"new-service-core.bat","new-service-datacollection.bat","new-service-kioskserver.bat","new-service-scanner.bat","makecert.exe","pvk2pfx.exe","mailsend.exe","Bginfo.exe","Autologon.exe","curl.exe","speedtest-cli.exe","devcon.exe","hstart.exe","nircmd.exe","nircmdc.exe","nssm.exe","sendEmail.exe","UPnPScan.exe","du.exe","LGPO.exe","BootUpdCmd20.exe","psexec.exe" | ForEach-Object {
-	# better if we used Get-FileHash, but no time to write good code ...
-	if (!(Test-Path "$env:local\bin\$_")) {
-		Start-BitsTransfer -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -DisplayName "LockerLifeLocalBin" -Description "Download LockerLife Local Tools $_" -TransferType Download -RetryInterval 60
-		} else { WriteInfoHighlighted "$basename -- Skipping $_" }
-	}
+$downloadList = @(
+    "new-service-core.bat",
+    "new-service-datacollection.bat",
+    "new-service-kioskserver.bat",
+    "new-service-scanner.bat",
+    "makecert.exe",
+    "pvk2pfx.exe",
+    "mailsend.exe",
+    "Bginfo.exe",
+    "Autologon.exe",
+    "curl.exe",
+    "speedtest-cli.exe",
+    "devcon.exe",
+    "hstart.exe",
+    "nircmd.exe",
+    "nircmdc.exe",
+    "nssm.exe",
+    "sendEmail.exe",
+    "UPnPScan.exe",
+    "du.exe",
+    "LGPO.exe",
+    "BootUpdCmd20.exe",
+    "psexec.exe")
+ForEach ($downloadTools in $downloadList) {
+    # better if we used Get-FileHash to check, but no time to write good code ...
+    if (!(Test-Path "$env:local\bin\$_")) {
+        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -DisplayName "LockerLifeLocalBin" -Description "Download LockerLife Local Tools $_" -TransferType Download -RetryInterval 60
+    } else {
+        WriteInfoHighlighted "$basename -- Skipping $_" 
+    }
+}
 #commit the downloaded files
 Get-BitsTransfer | Complete-BitsTransfer
 
@@ -832,37 +885,43 @@ Get-BitsTransfer | Complete-BitsTransfer
 
 Write-Host "$basename -- Download System Settings Files ..."
 "2017-01-gpo.zip","kiosk-production-black.bgi","lockerlife-boot.bs7","lockerlife-boot-custom.bs7","pantone-classic-blue.bmp","pantone-classic-blue.jpg","pantone-process-black-c.bmp","pantone-process-black-c.jpg","production-admin.bgi","production-kiosk.bgi","PRODUCTION-201701-TEAMVIEWER-HOST.reg","production-gpo.zip" | ForEach-Object {
-	# better if we used Get-FileHash, but no time to write good code ...
-	if (!(Test-Path "$env:local\etc\$_")) {
-		Start-BitsTransfer -Source "http://lockerlife.hk/deploy/etc/$_" -Destination "$env:local\etc\$_" -DisplayName "LockerLifeLocalEtc" -Description "Download LockerLife System Settings $_" -TransferType Download -RetryInterval 60
-	} else { WriteInfoHighlighted "$basename -- Skipping $_" }
+    # better if we used Get-FileHash, but no time to write good code ...
+    if (!(Test-Path "$env:local\etc\$_")) {
+        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/etc/$_" -Destination "$env:local\etc\$_" -DisplayName "LockerLifeLocalEtc" -Description "Download LockerLife System Settings $_" -TransferType Download -RetryInterval 60
+    } else {
+        WriteInfoHighlighted "$basename -- Skipping $_" 
+    }
 } # ForEach-Object ...
 #commit the downloaded files
 Get-BitsTransfer | Complete-BitsTransfer
 
 "WASP.dll" | ForEach-Object {
-	# better if we used Get-FileHash, but no time to write good code ...
-	if (!(Test-Path "$_")) {
-		Start-BitsTransfer -Source "http://lockerlife.hk/deploy/lib/$_" -Destination "$env:local\lib\$_" -DisplayName "LockerLifeLocalLib" -Description "Download LockerLife Local Libraries $_" -TransferType Download -RetryInterval 60
-	} else { WriteInfoHighlighted "$basename -- Skipping $_" }
+    # better if we used Get-FileHash, but no time to write good code ...
+    if (!(Test-Path "$_")) {
+        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/lib/$_" -Destination "$env:local\lib\$_" -DisplayName "LockerLifeLocalLib" -Description "Download LockerLife Local Libraries $_" -TransferType Download -RetryInterval 60
+    } else {
+        WriteInfoHighlighted "$basename -- Skipping $_" 
+    }
 } # ForEach-Object
 #commit the downloaded files
 Get-BitsTransfer | Complete-BitsTransfer
 
 Write-Host "$basename -- Download Installers ..."
 "jre-8u111-windows-i586.exe","jre-install.properties","Windows6.1-KB2889748-x86.msu","402810_intl_i386_zip.exe" | ForEach-Object {
-	# better if we used Get-FileHash, but no time to write good code ...
-	if (!(Test-Path "$_")) {
-		Start-BitsTransfer -Source "http://lockerlife.hk/deploy/_pkg/$_" -Destination "$Env:_tmp\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife Installer $_" -TransferType Download -RetryInterval 60
-	} else { WriteInfoHighlighted "$basename -- Skipping $_" }
+    # better if we used Get-FileHash, but no time to write good code ...
+    if (!(Test-Path "$_")) {
+        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/_pkg/$_" -Destination "$Env:_tmp\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife Installer $_" -TransferType Download -RetryInterval 60
+    } else {
+        WriteInfoHighlighted "$basename -- Skipping $_" 
+    }
 }
 # commit the downloaded files
 Get-BitsTransfer | Complete-BitsTransfer
 
 # fix if vm
 if (Test-Path "C:\Wallpaper") {
-	Copy-Item -Path "C:\Wallpaper\autologon.bat" -Destination "C:\Wallpaper\autologon2.bat" -Force
-	Copy-Item -Path "C:\autoexec.bat" -Destination "C:\Wallpaper\autologon.bat" -Force
+    Copy-Item -Path "C:\Wallpaper\autologon.bat" -Destination "C:\Wallpaper\autologon2.bat" -Force
+    Copy-Item -Path "C:\autoexec.bat" -Destination "C:\Wallpaper\autologon.bat" -Force
 }
 
 # --------------------------------------------------------------------------------------------
@@ -875,74 +934,75 @@ Write-Host "$basename -- Disable Windows Services"
 #"upnphost", # UPnP Device Host
 
 $disableServices = @(
- "SensrSvc", # Adaptive Brightness
- "ALG", # Application Layer Gateway Service
- "BDESVC", # BitLocker Drive Encryption Service
- "wbengine", # Block Level Backup Engine Service
- "bthserv", # Bluetooth Support Service
- "PeerDistSvc", # BranchCache
- "Browser", # Computer Browser
- "UxSms", # Desktop Window Manager Session Manager - Disable only if Aero not necessary
- "DPS", # Diagnostic Policy Service
- "WdiServiceHost", # Diagnostic Service Host
- "WdiSystemHost", # Diagnostic System Host
- "TrkWks", # Distributed Link Tracking Client
- "EFS", # Encrypting File System (EFS)
- "Fax", # Fax - Not present in Windows 7 Enterprise
- "fdPHost", # Function Discovery Provider Host
- "FDResPub", # Function Discovery Resource Publication
- "HomeGroupListener", # HomeGroup Listener - Not present in Windows 7 Enterprise
- "HomeGroupProvider", # HomeGroup Provider
- "UI0Detect", # Interactive Services Detection
- "iphlpsvc", # IP Helper
- "Mcx2Svc", # Media Center Extender Service
- "MSiSCSI", # Microsoft iSCSI Initiator Service
- "netprofm", # Network List Service
- "NlaSvc", # Network Location Awareness
- "CscService", # Offline Files
- "WPCSvc", # Parental Controls
- "wercplsupport", # Problem Reports and Solutions Control Panel Support
- "SstpSvc", # Secure Socket Tunneling Protocol Service
- "wscsvc", # Security Center
- "SSDPSRV", # SSDP Discovery
- "TapiSrv", # Telephony
- "Themes", # Themes - Disable only if you want to run in Classic interface
- "SDRSVC", # Windows Backup
- "WcsPlugInService", # Windows Color System
- "wcncsvc", # Windows Connect Now - Config Registrar
- "WerSvc", # Windows Error Reporting Service
- "ehRecvr", # Windows Media Center Receiver Service
- "ehSched", # Windows Media Center Scheduler Service
- "WMPNetworkSvc", # Windows Media Player Network Sharing Service
- "WSearch", # Windows Search
- "idsvc", # Windows CardSpace Service
- "vmictimesync",
- "vmicvss",
- "vmickvpexchange",
- "vmicshutdown",
- "vmicheartbeat"
+    "SensrSvc", # Adaptive Brightness
+    "ALG", # Application Layer Gateway Service
+    "BDESVC", # BitLocker Drive Encryption Service
+    "wbengine", # Block Level Backup Engine Service
+    "bthserv", # Bluetooth Support Service
+    "PeerDistSvc", # BranchCache
+    "Browser", # Computer Browser
+    "UxSms", # Desktop Window Manager Session Manager - Disable only if Aero not necessary
+    "DPS", # Diagnostic Policy Service
+    "WdiServiceHost", # Diagnostic Service Host
+    "WdiSystemHost", # Diagnostic System Host
+    "TrkWks", # Distributed Link Tracking Client
+    "EFS", # Encrypting File System (EFS)
+    "Fax", # Fax - Not present in Windows 7 Enterprise
+    "fdPHost", # Function Discovery Provider Host
+    "FDResPub", # Function Discovery Resource Publication
+    "HomeGroupListener", # HomeGroup Listener - Not present in Windows 7 Enterprise
+    "HomeGroupProvider", # HomeGroup Provider
+    "UI0Detect", # Interactive Services Detection
+    "iphlpsvc", # IP Helper
+    "Mcx2Svc", # Media Center Extender Service
+    "MSiSCSI", # Microsoft iSCSI Initiator Service
+    "netprofm", # Network List Service
+    "NlaSvc", # Network Location Awareness
+    "CscService", # Offline Files
+    "WPCSvc", # Parental Controls
+    "wercplsupport", # Problem Reports and Solutions Control Panel Support
+    "SstpSvc", # Secure Socket Tunneling Protocol Service
+    "wscsvc", # Security Center
+    "SSDPSRV", # SSDP Discovery
+    "TapiSrv", # Telephony
+    "Themes", # Themes - Disable only if you want to run in Classic interface
+    "SDRSVC", # Windows Backup
+    "WcsPlugInService", # Windows Color System
+    "wcncsvc", # Windows Connect Now - Config Registrar
+    "WerSvc", # Windows Error Reporting Service
+    "ehRecvr", # Windows Media Center Receiver Service
+    "ehSched", # Windows Media Center Scheduler Service
+    "WMPNetworkSvc", # Windows Media Player Network Sharing Service
+    "WSearch", # Windows Search
+    "idsvc", # Windows CardSpace Service
+    "vmictimesync",
+    "vmicvss",
+    "vmickvpexchange",
+    "vmicshutdown",
+    "vmicheartbeat"
 )
 foreach ($service in $disableServices) {
-	Stop-Service -Name $service -Force
-	# sc.exe config $service start= disabled
-	# Start-Process "C:\Windows\system32\sc.exe" -ArgumentList "config SensrSvc start= disabled" -PassThru -NoNewWindow -Wait
-	Set-Service -Name $service -StartupType Disabled
+    Stop-Service -Name $service -Force
+    # sc.exe config $service start= disabled
+    # Start-Process "C:\Windows\system32\sc.exe" -ArgumentList "config SensrSvc start= disabled" -PassThru -NoNewWindow -Wait
+    Set-Service -Name $service -StartupType Disabled
 }
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Disable built-in scheduled tasks we do not need"
 # --------------------------------------------------------------------------------------------
 $tasksToDisable = @(
-	"microsoft\windows\Maintenance\WinSAT",
-	"microsoft\windows\Ras\MobilityManager",
-	"microsoft\windows\SideShow\AutoWake",
-	"microsoft\windows\SideShow\GadgetManager",
-	"microsoft\windows\SideShow\SessionAgent",
-	"microsoft\windows\SideShow\SystemDataProviders",
-	"microsoft\windows\Windows Media Sharing\UpdateLibrary"
+    "microsoft\windows\Maintenance\WinSAT",
+    "microsoft\windows\Ras\MobilityManager",
+    "microsoft\windows\SideShow\AutoWake",
+    "microsoft\windows\SideShow\GadgetManager",
+    "microsoft\windows\SideShow\SessionAgent",
+    "microsoft\windows\SideShow\SystemDataProviders",
+    "microsoft\windows\Windows Media Sharing\UpdateLibrary"
 )
-foreach ($task in $tasksToDisable) {
-	schtasks /change /tn $task /Disable
+foreach -parallel ($task in $tasksToDisable) {
+    schtasks.exe /change /tn $task /Disable
+    Start-Sleep -Seconds 2
 }
 
 # --------------------------------------------------------------------------------------------
@@ -972,21 +1032,21 @@ NET USER Administrator Locision123
 
 $U = Get-WmiObject -class Win32_UserAccount | Where-Object { $_.Name -eq "AAICON" }
 if ($U) {
-	WriteInfo "$basename -- AAICON user exists"
-	WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
-	net user AAICON Locision123
+    WriteInfo "$basename -- AAICON user exists"
+    WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
+    net user AAICON Locision123
 } else {
-	Write-Host "$basename -- fixing AAICON user account ..."
-	#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123' -NoNewWindow
-	#& "c:\local\bin\autologon.exe" AAICON Locision123
-	#[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]
-	#"AutoAdminLogon"="1"
-	#"DefaultUserName"="admnistrator"
-	#"DefaultPassword"="P@$$w0rd"
-	#"DefaultDomainName"="contoso"
-	#Start-ChocolateyProcessAsAdmin -statements $args -exeToRun $vcdmount
-	net user AAICON Locision123
-	net user AAICON Locision123 /add /expires:never /passwordchg:no
+    Write-Host "$basename -- fixing AAICON user account ..."
+    #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user AAICON Locision123' -NoNewWindow
+    #& "c:\local\bin\autologon.exe" AAICON Locision123
+    #[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]
+    #"AutoAdminLogon"="1"
+    #"DefaultUserName"="admnistrator"
+    #"DefaultPassword"="P@$$w0rd"
+    #"DefaultDomainName"="contoso"
+    #Start-ChocolateyProcessAsAdmin -statements $args -exeToRun $vcdmount
+    net user AAICON Locision123
+    net user AAICON Locision123 /add /expires:never /passwordchg:no
 }
 
 # add taskbot account
@@ -1041,8 +1101,8 @@ Set-Location -Path "$Env:SystemRoot\System32"
 choco feature enable -n=allowGlobalConfirmation
 
 if (Test-Path "C:\ProgramData\chocolatey\bin\choco.exe") {
-  # chocolatey already installed .. check for old version pin
-  C:\ProgramData\chocolatey\bin\choco.exe pin remove --name chocolatey
+    # chocolatey already installed .. check for old version pin
+    C:\ProgramData\chocolatey\bin\choco.exe pin remove --name chocolatey
 }
 cinst chocolatey
 cinst Boxstarter
