@@ -18,10 +18,10 @@ $timer = Start-TimedSection "00-bootstrap"
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
-  Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
-  Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-  1..5 | % { Write-Host }
-  exit
+    Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    1..5 | % { Write-Host }
+    exit
 }
 
 ## backup
@@ -35,14 +35,14 @@ Write-Host "$basename - Loading Modules ..."
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
-	Import-Module BitsTransfer
+    Import-Module BitsTransfer
 } else {
-	# BitsTransfer module already loaded ... clear queue
-	Get-BitsTransfer | Complete-BitsTransfer
+    # BitsTransfer module already loaded ... clear queue
+    Get-BitsTransfer | Complete-BitsTransfer
 }
 
 if (Test-Path C:\local\lib\WASP.dll) {
-  Import-Module C:\local\lib\WASP.dll
+    Import-Module C:\local\lib\WASP.dll
 }
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
@@ -67,7 +67,7 @@ Select-Window -Title "Administrator`: 00-init" | Send-Keys ~
 
 Start-Sleep -Seconds 2
 if (Select-Window -Title "00-init") {
-  Select-Window -Title "00-init" | Send-Keys ~
+    Select-Window -Title "00-init" | Send-Keys ~
 }
 
 # Start Time and Transcript
@@ -85,10 +85,10 @@ Write-Host "Checking if OS is Windows 7"
 
 $BuildNumber=Get-WindowsBuildNumber
 if ($BuildNumber -le 7601) {
-  # Windows 7 RTM=7600, SP1=7601
-  WriteSuccess "`t PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
+    # Windows 7 RTM=7600, SP1=7601
+    WriteSuccess "`t PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
 } else {
-  WriteErrorAndExit "`t FAIL: Windows version $BuildNumber detected and is not supported. Exiting"
+    WriteErrorAndExit "`t FAIL: Windows version $BuildNumber detected and is not supported. Exiting"
 }
 
 
@@ -185,12 +185,12 @@ Start-Sleep -Seconds 5
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
 if (!( Test-Path "$env:local\status\powershell4-ngen.ok" -ErrorAction SilentlyContinue)) {
-  New-Item -Type File -Path "$env:local\status\powershell4-ngen.ok" -Force
-  iex ((New-Object System.Net.WebClient).DownloadString('http://lockerlife.hk/deploy/fix-powershell4-performance.ps1'))
+    New-Item -Type File -Path "$env:local\status\powershell4-ngen.ok" -Force
+    iex ((New-Object System.Net.WebClient).DownloadString('http://lockerlife.hk/deploy/fix-powershell4-performance.ps1'))
 }
 
 if ($PSVersionTable.PSVersion.Major -gt 4) {
-  Install-PackageProvider -Name NuGet -Force
+    Install-PackageProvider -Name NuGet -Force
 }
 
 #cinst powershell-packagemanagement
@@ -233,11 +233,13 @@ Breathe
 
 # --------------------------------------------------------------------------------------------
 if (!(Test-Path "$JAVA_HOME\java.exe")) {
-  Write-Host "`n $basename -- Installing Java jre"
-  & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
-  Breathe
-  # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
-} else { Write-Host "`n $basename -- Java already installed, skipping ..." }
+    Write-Host "`n $basename -- Installing Java jre"
+    & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
+    Breathe
+    # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
+} else {
+    Write-Host "`n $basename -- Java already installed, skipping ..." 
+}
 
 Breathe
 
@@ -335,11 +337,11 @@ Get-BitsTransfer | Complete-BitsTransfer
 # Make bginfo run on startup/login
 # & "$Env:local\bin\bginfo.exe" "$Env:local\etc\production-admin-bginfo.bgi" /nolicprompt /silent /timer:0
 if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\bginfo.lnk")) {
-  $WshShell = New-Object -comObject WScript.Shell
-  $Shortcut = $WshShell.CreateShortcut("C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\bginfo.lnk")
-  $Shortcut.TargetPath = "$Env:local\bin\Bginfo.exe"
-  $Shortcut.Arguments = "$Env:local\etc\production-kiosk.bgi /nolicprompt /timer:0 /silent"
-  $Shortcut.Save()
+    $WshShell = New-Object -comObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut("C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\bginfo.lnk")
+    $Shortcut.TargetPath = "$Env:local\bin\Bginfo.exe"
+    $Shortcut.Arguments = "$Env:local\etc\production-kiosk.bgi /nolicprompt /timer:0 /silent"
+    $Shortcut.Save()
 }
 
 

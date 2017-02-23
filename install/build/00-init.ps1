@@ -113,7 +113,7 @@ if ((Get-WmiObject -Class Win32_ComputerSystem).Model -eq "VMware Virtual Platfo
     #c:\windows\system32\cmd.exe /c 'subst d: "C:\mnt\d"'
     #c:\windows\system32\cmd.exe /c 'subst e: "C:\mnt\e"'
     if (!(Test-Path -Path "D:\done.txt")) {
-        Write-Host "$basename -- Prepare D drive"
+        WriteInfoHighlighted "$basename -- Prepare D drive"
 
         $diskpartD = @"
 select disk=1

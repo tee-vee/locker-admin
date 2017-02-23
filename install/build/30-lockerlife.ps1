@@ -15,10 +15,10 @@ $timer = Start-TimedSection "30-lockerlife"
 # Verify Running as Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 If (!( $isAdmin )) {
-	Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
-	Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-	1..5 | % { Write-Host }
-	exit
+    Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    1..5 | % { Write-Host }
+    exit
 }
 
 ## backup
@@ -32,14 +32,14 @@ Write-Host "$basename - Loading Modules ..."
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
-	Import-Module BitsTransfer
+    Import-Module BitsTransfer
 } else {
-	# BitsTransfer module already loaded ... clear queue
-	Get-BitsTransfer | Complete-BitsTransfer
+    # BitsTransfer module already loaded ... clear queue
+    Get-BitsTransfer | Complete-BitsTransfer
 }
 
 if (Test-Path C:\local\lib\WASP.dll) {
-  Import-Module C:\local\lib\WASP.dll
+    Import-Module C:\local\lib\WASP.dll
 }
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
@@ -97,17 +97,21 @@ Set-Location -Path "D:\"
 
 # lockerlife production
 "RunLockerLifeConsole.bat","RunLockerLifeTV.bat","core.jar","data-collection.jar","run-manual.bat","run-test.bat","run.bat","scanner.jar","production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-	if (!(Test-Path $_)) {
-		Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/app/$_" -Destination "D:\$_" -Description "Download LockerLife Console Setup File $_" -TransferType Download -RetryInterval 60
-	} else { Write-Host "$basename -- Skipping $_" }
+    if (!(Test-Path $_)) {
+        Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/app/$_" -Destination "D:\$_" -Description "Download LockerLife Console Setup File $_" -TransferType Download -RetryInterval 60
+    } else {
+        Write-Host "$basename -- Skipping $_" 
+    }
 }
 Get-BitsTransfer | Complete-BitsTransfer
 
 "production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
-	if (Test-Path $_) {
-		C:\ProgramData\chocolatey\bin\unzip.exe -o $_
-		#Remove-Item $_ -Force -Confirm:$false -Force
-	} else { Write-Host "$basename --- $_ missing" }
+    if (Test-Path $_) {
+        C:\ProgramData\chocolatey\bin\unzip.exe -o $_
+        #Remove-Item $_ -Force -Confirm:$false -Force
+    } else {
+        Write-Host "$basename --- $_ missing" 
+    }
 }
 
 #schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
@@ -162,7 +166,7 @@ Set-Location -Path "D:\locker-libs"
 
 #Get-Content D:\locker-libs\locker-libs-list.txt | xargs -n 1 curl --progress-bar -k -LO
 Get-Content -Path "D:\locker-libs\locker-libs-list.txt" | ForEach-Object {
-	Add-Content -Path "D:\locker-libs\locker-libs-list-transfer.ps1" "Start-BitsTransfer -DisplayName LockerLifeLibraryDownload -TransferType Download -RetryInterval 60 -Source $_ -Destination D:\locker-libs"
+    Add-Content -Path "D:\locker-libs\locker-libs-list-transfer.ps1" "Start-BitsTransfer -DisplayName LockerLifeLibraryDownload -TransferType Download -RetryInterval 60 -Source $_ -Destination D:\locker-libs"
 }
 
 # Foreach ($file in Get-Content $lockerlibs\$liblist) {
@@ -186,39 +190,47 @@ Write-Host "$basename - Install LockerLife Services"
 
 $chkservice = Get-Service -Name scanner -ErrorAction SilentlyContinue
 if (!($?)) {
-	WriteInfoHighlighted "`t $basename -- INSTALL SCANNER AS SERVICE"
-	#CALL %LOCKERINSTALL%\build\new-service-scanner.bat
-	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
-	Start-Process -FilePath $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
-} else { Write-Host "Scanner service installed." }
+    WriteInfoHighlighted "`t $basename -- INSTALL SCANNER AS SERVICE"
+    #CALL %LOCKERINSTALL%\build\new-service-scanner.bat
+    #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
+    Start-Process -FilePath $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
+} else {
+    Write-Host "Scanner service installed." 
+}
 Write-Host "."
 
 
 $chkservice = Get-Service -Name kioskserver -ErrorAction SilentlyContinue
 if (!($?)) {
-	WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
-	#CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
-	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
-	Start-Process -FilePath $Env:local\bin\new-service-kioskserver.bat -Verb RunAs -Wait
-	Write-Host "."
-} else { Write-Host "Kioskserver service installed."}
+    WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
+    #CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
+    #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
+    Start-Process -FilePath $Env:local\bin\new-service-kioskserver.bat -Verb RunAs -Wait
+    Write-Host "."
+} else {
+    Write-Host "Kioskserver service installed."
+}
 
 $chkservice = Get-Service -Name "data-collection" -ErrorAction SilentlyContinue
 if (!($?)) {
-	WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION AS SERVICE"
-	#CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
-	#CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
-	Start-Process -FilePath $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
-} else { Write-Host "Data-Collection service installed."}
+    WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION AS SERVICE"
+    #CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
+    #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
+    Start-Process -FilePath $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
+} else {
+    Write-Host "Data-Collection service installed."
+}
 Write-Host "."
 
 $chkservice = Get-Service -Name core -ErrorAction SilentlyContinue
 if (!($?)) {
-	WriteInfoHighlighted "$basename -- INSTALL CORE AS SERVICE"
-	## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
-	Start-Process -FilePath $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
-	Write-Host "."
-} else { Write-Host "Core service installed."}
+    WriteInfoHighlighted "$basename -- INSTALL CORE AS SERVICE"
+    ## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
+    Start-Process -FilePath $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
+    Write-Host "."
+} else {
+    Write-Host "Core service installed."
+}
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Manage LockerLife User Accounts ..."

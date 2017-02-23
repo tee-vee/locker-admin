@@ -15,7 +15,7 @@ Disable-UAC
 Update-ExecutionPolicy Unrestricted
 
 # Skipping 10 lines because if running when all prereqs met, statusbar covers powershell output
- 1..10 |% { Write-Host ""}
+1..10 |% { Write-Host ""}
 
 
 ##############
@@ -80,18 +80,16 @@ if (!$Env:sitename) {
     #move locker.properties.part1 %_tmp%
     #move locker.properties.part2 %_tmp%
 
-    if ($Env:sitename -like 'UFO*')
-    {
-      # rename as UFO
-      Install-ChocolateyEnvironmentVariable "UfoIccid" "NULL"
-      $Env:UfoIccid = $Env:iccid.SubString($Env:iccid.Length-5)
-      Write-Host "$Env:UfoIccid"
-      Rename-Computer -NewName "UFO-$Env:UfoIccid" -Restart
+    if ($Env:sitename -like 'UFO*') {
+        # rename as UFO
+        Install-ChocolateyEnvironmentVariable "UfoIccid" "NULL"
+        $Env:UfoIccid = $Env:iccid.SubString($Env:iccid.Length-5)
+        Write-Host "$Env:UfoIccid"
+        Rename-Computer -NewName "UFO-$Env:UfoIccid" -Restart
     }
-    else
-    {
-      Uninstall-ChocolateyEnvironmentVariable -VariableName 'UfoIccid'
-      Rename-Computer -NewName "$Env:sitename" -Restart
+    else {
+        Uninstall-ChocolateyEnvironmentVariable -VariableName 'UfoIccid'
+        Rename-Computer -NewName "$Env:sitename" -Restart
     }
 
     Add-Computer -WorkGroupName "LOCKERLIFE.HK"
@@ -104,7 +102,9 @@ if (!$Env:sitename) {
     Write-Host ""
 }
 
-if (Test-PendingReboot) { Invoke-Reboot }
+if (Test-PendingReboot) {
+    Invoke-Reboot 
+}
 
 #############
 # finishing #

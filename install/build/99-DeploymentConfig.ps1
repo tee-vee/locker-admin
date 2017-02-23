@@ -26,10 +26,10 @@ Write-Host "$basename - Loading Modules ..."
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer)) {
-	Import-Module BitsTransfer
+    Import-Module BitsTransfer
 } else {
-	# BitsTransfer module already loaded ... clear queue
-	Get-BitsTransfer | Complete-BitsTransfer
+    # BitsTransfer module already loaded ... clear queue
+    Get-BitsTransfer | Complete-BitsTransfer
 }
 
 
@@ -82,12 +82,10 @@ $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
 ## REMINDER: either set both $Env:variable only set $Env:variable
 
 Install-ChocolateyEnvironmentVariable "baseurl" "http://lockerlife.hk"
-$env:baseurl = "http://lockerlife.hk"
-$baseurl = $Env:baseurl
+$baseurl = "http://lockerlife.hk"
 
 Install-ChocolateyEnvironmentVariable "deployurl" "http://lockerlife.hk/deploy"
-$env:deployurl = "http://lockerlife.hk/deploy"
-$deployurl = $Env:deployurl
+$deployurl = "http://lockerlife.hk/deploy"
 
 Install-ChocolateyEnvironmentVariable "domainname" "lockerlife.hk"
 $domainname = $env:domainname
@@ -106,8 +104,7 @@ $env:hostname = [System.Environment]::MachineName
 $hostname = [System.Environment]::MachineName
 
 Install-ChocolateyEnvironmentVariable "local" "C:\local"
-$env:local = "C:\local"
-$local = $Env:local
+$local = "C:\local"
 
 Install-ChocolateyEnvironmentVariable "sitename" "NULL"
 $sitename = $Env:sitename
@@ -120,10 +117,10 @@ Write-Host "$basename -- External IP Address Discovery ..."
 Install-ChocolateyEnvironmentVariable "RouterExternalIpAddress" "0.0.0.0"
 
 if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
-  $WebClient = New-Object System.Net.WebClient
-  $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | ConvertFrom-JSON).origin
-  $RouterExternalIpAddress = $env:RouterExternalIpAddress
-  Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
+    $WebClient = New-Object System.Net.WebClient
+    $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | ConvertFrom-JSON).origin
+    $RouterExternalIpAddress = $env:RouterExternalIpAddress
+    Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
 }
 
 Write-Host "$basename -- Console PC Internal IP Address Discovery ..."
@@ -135,47 +132,39 @@ Write-Host "$basename -- Console PC Internal IP Address: $env:LocalIPAddress"
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
 #Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
 Install-ChocolateyEnvironmentVariable 'JAVA_HOME' "D:\java\jre\bin"
-$JAVA_HOME = $Env:JAVA_HOME
+$JAVA_HOME = "D:\java\jre\bin"
 
 Install-ChocolateyEnvironmentVariable '_tmp' 'C:\temp'
 $_tmp = "C:\temp"
 $_temp = "C:\temp"
-$env:_tmp = $_tmp
 
 Install-ChocolateyEnvironmentVariable 'logs' 'E:\logs'
-$env:logs = "E:\logs"
-$logs = $env:logs
+$logs = "E:\logs"
 
 Install-ChocolateyEnvironmentVariable 'images' 'E:\images'
-$env:images = "E:\images"
-$images = $env:images
+$images = "E:\images"
 
 Install-ChocolateyEnvironmentVariable 'imagesarchive' 'E:\images\archive'
-$env:imagesarchive = "E:\images\archive"
-$imagesarchive = $env:imagesarchive
+$imagesarchive = "E:\images\archive"
 
 Install-ChocolateyEnvironmentVariable 'curl' "c:\local\bin\curl.exe"
-$env:curl = "$local\bin\curl.exe"
-$curl = $env:curl
+$curl = "$local\bin\curl.exe"
 
 Install-ChocolateyEnvironmentVariable 'rm' "$Env:ProgramFiles\Gow\bin\rm.exe"
 
 Install-ChocolateyEnvironmentVariable 'kioskprofile' 'c:\users\kiosk'
 
 Install-ChocolateyEnvironmentVariable 'smtphost' 'hwsmtp.exmail.qq.com'
-$env:smtphost = $smtphost
+$smtphost = 'hwsmtp.exmail.qq.com'
 
 Install-ChocolateyEnvironmentVariable 'smtpport' '465'
 $smtpport = '465'
-$env:smtpport = $smtpport
 
 Install-ChocolateyEnvironmentVariable 'emailUser' "pi-admin@locision.com"
 $emailUser = "pi-admin@locision.com"
-$env:emailUser = $emailUser
 
 Install-ChocolateyEnvironmentVariable 'SMTP_USER_PASS' 'Locision1707'
 $SMTP_USER_PASS = "Locision1707"
-$env:SMTP_USER_PASS = $SMTP_USER_PASS
 
 # determine user ...
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent()
@@ -209,88 +198,88 @@ Write-Host "$basename - Functions"
 #--------------------------------------------------------------------
 function SetConsoleWindow {
 
-	# set window size
-	$H = Get-Host
-	$Win = $H.UI.RawUI.WindowSize
-	$Win.Width = 150
-	$Win.Height = 50
-	$H.UI.RawUI.Set_WindowSize($Win)
+    # set window size
+    $H = Get-Host
+    $Win = $H.UI.RawUI.WindowSize
+    $Win.Width = 150
+    $Win.Height = 50
+    $H.UI.RawUI.Set_WindowSize($Win)
 
-	$H = Get-Host
-	$Win = $H.UI.RawUI.BufferSize
-	$Win.Width = 150
-	$Win.height = 5000
-	$H.UI.RawUI.Set_BufferSize($Win)
-	$host.UI.RawUI.ForegroundColor = "DarkYellow"
-	$host.UI.RawUI.BackgroundColor = "Black"
+    $H = Get-Host
+    $Win = $H.UI.RawUI.BufferSize
+    $Win.Width = 150
+    $Win.height = 5000
+    $H.UI.RawUI.Set_BufferSize($Win)
+    $host.UI.RawUI.ForegroundColor = "DarkYellow"
+    $host.UI.RawUI.BackgroundColor = "Black"
 }
 
 function NewScheduledTask {
-	$jobname = "Recurring PowerShell Task"
-	# make sure script returns $true or $false or else scheduling won't work properly
-	$script =  "C:\local\bin\Test-ExampleScript.ps1 -Server $env:computername"
-	$repeat = (New-TimeSpan -Minutes 5)
+    $jobname = "Recurring PowerShell Task"
+    # make sure script returns $true or $false or else scheduling won't work properly
+    $script =  "C:\local\bin\Test-ExampleScript.ps1 -Server $env:computername"
+    $repeat = (New-TimeSpan -Minutes 5)
 
-	# The script below will run as the specified user (you will be prompted for credentials)
-	# and is set to be elevated to use the highest privileges.
-	# In addition, the task will run every 5 minutes or however long specified in $repeat.
-	$action = New-ScheduledTaskAction –Execute "$pshome\powershell.exe" -Argument  "$script; quit"
-	$duration = ([timeSpan]::maxvalue)
-	$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval $repeat -RepetitionDuration $duration
+    # The script below will run as the specified user (you will be prompted for credentials)
+    # and is set to be elevated to use the highest privileges.
+    # In addition, the task will run every 5 minutes or however long specified in $repeat.
+    $action = New-ScheduledTaskAction –Execute "$pshome\powershell.exe" -Argument  "$script; quit"
+    $duration = ([timeSpan]::maxvalue)
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval $repeat -RepetitionDuration $duration
 
-	$msg = "Enter the username and password that will run the task";
-	$credential = $Host.UI.PromptForCredential("Task username and password",$msg,"$env:userdomain\$env:username",$env:userdomain)
-	$username = $credential.UserName
-	$password = $credential.GetNetworkCredential().Password
-	$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -DontStopOnIdleEnd
+    $msg = "Enter the username and password that will run the task";
+    $credential = $Host.UI.PromptForCredential("Task username and password",$msg,"$env:userdomain\$env:username",$env:userdomain)
+    $username = $credential.UserName
+    $password = $credential.GetNetworkCredential().Password
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -DontStopOnIdleEnd
 
-	Register-ScheduledTask -TaskName $jobname -Action $action -Trigger $trigger -RunLevel Highest -User $username -Password $password -Settings $settings
+    Register-ScheduledTask -TaskName $jobname -Action $action -Trigger $trigger -RunLevel Highest -User $username -Password $password -Settings $settings
 }
 
 function NewScheduledJob {
-	# Change these three variables to whatever you want
-	$jobname = 'Recurring PowerShell Task'
-	$script =  "C:\local\bin\Test-ExampleScript.ps1 -Server server1"
-	$repeat = (New-TimeSpan -Minutes 5)
+    # Change these three variables to whatever you want
+    $jobname = 'Recurring PowerShell Task'
+    $script =  "C:\local\bin\Test-ExampleScript.ps1 -Server server1"
+    $repeat = (New-TimeSpan -Minutes 5)
 
-	# The script below will run as the specified user (you will be prompted for credentials)
-	# and is set to be elevated to use the highest privileges.
-	# In addition, the task will run every 5 minutes or however long specified in $repeat.
-	$scriptblock = [scriptblock]::Create($script)
-	$trigger = New-JobTrigger -Once -At (Get-Date).Date -RepeatIndefinitely -RepetitionInterval $repeat
-	$msg = "Enter the username and password that will run the task";
-	$credential = $Host.UI.PromptForCredential("Task username and password",$msg,"$env:userdomain\$env:username",$env:userdomain)
+    # The script below will run as the specified user (you will be prompted for credentials)
+    # and is set to be elevated to use the highest privileges.
+    # In addition, the task will run every 5 minutes or however long specified in $repeat.
+    $scriptblock = [scriptblock]::Create($script)
+    $trigger = New-JobTrigger -Once -At (Get-Date).Date -RepeatIndefinitely -RepetitionInterval $repeat
+    $msg = "Enter the username and password that will run the task";
+    $credential = $Host.UI.PromptForCredential("Task username and password",$msg,"$env:userdomain\$env:username",$env:userdomain)
 
-	$options = New-ScheduledJobOption -RunElevated
-	Register-ScheduledJob -Name $jobname -ScriptBlock $scriptblock -Trigger $trigger -ScheduledJobOption $options -Credential $credential
+    $options = New-ScheduledJobOption -RunElevated
+    Register-ScheduledJob -Name $jobname -ScriptBlock $scriptblock -Trigger $trigger -ScheduledJobOption $options -Credential $credential
 }
 
 function Test-4G {
-	Write-Host "$basename -- Running Internet Connection Speed Test ..."
-	$SpeedTestResults = "c:\temp\speedtest.txt"
-	C:\local\bin\speedtest-cli.exe | Out-File -Encoding utf8 $SpeedTestResults
-	Get-Content $SpeedTestResults | Select -Skip 1 | Out-File -Encoding utf8 c:\temp\speedtest8.txt
-	Move-Item c:\temp\speedtest8.txt $SpeedTestResults -Force
-	$ehlo_domain = "locision.com"
-	$to = "derekyuen@lockerlife.hk"
-	$replyto = "pi-admin@locision.com"
-	$from = "locker-deploy@locision.com"
-	$fromname = "Locker Deployment"
-	$returnpath = "pi-admin@locision.com"
-	$subject = "testing"
-	$attach = "c:\temp\speedtest.txt"
-	$mailbody = "message body"
-	$mimetype = "text/plain"
-	#$extargs = " -ehlo -info"
-	#Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer $smtphost -Port $smtpport -UseSsl -Credential (Get-Credential) -Debug
-	C:\local\bin\mailsend.exe -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment speed test" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
+    Write-Host "$basename -- Running Internet Connection Speed Test ..."
+    $SpeedTestResults = "c:\temp\speedtest.txt"
+    C:\local\bin\speedtest-cli.exe | Out-File -Encoding utf8 $SpeedTestResults
+    Get-Content $SpeedTestResults | Select -Skip 1 | Out-File -Encoding utf8 c:\temp\speedtest8.txt
+    Move-Item c:\temp\speedtest8.txt $SpeedTestResults -Force
+    $ehlo_domain = "locision.com"
+    $to = "derekyuen@lockerlife.hk"
+    $replyto = "pi-admin@locision.com"
+    $from = "locker-deploy@locision.com"
+    $fromname = "Locker Deployment"
+    $returnpath = "pi-admin@locision.com"
+    $subject = "testing"
+    $attach = "c:\temp\speedtest.txt"
+    $mailbody = "message body"
+    $mimetype = "text/plain"
+    #$extargs = " -ehlo -info"
+    #Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer $smtphost -Port $smtpport -UseSsl -Credential (Get-Credential) -Debug
+    C:\local\bin\mailsend.exe -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment speed test" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
 }
 
 function Download-File {
-  param ([string]$url,[string]$file)
-  Write-Host "Downloading $url to $file"
-  $downloader = new-object System.Net.WebClient
-  $downloader.DownloadFile($url, $file)
+    param ([string]$url,[string]$file)
+    Write-Host "Downloading $url to $file"
+    $downloader = new-object System.Net.WebClient
+    $downloader.DownloadFile($url, $file)
 }
 
 function Get-SystemDrive {
@@ -298,7 +287,7 @@ function Get-SystemDrive {
 }
 
 function Test-IsAdministrator {
-  <#
+    <#
   .Synopsis
       Tests if the user is an administrator
   .Description
@@ -306,86 +295,85 @@ function Test-IsAdministrator {
   .Example
       Test-IsAdministrator
   #>
-  param()
-  $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-  (New-Object Security.Principal.WindowsPrincipal $currentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    param()
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    (New-Object Security.Principal.WindowsPrincipal $currentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 } #end function Test-IsAdministrator
 
-function OkToDeploy
-{
-  # If (C:\DEPLOYMENT-UNAUTHORIZED) {
-  #   WriteError "Deployment Unauthorized"
-  #   WriteError "Contact email: locker-admin@lockerlife.hk
-  #   WriteErrorAndExit "Exiting ..."
-  #}
+function OkToDeploy {
+    # If (C:\DEPLOYMENT-UNAUTHORIZED) {
+    #   WriteError "Deployment Unauthorized"
+    #   WriteError "Contact email: locker-admin@lockerlife.hk
+    #   WriteErrorAndExit "Exiting ..."
+    #}
 }
 
 function ConfigureDisk {
-  # list disks (raw disks)
-  # wmic diskdrive list brief
-  Get-WmiObject -Class Win32_DiskDrive | Where-Object { $_.Partitions -eq 0 }
+    # list disks (raw disks)
+    # wmic diskdrive list brief
+    Get-WmiObject -Class Win32_DiskDrive | Where-Object { $_.Partitions -eq 0 }
 
-  # list volumes
-  # wmic volume list brief
+    # list volumes
+    # wmic volume list brief
 
-  # using diskpart
-  Write-Host "$basename -- Setup D drive"
-  #select disk=1
-  #create partition primary
-  #select partition=1
-  #format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
-  #assign letter="D"
-  #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/9b597a682a2fe6fee417be5039445da7/raw/20430a6353efa49f2cb8f03a3c75ecef009a2e9e/diskpart-d.txt","C:\local\etc\diskpart-d.txt")
+    # using diskpart
+    Write-Host "$basename -- Setup D drive"
+    #select disk=1
+    #create partition primary
+    #select partition=1
+    #format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
+    #assign letter="D"
+    #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/9b597a682a2fe6fee417be5039445da7/raw/20430a6353efa49f2cb8f03a3c75ecef009a2e9e/diskpart-d.txt","C:\local\etc\diskpart-d.txt")
 
 
-  # using diskpart
-  Write-Host "$basename -- Setup E drive"
-  #select disk=2
-  #create partition primary
-  #select partition=1
-  #format FS=NTFS UNIT=4906 LABEL="logs" QUICK
-  #assign letter=E
-  #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/ef21fd19a8e91c0cc3eef37a9557ad49/raw/b22394680129ffc07e1ff76685427319a5f704bd/diskpart-e.txt","C:\local\etc\diskpart-e.txt")
+    # using diskpart
+    Write-Host "$basename -- Setup E drive"
+    #select disk=2
+    #create partition primary
+    #select partition=1
+    #format FS=NTFS UNIT=4906 LABEL="logs" QUICK
+    #assign letter=E
+    #(New-Object System.Net.WebClient).DownloadFile("https://gist.githubusercontent.com/tee-vee/ef21fd19a8e91c0cc3eef37a9557ad49/raw/b22394680129ffc07e1ff76685427319a5f704bd/diskpart-e.txt","C:\local\etc\diskpart-e.txt")
 }
 
 # Function to set a registry property value and create the registry key if it doesn't exist
 Function Set-RegistryKey {
-	[CmdletBinding()]
-	Param(
-		[Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Item Path",Position=1)]
-		$Path,
-		[Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Item Name",Position=2)]
-		$Name,
-		[Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Property Item Value",Position=3)]
-		$Value,
-		[Parameter(Mandatory=$False,HelpMessage="Please Enter Registry Property Type",Position=4)]
-		$PropertyType = "DWORD"
-	)
-	# If path does not exist, create it
-	if ((Test-Path $Path) -eq $False ) {
-		$newItem = New-Item -Path $Path -Force
-	}
-	# Update registry value, create it if does not exist (DWORD is default)
-	$itemProperty = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
-	if($itemProperty -ne $null) {
-		$itemProperty = Set-ItemProperty -Path $Path -Name $Name -Value $Value
-	} else {
-		$itemProperty = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $PropertyType
-	}
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Item Path",Position=1)]
+        $Path,
+        [Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Item Name",Position=2)]
+        $Name,
+        [Parameter(Mandatory=$True,HelpMessage="Please Enter Registry Property Item Value",Position=3)]
+        $Value,
+        [Parameter(Mandatory=$False,HelpMessage="Please Enter Registry Property Type",Position=4)]
+        $PropertyType = "DWORD"
+    )
+    # If path does not exist, create it
+    if ((Test-Path $Path) -eq $False ) {
+        $newItem = New-Item -Path $Path -Force
+    }
+    # Update registry value, create it if does not exist (DWORD is default)
+    $itemProperty = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+    if($itemProperty -ne $null) {
+        $itemProperty = Set-ItemProperty -Path $Path -Name $Name -Value $Value
+    } else {
+        $itemProperty = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $PropertyType
+    }
 }
 
 function Breathe {
-  # Let libs/modules load ...
-  1..5 | % { Write-Host " -- "}
+    # Let libs/modules load ...
+    1..5 | % { Write-Host " -- "}
 }
 
 function AddTo-7zip($zipFileName) {
     BEGIN {
         #$7zip = "$($env:ProgramFiles)\7-zip\7z.exe"
         $7zip = Find-Program "\7-zip\7z.exe"
-		if(!([System.IO.File]::Exists($7zip))){
-			throw "7zip not found";
-		}
+        if(!([System.IO.File]::Exists($7zip))){
+            throw "7zip not found";
+        }
     }
     PROCESS {
         & $7zip a -tzip $zipFileName $_
@@ -395,63 +383,63 @@ function AddTo-7zip($zipFileName) {
 }
 
 function touch($file) {
-	if (Test-Path $file) {
-		$f = get-item $file;
-		$d = get-date
-		$f.LastWriteTime = $d
-	} else {
-		"" | out-file -FilePath $file -Encoding ASCII
-	} #else
+    if (Test-Path $file) {
+        $f = get-item $file;
+        $d = get-date
+        $f.LastWriteTime = $d
+    } else {
+        "" | out-file -FilePath $file -Encoding ASCII
+    } #else
 }
 
 
 function WriteInfo($message) {
-  Write-Host $message
+    Write-Host $message
 }  #end function WriteInfo
 
 function WriteInfoHighlighted($message) {
-  Write-Host $message -ForegroundColor Cyan
+    Write-Host $message -ForegroundColor Cyan
 }  #end function WriteInfoHighlighted
 
 function WriteSuccess($message) {
-  Write-Host $message -ForegroundColor Green
+    Write-Host $message -ForegroundColor Green
 }  #end function WriteSuccess
 
 function WriteError($message) {
-	Write-Host $message -ForegroundColor Red
+    Write-Host $message -ForegroundColor Red
 }
 
 function WriteErrorAndExit($message) {
-	Write-Host $message -ForegroundColor Red
-	Write-Host "Press any key to continue ..."
-	$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
-	$host.UI.RawUI.Flushinputbuffer()
-	Exit
+    Write-Host $message -ForegroundColor Red
+    Write-Host "Press any key to continue ..."
+    $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
+    $host.UI.RawUI.Flushinputbuffer()
+    Exit
 }  #end function WriteErrorAndExit
 
 function Get-WindowsBuildNumber {
-	$os = Get-WmiObject -Class Win32_OperatingSystem
-	return [int]($os.BuildNumber)
+    $os = Get-WmiObject -Class Win32_OperatingSystem
+    return [int]($os.BuildNumber)
 }  #end function Get-WindowsBuildNumber
 
 function Create-DeploymentLinks {
-	Write-Host "$basename -- Create-DeploymentLinks"
-	Set-Alias InstChocoSCut Install-ChocolateyShortcut
-	## create shortcut to deployment - 00-bootstrap
-	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$env:deployurl" -Description "Locker Deployment Website"
-	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00bootstrap.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-bootstrap.ps1" -Description "00-bootstrap"
-	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00init.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
-	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/10-identify.ps1" -Description "10-identify"
-	InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-30.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/30-lockerlife.ps1" -Description "30-lockerlife"
+    Write-Host "$basename -- Create-DeploymentLinks"
+    Set-Alias InstChocoSCut Install-ChocolateyShortcut
+    ## create shortcut to deployment - 00-bootstrap
+    InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$env:deployurl" -Description "Locker Deployment Website"
+    InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00bootstrap.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-bootstrap.ps1" -Description "00-bootstrap"
+    InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-00init.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/00-init.ps1" -Description "00-init"
+    InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-10.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/10-identify.ps1" -Description "10-identify"
+    InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\Deployment-30.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$env:deployurl/30-lockerlife.ps1" -Description "30-lockerlife"
 }  #end function Create-DeploymentLinks
 
 
 function Get-UserSID {
-	$PatternSID = 'S-1-5-21-\d+-\d+\-\d+\-\d+$'
-	Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*' | Where-Object {$_.PSChildName -match $PatternSID} |
-	select  @{name="SID";expression={$_.PSChildName}},
-          @{name="UserHive";expression={"$($_.ProfileImagePath)\ntuser.dat"}},
-          @{name="Username";expression={$_.ProfileImagePath -replace '^(.*[\\\/])', ''}}
+    $PatternSID = 'S-1-5-21-\d+-\d+\-\d+\-\d+$'
+    Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*' | Where-Object {$_.PSChildName -match $PatternSID} |
+    select  @{name="SID";expression={$_.PSChildName}},
+    @{name="UserHive";expression={"$($_.ProfileImagePath)\ntuser.dat"}},
+    @{name="Username";expression={$_.ProfileImagePath -replace '^(.*[\\\/])', ''}}
 }
 
 #function Make-Shortcut {
@@ -464,12 +452,20 @@ function Get-UserSID {
 #  $Shortcut.Save()
 #}
 
-function Is64Bit { [IntPtr]::Size -eq 8 }
+function Is64Bit {
+    [IntPtr]::Size -eq 8 
+}
 
 function Enable-Net40 {
-    if(Is64Bit) {$fx="framework64"} else {$fx="framework"}
+    if(Is64Bit) {
+        $fx="framework64"
+    } else {
+        $fx="framework"
+    }
     if(!(test-path "$env:windir\Microsoft.Net\$fx\v4.0.30319")) {
-        if((Test-PendingReboot) -and $Boxstarter.RebootOk) {return Invoke-Reboot}
+        if((Test-PendingReboot) -and $Boxstarter.RebootOk) {
+            return Invoke-Reboot
+        }
         Write-BoxstarterMessage "Downloading .net 4.5..."
         Get-HttpResource "http://download.microsoft.com/download/b/a/4/ba4a7e71-2906-4b2d-a0e1-80cf16844f5f/dotnetfx45_full_x86_x64.exe" "$env:temp\net45.exe"
         Write-BoxstarterMessage "Installing .net 4.5..."
@@ -477,44 +473,61 @@ function Enable-Net40 {
             Invoke-FromTask @"
 Start-Process "$env:temp\net45.exe" -verb runas -wait -argumentList "/quiet /norestart /log $Env:temp\net45.log"
 "@
-        }
-        else {
+        } else {
             $proc = Start-Process "$Env:temp\net45.exe" -verb runas -argumentList "/quiet /norestart /log $Env:temp\net45.log" -PassThru
-            while(!$proc.HasExited){ sleep -Seconds 1 }
+            while(!$proc.HasExited){
+                sleep -Seconds 1 
+            }
         }
     }
 }
 
 Function Rename-ComputerName ([string]$NewComputerName) {
- 	$ComputerInfo = Get-WmiObject -Class Win32_ComputerSystem
-	$ComputerInfo.Rename($NewComputerName)
+    $ComputerInfo = Get-WmiObject -Class Win32_ComputerSystem
+    $ComputerInfo.Rename($NewComputerName)
 }
 
 ## cleanup desktop
 function CleanupDesktop {
-	Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
-	w32tm /query /configuration
-	w32tm /query /status
-	w32tm /resync /rediscover /nowait
-	# Internet Explorer: Temp Internet Files:
-	RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
+    Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
+    w32tm /query /configuration
+    w32tm /query /status
+    w32tm /resync /rediscover /nowait
+    # Internet Explorer: Temp Internet Files:
+    RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 
-	"AppData\Roaming\Microsoft\Windows\Libraries\*","AppData\Roaming\Microsoft\Windows\SendTo\*.lnk","SendTo\*.lnk","Recent\*.lnk","LockerDeployment","Desktop\LockerDeployment","Links\*.lnk","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
-		if (Test-Path -Path "$env:UserProfile\$_") { Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force }
-		if (Test-Path -Path "$env:Public\$_") { Remove-Item -Path "$env:Public\$_" -Recurse -Force }
-		if (Test-Path -Path "C:\Users\kiosk\$_") { Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force }
-  }
-  Remove-Item "C:\99-DeploymentConfig.ps1" -Force | Out-Null
-  Enable-UAC
-  Disable-MicrosoftUpdate
+    "AppData\Roaming\Microsoft\Windows\Libraries\*","AppData\Roaming\Microsoft\Windows\SendTo\*.lnk","SendTo\*.lnk","Recent\*.lnk","LockerDeployment","Desktop\LockerDeployment","Links\*.lnk","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
+        if (Test-Path -Path "$env:UserProfile\$_") {
+            Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force 
+        }
+        if (Test-Path -Path "$env:Public\$_") {
+            Remove-Item -Path "$env:Public\$_" -Recurse -Force 
+        }
+        if (Test-Path -Path "C:\Users\kiosk\$_") {
+            Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force 
+        }
+    }
+    Remove-Item "C:\99-DeploymentConfig.ps1" -Force | Out-Null
+    Enable-UAC
+    Disable-MicrosoftUpdate
 }  #end function CleanupDesktop
 
 # Helper functions for user/computer session management
-function invoke-userLogout { shutdown /l /t 0 }
-function invoke-systemShutdown { shutdown /s /t 5 }
-function invoke-systemReboot { shutdown /r /t 5 }
-function invoke-systemSleep { RunDll32.exe PowrProf.dll,SetSuspendState }
-function invoke-terminalLock { RunDll32.exe User32.dll,LockWorkStation }
+function invoke-userLogout {
+    shutdown /l /t 0 
+}
+function invoke-systemShutdown {
+    shutdown /s /t 5 
+}
+function invoke-systemReboot {
+    shutdown /r /t 5 
+}
+function invoke-systemSleep {
+    RunDll32.exe PowrProf.dll,SetSuspendState 
+}
+function invoke-terminalLock {
+    RunDll32.exe User32.dll,LockWorkStation 
+}
 
 Write-Host "$basename - out" -ForegroundColor Green
 
