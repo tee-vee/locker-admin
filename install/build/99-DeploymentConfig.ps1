@@ -134,46 +134,46 @@ Write-Host "$basename -- Console PC Internal IP Address: $env:LocalIPAddress"
 
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
 #Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
-Install-ChocolateyEnvironmentVariable "JAVA_HOME" "D:\java\jre\bin"
+Install-ChocolateyEnvironmentVariable 'JAVA_HOME' "D:\java\jre\bin"
 $JAVA_HOME = $Env:JAVA_HOME
 
-Install-ChocolateyEnvironmentVariable "_tmp" "C:\temp"
+Install-ChocolateyEnvironmentVariable '_tmp' 'C:\temp'
 $_tmp = "C:\temp"
 $_temp = "C:\temp"
 $env:_tmp = $_tmp
 
-Install-ChocolateyEnvironmentVariable "logs" "E:\logs"
+Install-ChocolateyEnvironmentVariable 'logs' 'E:\logs'
 $env:logs = "E:\logs"
 $logs = $env:logs
 
-Install-ChocolateyEnvironmentVariable "images" "E:\images"
+Install-ChocolateyEnvironmentVariable 'images' 'E:\images'
 $env:images = "E:\images"
 $images = $env:images
 
-Install-ChocolateyEnvironmentVariable "imagesarchive" "E:\images\archive"
+Install-ChocolateyEnvironmentVariable 'imagesarchive' 'E:\images\archive'
 $env:imagesarchive = "E:\images\archive"
 $imagesarchive = $env:imagesarchive
 
-Install-ChocolateyEnvironmentVariable "curl" "c:\local\bin\curl.exe"
+Install-ChocolateyEnvironmentVariable 'curl' "c:\local\bin\curl.exe"
 $env:curl = "$local\bin\curl.exe"
 $curl = $env:curl
 
-Install-ChocolateyEnvironmentVariable "rm" "$Env:ProgramFiles\Gow\bin\rm.exe"
+Install-ChocolateyEnvironmentVariable 'rm' "$Env:ProgramFiles\Gow\bin\rm.exe"
 
-Install-ChocolateyEnvironmentVariable "kioskprofile" "c:\users\kiosk"
+Install-ChocolateyEnvironmentVariable 'kioskprofile' 'c:\users\kiosk'
 
-Install-ChocolateyEnvironmentVariable "smtphost" "hwsmtp.exmail.qq.com"
+Install-ChocolateyEnvironmentVariable 'smtphost' 'hwsmtp.exmail.qq.com'
 $env:smtphost = $smtphost
 
-Install-ChocolateyEnvironmentVariable "smtpport" "465"
-$smtpport = "465"
+Install-ChocolateyEnvironmentVariable 'smtpport' '465'
+$smtpport = '465'
 $env:smtpport = $smtpport
 
-Install-ChocolateyEnvironmentVariable "emailUser" "pi-admin@locision.com"
+Install-ChocolateyEnvironmentVariable 'emailUser' "pi-admin@locision.com"
 $emailUser = "pi-admin@locision.com"
 $env:emailUser = $emailUser
 
-Install-ChocolateyEnvironmentVariable "SMTP_USER_PASS" "Locision1707"
+Install-ChocolateyEnvironmentVariable 'SMTP_USER_PASS' 'Locision1707'
 $SMTP_USER_PASS = "Locision1707"
 $env:SMTP_USER_PASS = $SMTP_USER_PASS
 
@@ -181,19 +181,19 @@ $env:SMTP_USER_PASS = $SMTP_USER_PASS
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 
 # Get TeamViewer Client ID
-Install-ChocolateyEnvironmentVariable "TeamViewerClientID" "0"
+Install-ChocolateyEnvironmentVariable 'TeamViewerClientID' '0'
 #$TeamViewerClientID = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
 
 
 #--------------------------------------------------------------------
 Write-Host "$basename - Aliases"
 #--------------------------------------------------------------------
-Set-Alias -Name "iexplore" "C:\Program Files\Internet Explorer\iexplore.exe" -Option AllScope
-Set-Alias -Name "zip" "C:\Program Files\7-Zip\7z.exe" -Option AllScope -Force
-Set-Alias -Name "curl" -Value "C:\local\bin\curl.exe" -Option AllScope -Force
-Set-Alias -Name "logout" invoke-userLogout
-Set-Alias -Name "halt" invoke-systemShutdown
-Set-Alias -Name "restart" invoke-systemReboot
+Set-Alias -Name 'iexplore' "C:\Program Files\Internet Explorer\iexplore.exe" -Option AllScope
+Set-Alias -Name 'zip' "C:\Program Files\7-Zip\7z.exe" -Option AllScope -Force
+Set-Alias -Name 'curl' -Value "C:\local\bin\curl.exe" -Option AllScope -Force
+Set-Alias -Name 'logout' 'invoke-userLogout'
+Set-Alias -Name 'halt' 'invoke-systemShutdown'
+Set-Alias -Name 'restart' 'invoke-systemReboot'
 
 
 #--------------------------------------------------------------------
@@ -249,7 +249,7 @@ function NewScheduledTask {
 
 function NewScheduledJob {
 	# Change these three variables to whatever you want
-	$jobname = "Recurring PowerShell Task"
+	$jobname = 'Recurring PowerShell Task'
 	$script =  "C:\local\bin\Test-ExampleScript.ps1 -Server server1"
 	$repeat = (New-TimeSpan -Minutes 5)
 
