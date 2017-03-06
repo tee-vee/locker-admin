@@ -1,9 +1,10 @@
+#Requires -version 2.0
+
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
 # 99-DeploymentConfig - setup variables, functions
 $host.ui.RawUI.WindowTitle = "99-DeploymentConfig"
-
 
 
 
@@ -88,16 +89,13 @@ Install-ChocolateyEnvironmentVariable "deployurl" "http://lockerlife.hk/deploy"
 $deployurl = "http://lockerlife.hk/deploy"
 
 Install-ChocolateyEnvironmentVariable "domainname" "lockerlife.hk"
-$domainname = $env:domainname
+$domainname = "lockerlife.hk"
 
 Install-ChocolateyEnvironmentVariable "iccid" "NULL"
-$iccid = $Env:iccid
 
 Install-ChocolateyEnvironmentVariable "lockertype" "NULL"
-$lockertype = $Env:lockertype
 
 Install-ChocolateyEnvironmentVariable "lockerserialnumber" "NULL"
-$lockerserialnumber = $Env:lockerserialnumber
 
 Install-ChocolateyEnvironmentVariable "hostname" "NULL"
 $env:hostname = [System.Environment]::MachineName
@@ -107,7 +105,7 @@ Install-ChocolateyEnvironmentVariable "local" "C:\local"
 $local = "C:\local"
 
 Install-ChocolateyEnvironmentVariable "sitename" "NULL"
-$sitename = $Env:sitename
+
 
 Write-Host "$basename -- Router Internal IP Address Discovery ..."
 Install-ChocolateyEnvironmentVariable "RouterInternalIpAddress" "0.0.0.0"
@@ -442,15 +440,15 @@ function Get-UserSID {
     @{name="Username";expression={$_.ProfileImagePath -replace '^(.*[\\\/])', ''}}
 }
 
-#function Make-Shortcut {
-#  # Create a Shortcut with native Windows PowerShell
-#  $TargetFile = "$env:SystemRoot\System32\notepad.exe"
-#  $ShortcutFile = "$env:Public\Desktop\Notepad.lnk"
-#  $WScriptShell = New-Object -ComObject WScript.Shell
-#  $Shortcut = $WScriptShell.CreateShortcut($ShortcutFile)
-#  $Shortcut.TargetPath = $TargetFile
-#  $Shortcut.Save()
-#}
+function Make-Shortcut {
+    # Create a Shortcut with native Windows PowerShell
+    $TargetFile = "$env:SystemRoot\System32\notepad.exe"
+    $ShortcutFile = "$env:Public\Desktop\Notepad.lnk"
+    $WScriptShell = New-Object -ComObject WScript.Shell
+    $Shortcut = $WScriptShell.CreateShortcut($ShortcutFile)
+    $Shortcut.TargetPath = $TargetFile
+    $Shortcut.Save()
+}
 
 function Is64Bit {
     [IntPtr]::Size -eq 8 
