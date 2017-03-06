@@ -1,3 +1,5 @@
+#Requires -version 2.0 -Modules BitsTransfer
+
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
@@ -6,6 +8,8 @@ $host.ui.RawUI.WindowTitle = "00-init"
 
 $basename = "00-init"
 $ErrorActionPreference = "Continue"
+#$PSDefaultParameterValues += @{'Get*:Verbose' = $true}
+#$PSDefaultParameterValues += @{'*:Confirm' = $false}
 
 
 # --------------------------------------------------------------------------------------------
@@ -97,6 +101,13 @@ Write-Host "$basename - START - Update Root Certificates from Microsoft ..."
 # --------------------------------------------------------------------------------------------
 certutil.exe -syncWithWU -f $env:temp
 
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- Update-Help"
+# --------------------------------------------------------------------------------------------
+# powershell.exe -NoProfile -command "& {Update-Help}"
+
+
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Setup D drive ..."
 # --------------------------------------------------------------------------------------------
@@ -124,7 +135,7 @@ format FS=NTFS UNIT=4096 LABEL="LOCKERLIFEAPP" QUICK
 assign letter=D
 "@
         Set-Content -Path C:\diskpartD.txt -Value $diskpartD
-        diskpart /s C:\diskpartD.txt
+        diskpart.exe /s C:\diskpartD.txt
         New-Item -ItemType File -Path "D:\done"
     }
 
@@ -140,7 +151,7 @@ format FS=NTFS LABEL="logs" QUICK
 assign letter=E
 "@
         Set-Content -Path C:\diskpartE.txt -Value $diskpartE
-        diskpart /s C:\diskpartE.txt
+        diskpart.exe /s C:\diskpartE.txt
         New-Item -ItemType File -Path "E:\done"
     }
 }
@@ -423,14 +434,14 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authenti
 WriteInfoHighlighted "."
 
 # Disable Welcome logon screen & require CTRL+ALT+DEL
-REG ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" /v LogonType /t REG_DWORD /d 0 /f
-REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableCAD /t REG_DWORD /d 0 /f
+reg ADD "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" /v LogonType /t REG_DWORD /d 0 /f
+reg ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableCAD /t REG_DWORD /d 0 /f
 
 # Interactive logon: Do not display last user name
-REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dontdisplaylastusername /t REG_DWORD /d 1 /f
+reg ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dontdisplaylastusername /t REG_DWORD /d 1 /f
 
 # suppress errors (production) - need watchdog
-REG add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Windows" /v ErrorMode /t REG_DWORD /d 2 /f
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Windows" /v ErrorMode /t REG_DWORD /d 2 /f
 
 ### Set PopUp Error Mode to "Neither"
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Windows" -Name ErrorMode -Value 2 -Force
@@ -441,7 +452,7 @@ Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Windows" -Name Er
 
 # Turn off Windows SideShow
 Set-RegistryKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Sideshow" -Name "Disabled" -Value 1
-REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Slideshow" /v Disabled /d 1 /f
+reg ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Slideshow" /v Disabled /d 1 /f
 
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowOff" -Force
 
@@ -455,14 +466,14 @@ New-Item -ItemType File "C:\local\bin\autologon.bat"
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 
 Set-RegistryKey -Path "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'EnableBalloonTips' -Value 0
-REG ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0 /f
+reg ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0 /f
 
 Write-Host "$basename --  Adjust UI for Best Performance"
-REG LOAD "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
+reg LOAD "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
 Set-RegistryKey -Path "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name 'VisualFXSetting' -Value 2
-REG ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
+reg ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
 # Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Force
-REG UNLOAD "hku\temp"
+reg UNLOAD "hku\temp"
 
 # --------------------------------------------------------------------
 WriteInfo "$basename --- Setup Default User Registry"
@@ -1021,13 +1032,13 @@ Write-Host "$basename - Manage System User Accounts (no lockerlife accounts)"
 
 WriteInfoHighlighted "$basename - DISABLE GUEST USER"
 # https://technet.microsoft.com/en-us/library/ff687018.aspx
-net user guest /active:no
+net.exe user guest /active:no
 
 WinSAT.exe -v forgethistory
 
 Write-Host "$basename -- Enable Administrator"
-NET USER Administrator /active:yes
-NET USER Administrator Locision123
+net.exe USER Administrator /active:yes
+net.exe USER Administrator Locision123
 #net user administrator /active:no
 
 $U = Get-WmiObject -class Win32_UserAccount | Where-Object { $_.Name -eq "AAICON" }
@@ -1045,8 +1056,8 @@ if ($U) {
     #"DefaultPassword"="P@$$w0rd"
     #"DefaultDomainName"="contoso"
     #Start-ChocolateyProcessAsAdmin -statements $args -exeToRun $vcdmount
-    net user AAICON Locision123
-    net user AAICON Locision123 /add /expires:never /passwordchg:no
+    net.exe user AAICON Locision123
+    net.exe user AAICON Locision123 /add /expires:never /passwordchg:no
 }
 
 # add taskbot account
@@ -1111,6 +1122,7 @@ choco feature disable -n=allowGlobalConfirmation
 
 
 
+Breathe
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Installing Telnet Client (dism/windowsfeatures)"
 cinst TelnetClient -source windowsfeatures
