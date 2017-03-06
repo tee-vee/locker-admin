@@ -475,6 +475,9 @@ reg ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\
 # Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Force
 reg UNLOAD "hku\temp"
 
+# Force Classic Control Panel
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v ForceClassicControlPanel /t reg_dword /d 1 /f
+
 # --------------------------------------------------------------------
 WriteInfo "$basename --- Setup Default User Registry"
 $defaultUserHivePath = $env:SystemDrive + "\Users\Default\NTUSER.DAT"
@@ -491,6 +494,13 @@ Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "MenuShowDel
 # Disable cursor blink
 Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "CursorBlinkRate" -Value -1
 Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DisableCursorBlink" -Value 1
+
+# do not highlight newly installed programs
+Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_NotifyNewApps" -Value 0
+
+
+# force classic control panel 
+Set-RegistryKey -Path "HKU\DefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\ForceClassicControlPanel" -Value 1
 
 # Force off-screen composition in IE
 Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Internet Explorer\Main" -Name "Force Offscreen Composition" -Value 1
@@ -596,7 +606,8 @@ Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication
 REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
 Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" "DisableStartupSound" 1 -Force
 
-
+# Do Not Highlight newly installed programs
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Start_NotifyNewApps /t reg_dword /d 0 /f
 #--------------------------------------------------------------------
 # Enable Action Center
 # Remove-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter"
