@@ -57,7 +57,7 @@ $pswindow.buffersize = $newsize
 # the nul ensures window size does not chnage
 #& cmd /c mode con: cols=150  >nul 2>nul
 
-
+shutdown.exe /r /t 3
 #--------------------------------------------------------------------
 # finishing #
 #--------------------------------------------------------------------

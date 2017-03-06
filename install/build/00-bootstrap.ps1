@@ -1,3 +1,5 @@
+#Requires -version 2.0 -Modules BitsTransfer
+
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
@@ -180,7 +182,7 @@ cinst powershell
 Breathe
 Start-Sleep -Seconds 5
 
-(new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+(New-Object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
 
 # powershell performance issues
 # https://blogs.msdn.microsoft.com/powershell/2008/07/11/speeding-up-powershell-startup/
@@ -232,6 +234,7 @@ cinst psexec
 Breathe
 
 # --------------------------------------------------------------------------------------------
+Write-Host "$basename -- Checking for Java ... "
 if (!(Test-Path "$JAVA_HOME\java.exe")) {
     Write-Host "`n $basename -- Installing Java jre"
     & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
@@ -244,6 +247,7 @@ if (!(Test-Path "$JAVA_HOME\java.exe")) {
 Breathe
 
 # --------------------------------------------------------------------------------------------
+# Write-Host "$basename -- Installing Dropbox ..."
 #cinst dropbox --ignore-checksums
 
 
@@ -255,6 +259,7 @@ WriteInfoHighlighted "$basename -- Installing QuickSet"
 Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive /L*v e:\logs\quickset-install.log' -Wait
 
 
+Breathe
 # --------------------------------------------------------------------------------------------
 # after drivers, hardware ...
 # --------------------------------------------------------------------------------------------
@@ -265,12 +270,12 @@ fsutil.exe behavior set disablelastaccess 1
 # disable monitor timeout
 powercfg.exe -change -monitor-timeout-ac 0
 
-
+Breathe
 # --------------------------------------------------------------------------------------------
 # Install scanner driver
 # --------------------------------------------------------------------------------------------
 
-Set-Location -Path "$Env:local\drivers"
+Set-Location -Path "$local\drivers"
 Remove-Item -Path scanner.zip -Force -ErrorAction SilentlyContinue
 
 # step 1: install usb virtual com interface
@@ -282,6 +287,11 @@ Start-Process "c:\windows\system32\msiexec.exe" -ArgumentList "/i http://lockerl
 # windows should look in IOUSB for remainder; 00-bootstrap
 
 
+#Write-Host "$basename -- Auto Configure Scanner ... "
+#
+#
+
+Breathe
 # --------------------------------------------------------------------------------------------
 # DISABLE 802.11 / Bluetooth interfaces
 # --------------------------------------------------------------------------------------------
@@ -298,7 +308,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /
 ## must install printer before gpo;
 ## must let machine contact windows update
 
-
+Breathe
 # --------------------------------------------------------------------------------------------
 # Install printer-filter driver
 # RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 path-to-inf\infname.inf
@@ -330,9 +340,8 @@ reg add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /
 chocolatey feature disable -n=allowGlobalConfirmation
 
 
-Get-BitsTransfer | Complete-BitsTransfer
 
-
+Breathe
 # --------------------------------------------------------------------------------------------
 # Make bginfo run on startup/login
 # & "$Env:local\bin\bginfo.exe" "$Env:local\etc\production-admin-bginfo.bgi" /nolicprompt /silent /timer:0
@@ -345,6 +354,7 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
 }
 
 
+Breathe
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------------------------------
@@ -366,6 +376,8 @@ Write-Host "."
 
 Stop-TimedSection $timer
 
+
+Breathe
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Next stage ... "
 # --------------------------------------------------------------------------------------------

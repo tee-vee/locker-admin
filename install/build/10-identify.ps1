@@ -9,6 +9,7 @@ $host.ui.RawUI.WindowTitle = "10-identify"
 $basename = "10-identify"
 $ErrorActionPreference = "Continue"
 
+
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Lets start"
 # --------------------------------------------------------------------------------------------
@@ -105,9 +106,8 @@ $token = "Bearer " + $authtoken
 
 
 #--------------------------------------------------------------------
-bcdedit /set bootux disabled
+bcdedit.exe /set bootux disabled
 
-#--------------------------------------------------------------------
 
 if (!(Test-Path -Path "c:\sitename.done")) {
 	#if ((Get-WmiObject Win32_ComputerSystem).domain -eq "LOCKERLIFE.HK" -And (($env:iccid))) { Write-Host "ok" }
@@ -199,7 +199,7 @@ if (!(Test-Path -Path "c:\sitename.done")) {
 
 
 #--------------------------------------------------------------------
-# finishing #
+# finishing
 #--------------------------------------------------------------------
 
 # Internet Explorer: All:

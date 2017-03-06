@@ -1,3 +1,5 @@
+#Requires -version 2.0 -Modules BitsTransfer
+
 # Derek Yuen <derekyuen@locision.com>
 # December 2016
 
@@ -26,9 +28,9 @@ If (!( $isAdmin )) {
 #Checkpoint-Computer -Description "Before 00-init"
 
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Loading Modules ..."
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer -ErrorAction SilentlyContinue)) {
@@ -114,26 +116,9 @@ Get-BitsTransfer | Complete-BitsTransfer
     }
 }
 
-#schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
 
-## Register Locker with Locker Cloud:
-#$script = @"
-#    `$cred = Get-Credential $env:USERNAME
-#    Install-BoxstarterPackage https://gitlab.com/locker-admin/...ps1 -Credential `$cred
-#"@
-#Set-Content (Join-Path $a "register-locker.ps1") ($script)
-
-## Finish Locker Deployment:
-#$script = @"
-#    `$cred = Get-Credential $env:USERNAME
-#    Install-BoxstarterPackage https://gitlab.com/locker-admin/...ps1 -Credential `$cred
-#"@
-#Set-Content (Join-Path $a "finish-locker-deployment.ps1") ($script)
-
-
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Install LockerLife Libraries"
-Write-Host "$basename -- LockerLife -> Get lockerlife libraries ..."
 # --------------------------------------------------------------------------------------------
 
 # get-location of locker-libs first from locker-cloud; preserve Last-Modified --> restamp all files using each individual file Last-Modified time
@@ -144,12 +129,14 @@ $lockercloudlibpath = "/dev/lockers/libs"
 $lockerlibfullpath = $lockercloudhost + $lockercloudlibpath
 
 $lockerlibs = "D:\locker-libs"
-$liblist = "locker-libs-list.txt"
-$libtimestamp = "locker-libs-timestamps.txt"
+$liblist = 'locker-libs-list.txt'
+$libtimestamp = 'locker-libs-timestamps.txt'
 
+# Not sure why it takes two tries ... 
 Move-Item $lockerlibs\$liblist $lockerlibs\$liblist.old -Force
 Move-Item "D:\locker-libs\locker-libs-list-transfer.ps1" "D:\locker-libs\locker-libs-list-transfer-old.ps1" -Force
-#locate locker-libs first; then send output to locker-lib
+
+# locate locker-libs first from locker-cloud; then send output to locker-lib
 ## & "$Env:curl" -Ss -R -k --url "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers/libs" | jq '.[].url' > D:\locker-libs\locker-libs-list.txt
 #& "$env:curl" -RSs -k --url "$lockercloudhost$lockercloudlibpath" | jq '.[].url' >> $lockerlibs\$liblist
 (Invoke-RestMethod -Uri "$lockercloudhost$lockercloudlibpath").url | Out-File -FilePath $lockerlibs\$liblist
@@ -179,14 +166,14 @@ Get-Content -Path "D:\locker-libs\locker-libs-list.txt" | ForEach-Object {
 
 # }
 
-D:\locker-libs\locker-libs-list-transfer.ps1
+powershell.exe -NoProfile -File "D:\locker-libs\locker-libs-list-transfer.ps1"
 #Get-BitsTransfer | ? { $_.jobstate -ne 'transferred'}
 
 Get-BitsTransfer | Complete-BitsTransfer
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Install LockerLife Services"
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 
 $chkservice = Get-Service -Name scanner -ErrorAction SilentlyContinue
 if (!($?)) {
@@ -232,11 +219,11 @@ if (!($?)) {
     Write-Host "Core service installed."
 }
 
-#--------------------------------------------------------------------
-Write-Host "$basename - Manage LockerLife User Accounts ..."
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename - LockerLife User Accounts ..."
 
 # add user
-Write-Host "$basename -- ADD KIOSK USER"
+Write-Host "$basename -- Adding kiosk user ... "
 #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
 & net.exe localgroup kiosk-group /add
 net.exe localgroup kiosk-group /add
@@ -249,9 +236,9 @@ net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /ful
 & net.exe localgroup "kiosk-group" "kiosk" /add
 net.exe localgroup "kiosk-group" "kiosk" /add
 
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 Write-Host "$basename - Setting up kiosk user environment"
-
+# Write-Host "$basename -- set autologon to kiosk user"
 
 $KioskUser = "kiosk"
 $KioskPass = ConvertTo-SecureString -String "locision123" -AsPlainText -Force
@@ -272,54 +259,91 @@ Start-Process -Credential $kioskCred -LoadUserProfile "c:\ProgramData\chocolatey
 Start-Process -Credential $kioskCred "c:\windows\system32\calc.exe"
 Start-Process -Credential $kioskCred -LoadUserProfile "c:\windows\system32\calc.exe"
 Stop-Process -Name "Calc" -Force
-Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -ErrorAction SilentlyContinue
-Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -ErrorAction SilentlyContinue
 
 #Start-process psexec -ArgumentList '-accepteula -nobanner -u kiosk -p locision123 cmd /c dir' -NoNewWindow
 #& psexec.exe -accepteula -nobanner -u kiosk -p locision123 cmd /c dir
-# Copy-Item -Path "D:\run.bat" -Destination 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\run.bat'
-Set-Location "C:\local\etc"
+
+# Write-Host "$basename -- setting up logon script for kiosk user ..."
 
 
-# set autologon to kiosk user
 
+# --------------------------------------------------------------------------------------------
+# Write-Host "$basename -- Register Locker with Locker Cloud"
+# --------------------------------------------------------------------------------------------
+
+# $lockercfg = "locker.properties"
+# $lockerStatus = "status"
+
+$lockerCloudApiKey = "123456789"
+
+# $dataFile="$lockeradmin\config\$lockercfg"
+# $statusFile="$lockeradmin\config\$lockerStatus"
+
+# #$url=http://requestb.in/pwsa6kpw
+$url = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers"
+
+#curl.exe -XPOST -H "Accept: application/json" -H "Content-Type: application/json; charset=utf-8" -H "x-api-key: 123456789" -H "Cache-Control: no-cache" --data @data.json %url%
+
+#curl.exe --dns-servers 8.8.8.8 -k -vv -S -XPOST -H "Accept: application/json" -H "Content-Type: application/json" -H "x-api-key: $lockerCloudApiKey" -H "Cache-Control: no-cache" --data @%DATAFILE% --url $url
+# Invoke-RestMethod -uri $url 
+
+
+# --------------------------------------------------------------------------------------------
+# Write-Host "$basename -- Purple screen and slider ..."
+
+Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
+$kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+Set-Location -Path "$kioskstartup"
+
+# Shouldn't really need to do this, but ...
+New-Item -ItemType Directory -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup" -Force
+
+# No idea why it takes three tries to work ... 
+#Copy-Item -Path "d:\run.bat" -Destination "$kioskstartup\run.bat" -Force
+Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' 
+Copy-Item -Path "D:\run.bat" -Destination 'C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat' -Force | Out-Null
+Copy-Item -Path "D:\run.bat" -Destination "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat" -Force | Out-Null 
+
+# Previously wanted to do symlinks but this has big immediate impact on production .. no room for error ... 
+# So now it's disabled. 
 # symlink \Users\kiosk\...\startup items\run.bat->dropbox\locker-shared\production\run.bat
 # symlink D:\run.bat->dropbox\locker-shared\production\run.bat
 
-# create finish-locker-setup.ps1 on kiosk\desktop, reboot
-
-
-
-#WriteInfoHighlighted "$basename -- Disable Automatic Updates"
-#REG ADD "HKLM\Software\Policies\Microsoft\Windows\WindowsUpdate\AU" /v NoAutoUpdate /t REG_DWORD /d 1 /f
-
-
-#$WUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
-#$WUSettings
-#$WUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
-#
-#REM
-#REM NotificationLevel  :
-#REM     0 = Not configured;
-#REM     1 = Disabled;
-#REM     2 = Notify before download;
-#REM     3 = Notify before installation;
-#REM     4 = Scheduled installation;
-#REM
-#
-#$WUSettings.NotificationLevel=1
-#$WUSettings.save()
-#
-
 
 # --------------------------------------------------------------------------------------------
-# set scheduled tasks
+# Write-Host "$basename -- set scheduled tasks"
 # Examples: https://technet.microsoft.com/en-us/library/bb490996.aspx
 # --------------------------------------------------------------------------------------------
 
-#Register-ScheduledJob -Name Update-Help -ScriptBlock {Update-Help -Module *} -Trigger ( New-JobTrigger -DaysOfWeek Monday -Weekly -At 8AM) -ScheduledJobOption (New-ScheduledJobOption -RequireNetwork)
-# -Credential $cred
+##
+## testing schtasks.exe ...
+#schtasks.exe /Create /SC ONLOGON /TN "StartSeleniumNode" /TR "cmd /c ""C:\SeleniumGrid\startnode.bat"""
+
+##
+## testing scheduled jobs
+#Register-ScheduledJob -Name Update-Help -ScriptBlock {Update-Help -Module *} -Trigger ( New-JobTrigger -DaysOfWeek Monday -Weekly -At 8AM) -ScheduledJobOption (New-ScheduledJobOption -RequireNetwork) -Credential $cred
 #Register-ScheduledJob -Name UpdatePowerShellHelpJob -ScriptBlock { Update-Help -Module * } -Trigger ( New-JobTrigger -Daily -At "1 AM" )
+
+$dailyTrigger = New-JobTrigger -Daily -At "01:00 PM"
+Register-ScheduledJob -Name UpdateHelp -ScriptBlock {Update-Help -Force} -Trigger $dailyTrigger
+
+#
+# Write-Host "$basename -- Setting up hourly auto production health checks ..."
+# schtasks /create /sc hourly /st 00:05:00 /tn "My App" /tr c:\local\bin\health-check.ps1
+
+
+# Write-Host "$basename -- Setting up daily auto checkin for production slider video updates ..."
+# schtasks /create /tn "My App" /tr "powershell.exe c:\local\bin\update-slider-video.ps1" /sc daily /st 03:00:00
+
+
+# Write-Host "$basename -- Setting up weekly reboot ..."
+# schtasks /create /tn "My App" /tr "powershell.exe c:\local\bin\update-locker.ps1" /sc daily /st 03:00:00
+
+
+
+# Write-Host "$basename -- Setting up auto update of locker-lib code on 1st day and 17th day of every month ..."
+# schtasks /create /tn "My App" /tr "powershell.exe c:\local\bin\update-locker.ps1" /sc daily /st 01:00:00
+
 
 # To schedule a command that runs every hour at five minutes past the hour
 # The following command schedules the MyApp program to run hourly beginning at five minutes past midnight.
@@ -340,31 +364,7 @@ Set-Location "C:\local\etc"
 
 
 # --------------------------------------------------------------------------------------------
-Write-Host "$basename -- final hardening ..."
-
-Set-TaskbarOptions -Size Small -Lock -Dock Bottom
-Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
-
-
-Write-Host "$basename - disable admin user"
-& net.exe user administrator /active:no
-net user administrator /active:no
-
-# set autologin to kiosk user, reboot computer ...
-WriteInfoHighlighted "SETUP AUTOLOGON"
-#Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
-& "$env:local\bin\autologon.exe" /accepteula kiosk $env:computername locision123
-Write-Host "."
-
-
-# --------------------------------------------------------------------------------------------
-# purple screen
-Write-Host "$basename -- enabling purple screen and lockerlife slider on startup for kiosk user ..."
-$kioskstartup = "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-Set-Location -Path "$kioskstartup"
-#Copy-Item -Path "d:\run.bat" -Destination "$kioskstartup\run.bat" -Force
-New-Item -ItemType Directory -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup" -Force
-Copy-Item -Path "D:\run.bat" -Destination "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat" -Force
+Write-Host "$basename -- Resetting Internet Explorer ..."
 
 # Internet Explorer: All:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 255
@@ -387,6 +387,46 @@ Copy-Item -Path "D:\run.bat" -Destination "C:\Users\kiosk\AppData\Roaming\Micros
 # Internet Explorer: All:
 & "$Env:SystemRoot\System32\RunDll32.exe" InetCpl.cpl,ClearMyTracksByProcess 4351
 
+
+# --------------------------------------------------------------------------------------------
+WriteInfoHighlighted "$basename -- Disable Automatic Updates"
+# --------------------------------------------------------------------------------------------
+#REG ADD "HKLM\Software\Policies\Microsoft\Windows\WindowsUpdate\AU" /v NoAutoUpdate /t REG_DWORD /d 1 /f
+
+
+#$WUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
+#$WUSettings
+#$WUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
+#
+#
+# NotificationLevel  :
+#     0 = Not configured;
+#     1 = Disabled;
+#     2 = Notify before download;
+#     3 = Notify before installation;
+#     4 = Scheduled installation;
+#
+#
+#$WUSettings.NotificationLevel=1
+#$WUSettings.save()
+#
+
+# --------------------------------------------------------------------------------------------
+Write-Host "$basename -- final hardening ..."
+
+Set-TaskbarOptions -Size Small -Lock -Dock Bottom
+Set-WindowsExplorerOptions -DisableShowProtectedOSFiles -DisableShowFileExtensions -DisableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
+
+
+Write-Host "$basename - disable admin user"
+& net.exe user administrator /active:no
+net user administrator /active:no
+
+# set autologin to kiosk user, reboot computer ...
+WriteInfoHighlighted "SETUP AUTOLOGON"
+#Start-Process 'autologon.exe' -Verb runAs -ArgumentList '/accepteula kiosk \ locision123'
+& "$env:local\bin\autologon.exe" /accepteula kiosk $env:computername locision123
+Write-Host "."
 
 
 # --------------------------------------------------------------------

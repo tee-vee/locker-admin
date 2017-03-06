@@ -1,4 +1,4 @@
-#Requires -version 2.0 -Modules BitsTransfer
+#Requires -version 2.0
 
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
@@ -108,7 +108,9 @@ if (Test-PendingReboot) {
     Invoke-Reboot 
 }
 
-# finishing
+#############
+# finishing #
+#############
 
 # Internet Explorer: All:
 #RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 255
@@ -131,8 +133,8 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 # Internet Explorer: All:
 # rundll32.exe InetCpl.cpl,ClearMyTracksByProcess 4351
 
-#Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\register-locker.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/10-configure.ps1" -Description "register-locker"
-#Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\setup-locker.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/20-setup.ps1" -Description "setup-locker"
+Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\register-locker.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/10-configure.ps1" -Description "register-locker"
+Install-ChocolateyShortcut -ShortcutFilePath "$env:Public\Desktop\setup-locker.lnk" -TargetPath "$Env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "http://boxstarter.org/package/url?$Env:deployurl/20-setup.ps1" -Description "setup-locker"
 
 
 Write-Host "Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
