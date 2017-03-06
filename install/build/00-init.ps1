@@ -498,7 +498,6 @@ Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DisableCurs
 # do not highlight newly installed programs
 Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_NotifyNewApps" -Value 0
 
-
 # force classic control panel 
 Set-RegistryKey -Path "HKU\DefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\ForceClassicControlPanel" -Value 1
 
