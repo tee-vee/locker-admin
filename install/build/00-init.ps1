@@ -939,6 +939,20 @@ Write-Host "$basename -- Download Installers ..."
 # commit the downloaded files
 Get-BitsTransfer | Complete-BitsTransfer
 
+
+Write-Host "$basename -- Download DRIVERS ..."
+"printer-filter.zip","printer.zip" | ForEach-Object {
+    # better if we used Get-FileHash, but no time to write good code ...
+    if (!(Test-Path "$_")) {
+        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/drivers/$_" -Destination "c:\local\drivers\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife System Drivers $_" -TransferType Download -RetryInterval 60
+    } else {
+        WriteInfoHighlighted "$basename -- Skipping $_" 
+    }
+}
+# commit the downloaded files
+Get-BitsTransfer | Complete-BitsTransfer
+
+
 # fix if vm
 if (Test-Path "C:\Wallpaper") {
     Copy-Item -Path "C:\Wallpaper\autologon.bat" -Destination "C:\Wallpaper\autologon2.bat" -Force
@@ -952,7 +966,6 @@ Write-Host "$basename -- Disable Windows Services"
 #"ShellHWDetection", # Shell Hardware Detection
 #"SNMPTRAP", # SNMP Trap
 #"SysMain", # Superfetch
-#"upnphost", # UPnP Device Host
 
 $disableServices = @(
     "SensrSvc", # Adaptive Brightness
@@ -1000,6 +1013,7 @@ $disableServices = @(
     "vmicvss",
     "vmickvpexchange",
     "vmicshutdown",
+    "upnphost", # UPnP Device Host
     "vmicheartbeat"
 )
 foreach ($service in $disableServices) {
