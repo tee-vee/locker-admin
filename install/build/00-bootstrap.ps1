@@ -258,6 +258,9 @@ Write-Host "$basename - Out of band Installers"
 WriteInfoHighlighted "$basename -- Installing QuickSet"
 Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive /L*v e:\logs\quickset-install.log' -Wait
 
+Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/AMC_Embedded_msi.msi /quiet /passive /L*v e:\logs\amcembedded-install.log' -Wait
+
+
 
 Breathe
 # --------------------------------------------------------------------------------------------
@@ -275,7 +278,8 @@ Breathe
 # Install scanner driver
 # --------------------------------------------------------------------------------------------
 
-Set-Location -Path "$local\drivers"
+Set-Location -Path "$env:local\drivers"
+#unzip 
 Remove-Item -Path scanner.zip -Force -ErrorAction SilentlyContinue
 
 # step 1: install usb virtual com interface
@@ -303,12 +307,31 @@ Stop-Service bthserv
 reg add "HKLM\SYSTEM\CurrentControlSet\services\bthserv" /v Start /t REG_DWORD /d 4 /f
 
 # 2017-01 Temporarily hold off on disabling wifi
-#& "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
+& "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
 
 ## must install printer before gpo;
 ## must let machine contact windows update
 
+# 2017 March - fix printer mistake
+#net stop spooler
+Stop-Service Spooler -Verbose
+Remove-Item "$env:systemroot\System32\spool\printers\*.shd" -Force -Verbose
+Remove-Item "$env:systemroot\System32\spool\printers\*.spl" -Force -Verbose
+cscript c:\windows\system32\Printing_Admin_Scripts\en_US\prnjobs.vbs
+Start-Service Spooler -Verbose
+
 Breathe
+
+Set-Location -Path "$env:local\drivers"
+"printer-filter.zip","printer.zip" | ForEach-Object {
+    if (Test-Path $_) {
+        C:\ProgramData\chocolatey\bin\unzip.exe -o $_
+        #Remove-Item $_ -Force -Confirm:$false -Force
+    } else {
+        Write-Host "$basename --- $_ missing" 
+    }
+}
+
 # --------------------------------------------------------------------------------------------
 # Install printer-filter driver
 # RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 path-to-inf\infname.inf
@@ -317,19 +340,22 @@ Breathe
 # check; don't reinstall if already exists
 # ** implementation incomplete ...
 #Write-Host "Checking printer status ..."
-#& "$Env:SystemRoot\System32\webm\wmic.exe" printer list status | Select-String 80mm
-#
+& "$Env:SystemRoot\System32\webm\wmic.exe" printer list status | Select-String 80mm
+
 ## step 1: install port
-##& "$Env:local\drivers\printer\Windows81Driver\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 %LOCKERDRIVERS%\printer\Windows81Driver\POS88EN.inf
+& C:\windows\system32\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 C:\local\drivers\printer\Windows81Driver\POS88EN.inf
+
 ## %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
-#Write-Host "20-setup: Installing printer-filter driver"
+
+Write-Host "$basename --- Installing printer-filter driver"
 #& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --device=USB\VID_0483"&"PID_5720"&"REV_0100
-#
+
 ## step 2: connect/bridge printer-filter to printer
 ## %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install --inf=%LOCKERDRIVERS%\printer\SPRT_Printer.inf
-#Write-Host "20-setup: connecting printer-filter to printer"
-#& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --inf="$Env:local\drivers\printer\SPRT_Printer.inf"
-#
+Write-Host "20-setup: connecting printer-filter to printer"
+& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --inf="$Env:local\drivers\printer\SPRT_Printer.inf"
+
+
 ## Print a test page to one or more printers
 ## for /f "tokens=1-4 delims=," %i in (%Printer.txt%) do cscript prnctrl.vbs -t -b \\%PrintServer%\%i
 ##Cscript Prnqctl -e
