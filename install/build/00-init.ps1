@@ -1,5 +1,3 @@
-#Requires -version 2.0 -Modules BitsTransfer
-
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
@@ -69,7 +67,9 @@ SetConsoleWindow
 $host.ui.RawUI.WindowTitle = "00-init"
 
 # close previous IE windows ...
-Stop-Process -Name "iexplore"
+if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
+    Stop-Process -Name iexplore
+}
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -378,13 +378,12 @@ Write-Host "$basename -- Configure Windows Time Services"
 Stop-Service w32time
 
 # Get existing type, run the following command and look for Type
-Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters"
-# Change the server type to NTP
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters" Type -Value NTP -Force
+#Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters"
+(Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters" -Name NtpServer).NtpServer
 # Get NTP server status
 # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpServer"
 # Enable NTP
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpServer" Enabled -Value 1 -Force
+reg add "HKLM\system\CurrentControlSet\Services\W32Time\TimeProviders\NtpServer" /v Enabled /t REG_DWORD /d 0x1 /f
 
 Write-Host "$basename -- Set Time Zone"
 tzutil.exe /s "China Standard Time"
@@ -400,22 +399,29 @@ Write-Host "$basename -- Set Language and Region"
 Set-ItemProperty -Path "HKCU:\Control Panel\International" -Name sLanguage -Value ENU
 Set-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name Nation -Value 104
 
+Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value 506
+
 # Disable Location Tracking
 #Write-Host "$basename - Disabling Location Tracking..."
-#Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0 -Force
-#Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0 -Force
-#Set-ItemProperty -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Diagnostics" -Name "GPSvcDebugLevel" -Type DWord -Value "GPSvcDebugLevel"=dword:00030002 -Force
+Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Value 0
+Set-RegistryKey -Path "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Value 0
+
+# group policy enable debug log
+# The resulting log file “gpsvc.log” can be found $env:WINDIR\debug\usermode
+#Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Diagnostics" -Name GPSvcDebugLevel -Value "00030002" 
+
 
 Write-Host "$basename -- Set Sound Volume to minimum"
 $obj = new-object -com wscript.shell
 $obj.SendKeys([char]173)
 
 #  Disable user from enabling the startup sound
-Set-RegistryKey -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name DisableStartupSound -Value 1
+
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name DisableStartupSound -Value 1
 REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupSound /t REG_DWORD /d 1 /f
 
 # Somehow setting DisableStartupSound = 0 here actually disables the sound
-Set-RegistryKey -Path "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" -Name DisableStartupSound -Value 0
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" -Name DisableStartupSound -Value 0
 REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" /v DisableStartupSound /t REG_DWORD /d 0 /f
 
 # And finally, change the sound scheme to No Sound:
@@ -429,7 +435,6 @@ Write-Host "$basename - Before login ..."
 Write-Host "$basename - set logon UI Background image"
 # enable custom logon background
 #HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background
-Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name OEMBackground -Value 1 -Force
 WriteInfoHighlighted "."
 
@@ -444,14 +449,14 @@ reg ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dont
 reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Windows" /v ErrorMode /t REG_DWORD /d 2 /f
 
 ### Set PopUp Error Mode to "Neither"
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Windows" -Name ErrorMode -Value 2 -Force
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Windows" -Name ErrorMode -Value 2
 # REG add "HKEY_CURRENT_USER\Software\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
 
 # Disable Error Reporting
 # Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PCHealth\ErrorReporting" -Name "DoReport" -Value 0 -Force
 
 # Turn off Windows SideShow
-Set-RegistryKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Sideshow" -Name "Disabled" -Value 1
+#Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Sideshow" -Name "Disabled" -Value 1
 reg ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Slideshow" /v Disabled /d 1 /f
 
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowOff" -Force
@@ -459,24 +464,40 @@ New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowO
 # --------------------------------------------------------------------
 Write-Host "$basename - After login ..."
 # --------------------------------------------------------------------
-New-Item -ItemType File "C:\local\bin\autologon.bat"
+New-Item -ItemType File "C:\local\bin\autologon.bat" -Force
 
 # Windows Explorer Settings through Choco
 #Set-WindowsExplorerOptions -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar -DisableShowRecentFilesInQuickAccess -DisableShowFrequentFoldersInQuickAccess
 Set-TaskbarOptions -Size Small -Lock -Combine Full -Dock Bottom
 
-Set-RegistryKey -Path "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'EnableBalloonTips' -Value 0
-reg ADD "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0 /f
+# Disable All Balloon Tips
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'EnableBalloonTips' -Value 0
+reg ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v EnableBalloonTips /t REG_DWORD /d 0 /f
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoSMBalloonTip" -Value 0
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'FolderContentsInfoTip' -Value 0
+New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "tips" -Force
+Set-RegistryKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\tips" -Name "Show" -Value 0
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\tips" -Name 'Show' -Value 0
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'StartButtonBalloonTip' -Value 0
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name 'ShowInfoTip' -Value 0
+
+# Disable Getting Started Welcome Screen at Logon
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoWelcomeScreen" -Value 1
+
+
+# disable language bar
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoSaveSettings" -Value 0
+
 
 Write-Host "$basename --  Adjust UI for Best Performance"
 reg LOAD "hku\temp" "$env:USERPROFILE\..\Default User\NTUSER.DAT"
-Set-RegistryKey -Path "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name 'VisualFXSetting' -Value 2
 reg ADD "HKEY_USERS\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
 # Set-ItemProperty -Path "HKEY_USERS:\.DEFAULT\Control Panel\Colors" -Name Background -Value "0 0 0" -Force
+
 reg UNLOAD "hku\temp"
 
 # Force Classic Control Panel
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v ForceClassicControlPanel /t reg_dword /d 1 /f
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v ForceClassicControlPanel /d 1 /f
 
 # --------------------------------------------------------------------
 WriteInfo "$basename --- Setup Default User Registry"
@@ -488,62 +509,73 @@ reg load $userLoadPath $defaultUserHivePath | Out-Host
 # Create PSDrive
 $psDrive = New-PSDrive -Name HKUDefaultUser -PSProvider Registry -Root $userLoadPath
 
+#Set-ItemProperty -Path "HKUDefaultUser:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name 'VisualFXSetting' -Value 2
+
 # Reduce menu show delay
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "MenuShowDelay" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "MenuShowDelay" -Value 0
 
 # Disable cursor blink
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "CursorBlinkRate" -Value -1
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DisableCursorBlink" -Value 1
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "CursorBlinkRate" -Value -1
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DisableCursorBlink" -Value 1
 
 # do not highlight newly installed programs
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_NotifyNewApps" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\" -Name "Start_NotifyNewApps" -Value 0
 
 # force classic control panel 
-Set-RegistryKey -Path "HKU\DefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\ForceClassicControlPanel" -Value 1
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "ForceClassicControlPanel" -Value 1
 
 # Force off-screen composition in IE
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Internet Explorer\Main" -Name "Force Offscreen Composition" -Value 1
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Internet Explorer\Main" -Name "Force Offscreen Composition" -Value 1
 
 # Disable screensavers
-# Set-RegistryKey -Path "HKUDefaultUser:\Software\Policies\Microsoft\Windows\Control Panel\Desktop" -Name "ScreenSaveActive" -Value 0
-# Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop\" -Name "ScreenSaveActive" -Value 0
-# Set-RegistryKey -Path "Registry::\HKEY_USERS\.DEFAULT\Control Panel\Desktop" -Name "ScreenSaveActive" -Value 0
+# Set-ItemProperty -Path "HKUDefaultUser:\Software\Policies\Microsoft\Windows\Control Panel\Desktop" -Name "ScreenSaveActive" -Value 0
+# Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop\" -Name "ScreenSaveActive" -Value 0
+# Set-ItemProperty -Path "Registry::\HKEY_USERS\.DEFAULT\Control Panel\Desktop" -Name "ScreenSaveActive" -Value 0
 
 # Don't show window contents when dragging
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DragFullWindows" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DragFullWindows" -Value 0
 
 # Don't show window minimize/maximize animations
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value 0
 
 # Disable font smoothing
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "FontSmoothing" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "FontSmoothing" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop"-Name "FontSmoothingType" -Value 2
 
 # Disable most other visual effects
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "VisualFXSetting" -Value 3
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewAlphaSelect" -Value 0
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 0
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewWatermark" -Value 0
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 0
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90,0x12,0x01,0x80)) -PropertyType "Binary"
-Set-RegistryKey -Path "HKUDefaultUser:\Control Panel\Colors" -Name "Background" -Value "0 0 0"
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "VisualFXSetting" -Value 3
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewAlphaSelect" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewWatermark" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90,0x12,0x01,0x80))
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Colors" -Name "Background" -Value "0 0 0"
+
+# Don't cache thumbnails
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "DisableThumbnailCache" -Value 1
 
 # Disable Action Center Icon
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAHealth" -Value 1
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAHealth" -Value 1
 
 # Disable Network Icon
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCANetwork" -Value 1
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCANetwork" -Value 1
 
 # Disable IE Persistent Cache
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Cache" -Name "Persistent" -Value 0
-Set-RegistryKey -Path "HKUDefaultUser:\Software\Microsoft\Feeds" -Name "SyncStatus" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Internet Settings" -Name "MaxConnectionsPer1_0Server" -Value 0
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Feeds" -Name "SyncStatus" -Value 0
+
+# Set Internet Explorer's Simultaneous Downloads From 2 to 10 Connections
+Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Cache" -Name "Persistent" -Value 0
+
 
 # Remove PSDrive
 $psDrive = Remove-PSDrive HKUDefaultUser
-# Clean up references not in use
-$variables = Get-Variable | Where { $_.Name -ne "userLoadPath" } | foreach { $_.Name }
-foreach($var in $variables) {
-    Remove-Variable $var 
-}
+
+# # Clean up references not in use
+# $variables = Get-Variable | Where { $_.Name -ne "userLoadPath" } | foreach { $_.Name }
+# foreach($var in $variables) {
+#     Remove-Variable $var 
+# }
 [gc]::collect()
 # Unload Hive
 REG unload $userLoadPath | Out-Host
@@ -590,7 +622,7 @@ Set-ItemProperty "HKCU:\Control Panel\Colors" -Name Background -Value "0 0 0" -F
 
 WriteInfo "$basename - Set lock screen background image"
 New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows" -Name Personalization -Force
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name LockScreenImage -Value "C:\local\etc\pantone-process-black-c.jpg" -Force
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "LockScreenImage" -Value "C:\local\etc\pantone-process-black-c.jpg" -Force
 
 #Set the Screen Saver Settings
 #REG ADD "HKU\.DEFAULT\Control Panel\Desktop" /v ScreenSaveActive /t REG_SZ /d 1 /f
@@ -701,7 +733,7 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer
 # --------------------------------------------------------------------
 # Hide Computer shortcut from desktop
 #   ; Computer = {20D04FE0-3AEA-1069-A2D8-08002B30309D}
-#Remove-ItemProperty -Path "[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons]" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
+#Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 #Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
 
 #Remove-ItemProperty -Path "[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel]" -Name "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
@@ -740,9 +772,9 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer
 
 #--------------------------------------------------------------------
 # Remove Music icon from computer namespace
-Write-Host "$basename -- Removing Music icon from computer namespace..."
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Recurse
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Recurse
+#Write-Host "$basename -- Removing Music icon from computer namespace..."
+#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3dfdf296-dbec-4fb4-81d1-6a3438bcf4de}" -Recurse
+#Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}" -Recurse
 
 
 # Add Music icon to computer namespace
@@ -752,9 +784,9 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 
 #--------------------------------------------------------------------
 # Remove Pictures icon from computer namespace
-Write-Host "$basename -- Removing Pictures icon from computer namespace..."
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Recurse
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Recurse
+# Write-Host "$basename -- Removing Pictures icon from computer namespace..."
+# Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}" -Recurse
+# Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{3ADD1653-EB32-4cb0-BBD7-DFA0ABB5ACCA}" -Recurse
 
 # Add Pictures icon to computer namespace
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{24ad3ad4-a569-4530-98e1-ab02f9417aa8}"
@@ -762,9 +794,9 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 
 #--------------------------------------------------------------------
 # Remove Videos icon from computer namespace
-Write-Host "$basename -- Removing Videos icon from computer namespace..."
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}" -Recurse -ErrorAction SilentlyContinue
-Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}" -Recurse -ErrorAction SilentlyContinue
+# Write-Host "$basename -- Removing Videos icon from computer namespace..."
+# Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}" -Recurse -ErrorAction SilentlyContinue
+# Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{A0953C92-50DC-43bf-BE83-3742FED03C9C}" -Recurse -ErrorAction SilentlyContinue
 
 # Add Videos icon to computer namespace
 # New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a}"
@@ -773,7 +805,7 @@ Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\MyCo
 #--------------------------------------------------------------------
 # shorten shutdown wait time - WaitToKillServiceTimeout
 REG ADD "HKLM\SYSTEM\CurrentControlSet\Control" /v Start /t REG_DWORD /d 4 /f
-
+Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "Start" -Value 4
 
 # --------------------------------------------------------------------
 # Internet Explorer customizations ...
@@ -1035,7 +1067,7 @@ $tasksToDisable = @(
     "microsoft\windows\SideShow\SystemDataProviders",
     "microsoft\windows\Windows Media Sharing\UpdateLibrary"
 )
-foreach -parallel ($task in $tasksToDisable) {
+foreach ($task in $tasksToDisable) {
     schtasks.exe /change /tn $task /Disable
     Start-Sleep -Seconds 2
 }
@@ -1163,7 +1195,9 @@ Write-Host "$basename -- End -- Remove unnecessary Windows components"
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------------------------------
-Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
+if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
+    Stop-Process -Name iexplore
+}
 
 # Cleanup Desktop
 CleanupDesktop
