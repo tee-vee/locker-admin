@@ -1,5 +1,3 @@
-#Requires -version 2.0 -Modules BitsTransfer
-
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
@@ -56,7 +54,9 @@ SetConsoleWindow
 $host.ui.RawUI.WindowTitle = "00-bootstrap"
 
 # close previous IE windows ...
-Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
+if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
+    Stop-Process -Name iexplore
+}
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -381,10 +381,14 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
 
 
 Breathe
+
+
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------------------------------
-Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
+if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
+    Stop-Process -Name iexplore
+}
 
 # Cleanup Desktop
 CleanupDesktop
