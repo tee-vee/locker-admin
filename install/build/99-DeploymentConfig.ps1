@@ -1,5 +1,3 @@
-#Requires -version 2.0
-
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
