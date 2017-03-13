@@ -86,7 +86,9 @@ shutdown.exe /r /t 3
 # --------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue -Verbose
+if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
+    Stop-Process -Name iexplore
+}
 
 # Cleanup Desktop
 CleanupDesktop
