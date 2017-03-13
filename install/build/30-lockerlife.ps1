@@ -1,5 +1,3 @@
-#Requires -version 2.0 -Modules BitsTransfer
-
 # Derek Yuen <derekyuen@locision.com>
 # December 2016
 
@@ -432,7 +430,9 @@ Write-Host "."
 # --------------------------------------------------------------------
 Write-Host "$basename - Cleanup"
 # --------------------------------------------------------------------
-Stop-Process -Name iexplore
+if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
+    Stop-Process -Name iexplore
+}
 
 # Cleanup Desktop
 CleanupDesktop
