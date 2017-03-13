@@ -1,5 +1,3 @@
-# Requires -Version 3.0
-
 # Derek Yuen <derekyuen@lockerlife.hk>
 # January 2017
 
@@ -96,13 +94,32 @@ Write-Host "$basename -- Set local variables"
 #(New-Object System.Net.WebClient).DownloadString("http://stackoverflow.com")
 #
 
-## dropbox api
+# --------------------------------------------------------------------------------------------
+# Dropbox API
+
 #$authtoken "5nHPkEeCXnAAAAAAAAAAJI71YUOYRZgv4PeQ1h1ZHGmCHnbnosmjFdqkg5NPSggL"
 $authtoken = "5nHPkEeCXnAAAAAAAAAAIyI533NP8-Y1zXEK7m2LOvAk4-HC0jGOZLKjEoGcq2gU"
 $token = "Bearer " + $authtoken
 
 
-## teamviewer api
+
+# --------------------------------------------------------------------------------------------
+# TeamViewer API
+
+Write-Host "$basename -- TeamViewer Setup"
+$TVtoken = "Bearer","2034214-P3aa9qGG323SKWVqqKBV"
+
+$TVheader = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+$TVheader.Add("authorization", $TVtoken)
+
+$ping = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/ping" -Method Get -Headers $TVheader
+
+$webrequest = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/groups/" -Method Get -Headers $TVheader
+$machine = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/devices/" -Method Get -Headers $TVheader
+$groups = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/groups" -Method Get -Headers $TVheader
+$account = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/account" -Method Get -Headers $TVheader
+
+
 
 
 #--------------------------------------------------------------------
@@ -130,6 +147,12 @@ if (!(Test-Path -Path "c:\sitename.done")) {
 	$token = "Bearer " + $authtoken
 	$body = '{"path":"/locker-admin/locker","query":"' +  $env:iccid + '"}'
 	$yy = Invoke-RestMethod -Uri $uri -Headers @{ "Authorization" = $token } -Body $body -ContentType 'application/json' -Method Post
+	
+	# $uri2 = "https://content.dropboxapi.com/2/files/download"
+	# $body2 = @{
+	# 	"Dropbox-API-Arg" = @{"path"="id:if8TBINGnSAAAAAAAAKYMA"}
+	# }
+	# $zz = Invoke-RestMethod -Uri $uri2 -Headers @{"Authorization" = $token } -Body $body2 -ContentType 'application/json' -Method Post	
 	#$yy
 	#Write-Host "Number of matches: " $yy.start
 	#$yy.matches
