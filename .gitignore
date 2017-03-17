@@ -12,3 +12,6 @@ docs/
 *.hlp
 *.sys
 *.zip
+*.xls
+*.xlsx
+*.docx
