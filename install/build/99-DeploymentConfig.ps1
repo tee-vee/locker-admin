@@ -170,6 +170,10 @@ Install-ChocolateyEnvironmentVariable 'TeamViewerClientID' '0'
 #$TeamViewerClientID = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
 
 
+# locker-cloud api-key
+$lockerCloudApiKey = @{ "X-API-KEY" = "123456789" } 
+
+
 #--------------------------------------------------------------------
 Write-Host "$basename - Aliases"
 #--------------------------------------------------------------------
@@ -197,13 +201,13 @@ function SetConsoleWindow {
     # set window size
     $H = Get-Host
     $Win = $H.UI.RawUI.WindowSize
-    $Win.Width = 150
+    $Win.Width = 125
     $Win.Height = 50
     $H.UI.RawUI.Set_WindowSize($Win)
 
     $H = Get-Host
     $Win = $H.UI.RawUI.BufferSize
-    $Win.Width = 150
+    $Win.Width = 125
     $Win.height = 5000
     $H.UI.RawUI.Set_BufferSize($Win)
     $host.UI.RawUI.ForegroundColor = "DarkYellow"
