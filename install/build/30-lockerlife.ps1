@@ -65,7 +65,7 @@ Write-Host "`t Script started at $StartDateTime" -ForegroundColor Green
 Write-Host "$basename -- LockerLife -> Repo Checks ..."
 # --------------------------------------------------------------------------------------------
 
-Invoke-RestMethod -Uri "https://api.github.com/users/lockerlife-kiosk"
+$githubCheck = Invoke-RestMethod -Uri "https://api.github.com/users/lockerlife-kiosk"
 #& "$Env:curl" --progress-bar -Ss -k --include --url "https://api.github.com/users/lockerlife-kiosk"
 #& "$Env:curl" --progress-bar -Ss -k --user "lockerlife-kiosk:Locision123" --url "https://api.github.com/authorizations"
 
@@ -173,20 +173,19 @@ Get-BitsTransfer | Complete-BitsTransfer
 Write-Host "$basename - Install LockerLife Services"
 # --------------------------------------------------------------------------------------------
 
-$chkservice = Get-Service -Name scanner -ErrorAction SilentlyContinue
-if (!($?)) {
-    WriteInfoHighlighted "`t $basename -- INSTALL SCANNER AS SERVICE"
-    #CALL %LOCKERINSTALL%\build\new-service-scanner.bat
-    #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
-    Start-Process -FilePath $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
-} else {
-    Write-Host "Scanner service installed." 
+$sdkUri = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/latest/sdk"
+$headers = @{ "X-API-KEY" = "123456789" } 
+$sdkResponse = Invoke-RestMethod -Method Get -UseBasicParsing -Headers $headers -Uri $sdkUri
+
+$sdkVersions = @( "core", "scanner", "dataCollection")
+foreach ($sdk in $sdkVersions) {
+    $sdkResponse.$sdk.version | Out-File -Encoding utf8 -FilePath "D:\$sdk.version.txt"
 }
-Write-Host "."
+
+Invoke-RestMethod -UseBasicParsing -Method Get -Headers $headers -Uri $sdkUri -Verbose
 
 
-$chkservice = Get-Service -Name kioskserver -ErrorAction SilentlyContinue
-if (!($?)) {
+if (!(Get-Service -Name kioskserver -ErrorAction SilentlyContinue)) {
     WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
     #CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
     #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
@@ -194,45 +193,82 @@ if (!($?)) {
     Write-Host "."
 } else {
     Write-Host "Kioskserver service installed."
+    Restart-Service -Name "kioskserver" -Verbose
 }
 
-$chkservice = Get-Service -Name "data-collection" -ErrorAction SilentlyContinue
-if (!($?)) {
+
+#$installedSdkVer = unzip -p scanner.jar META-INF/MANIFEST.MF | Select-String "Implementation-Version"
+if (!(Get-Service -Name scanner -ErrorAction SilentlyContinue)) {
+    WriteInfoHighlighted "`t $basename -- INSTALL SCANNER AS SERVICE"
+    Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $sdkResponse.scanner.url -OutFile "D:\scanner.jar" -ContentType "application/octet-stream" -Verbose
+    #CALL %LOCKERINSTALL%\build\new-service-scanner.bat
+    #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-scanner.bat
+    Start-Process -FilePath $Env:local\bin\new-service-scanner.bat -Verb RunAs -Wait
+} else {
+    Write-Host "Scanner service installed."
+    Stop-Service -Name scanner -Verbose
+    Move-Item -Path "D:\scanner.jar" -Destination "D:\scanner.jar.old" -Force
+    Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $sdkResponse.scanner.url -OutFile "D:\scanner.jar" -ContentType "application/octet-stream" -Verbose
+    Start-Service -Name scanner -Verbose
+    
+}
+
+
+
+if (!(Get-Service -Name "data-collection" -ErrorAction SilentlyContinue)) {
     WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION AS SERVICE"
+    Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $sdkResponse.dataCollection.url -OutFile "D:\data-collection.jar" -ContentType "application/octet-stream" -Verbose
     #CALL %LOCKERINSTALL%\build\new-service-datacollection.bat
     #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-datacollection.bat
     Start-Process -FilePath $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
 } else {
     Write-Host "Data-Collection service installed."
+    Stop-Service -Name "data-collection" -Verbose
+    Move-Item -Path "D:\data-collection.jar" -Destination "D:\data-collection.jar.old" -Force
+    Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $sdkResponse.dataCollection.url -OutFile "D:\data-collection.jar" -ContentType "application/octet-stream" -Verbose
+    Start-Service -Name "data-collection" -Verbose
 }
-Write-Host "."
 
-$chkservice = Get-Service -Name core -ErrorAction SilentlyContinue
-if (!($?)) {
+
+
+if (!(Get-Service -Name core -ErrorAction SilentlyContinue)) {
     WriteInfoHighlighted "$basename -- INSTALL CORE AS SERVICE"
+    Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $sdkResponse.core.url -OutFile "D:\core.jar" -ContentType "application/octet-stream" -Verbose
     ## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
     Start-Process -FilePath $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
     Write-Host "."
 } else {
     Write-Host "Core service installed."
+    Stop-Service -Name core -Verbose
+    Move-Item -Path "D:\core.jar" -Destination "D:\core.jar.old" -Force
+    Invoke-WebRequest -UseBasicParsing -Method Get -Headers $headers -Uri $sdkResponse.core.url -OutFile "D:\core.jar" -ContentType "application/octet-stream" -Verbose
+    Start-Service -Name core -Verbose
 }
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - LockerLife User Accounts ..."
 
-# add user
-Write-Host "$basename -- Adding kiosk user ... "
-#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
-& net.exe localgroup kiosk-group /add
-net.exe localgroup kiosk-group /add
+if (!(Get-CimInstance win32_useraccount | where { $_.Name -eq "kiosk" })) {
+    # add user
+    Write-Host "$basename -- Adding kiosk user ... "
+    #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup kiosk-group /add' -NoNewWindow -Verb RunAs
 
-#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
-& net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no
-net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no
+    & net.exe localgroup kiosk-group /add
+    net.exe localgroup kiosk-group /add
 
-#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
-& net.exe localgroup "kiosk-group" "kiosk" /add
-net.exe localgroup "kiosk-group" "kiosk" /add
+    #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
+    & net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no /logonpasswordchg:no /expires:never /times:all
+    net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no /logonpasswordchg:no /expires:never /times:all
+
+    #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'localgroup "kiosk-group" "kiosk" /add' -NoNewWindow
+    & net.exe localgroup "kiosk-group" "kiosk" /add
+    net.exe localgroup "kiosk-group" "kiosk" /add
+
+} else {
+    Write-Host "$basename -- kiosk user already exists"
+    net.exe user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no /logonpasswordchg:no /expires:never /times:all
+
+}
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Setting up kiosk user environment"
@@ -323,8 +359,10 @@ Copy-Item -Path "D:\run.bat" -Destination "C:\Users\kiosk\AppData\Roaming\Micros
 #Register-ScheduledJob -Name UpdatePowerShellHelpJob -ScriptBlock { Update-Help -Module * } -Trigger ( New-JobTrigger -Daily -At "1 AM" )
 
 $dailyTrigger = New-JobTrigger -Daily -At "01:00 PM"
-Register-ScheduledJob -Name UpdateHelp -ScriptBlock {Update-Help -Force} -Trigger $dailyTrigger
 
+if (!(Get-ScheduledJob).Name -eq "UpdateHelp") {
+    Register-ScheduledJob -Name UpdateHelp -ScriptBlock {Update-Help -Force} -Trigger $dailyTrigger
+}
 #
 # Write-Host "$basename -- Setting up hourly auto production health checks ..."
 # schtasks /create /sc hourly /st 00:05:00 /tn "My App" /tr c:\local\bin\health-check.ps1
@@ -441,7 +479,7 @@ cleanmgr.exe /verylowdisk
 
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
-New-Item -ItemType File -Path "$env:local\status\$basename.done" | Out-Null
+New-Item -ItemType File -Path "$env:local\status\$basename.done" -Force | Out-Null
 
 Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
