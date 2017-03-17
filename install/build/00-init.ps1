@@ -25,6 +25,9 @@ If (!( $isAdmin )) {
 }
 
 # backup
+$previousHour = [DateTime]::Now.AddHours(-1)
+#if (((Get-ComputerRestorePoint)[-1]).CreationTime -gt $previousHour)
+
 Enable-ComputerRestore -Drive "C:\" -Confirm:$false
 Checkpoint-Computer -Description "Before 00 init"
 
@@ -99,7 +102,7 @@ if ($BuildNumber -le 7601) {
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - START - Update Root Certificates from Microsoft ..."
 # --------------------------------------------------------------------------------------------
-certutil.exe -syncWithWU -f $env:temp
+#certutil.exe -syncWithWU -f $env:temp
 
 
 # --------------------------------------------------------------------------------------------
@@ -498,6 +501,8 @@ reg UNLOAD "hku\temp"
 
 # Force Classic Control Panel
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v ForceClassicControlPanel /d 1 /f
+# do not highlight newly installed programs
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Advanced" /v Start_NotifyNewApps /d 0 /f
 
 # --------------------------------------------------------------------
 WriteInfo "$basename --- Setup Default User Registry"
@@ -515,11 +520,11 @@ $psDrive = New-PSDrive -Name HKUDefaultUser -PSProvider Registry -Root $userLoad
 Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "MenuShowDelay" -Value 0
 
 # Disable cursor blink
-Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "CursorBlinkRate" -Value -1
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "CursorBlinkRate" -Value "-1"
 Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "DisableCursorBlink" -Value 1
 
 # do not highlight newly installed programs
-Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\" -Name "Start_NotifyNewApps" -Value 0
+#Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_NotifyNewApps" -Value 0
 
 # force classic control panel 
 Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "ForceClassicControlPanel" -Value 1
@@ -540,7 +545,7 @@ Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop\WindowMetrics" -Na
 
 # Disable font smoothing
 Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "FontSmoothing" -Value 0
-Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop"-Name "FontSmoothingType" -Value 2
+Set-ItemProperty -Path "HKUDefaultUser:\Control Panel\Desktop" -Name "FontSmoothingType" -Value 2
 
 # Disable most other visual effects
 Set-ItemProperty -Path "HKUDefaultUser:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "VisualFXSetting" -Value 3
@@ -894,7 +899,7 @@ Write-Host "$basename - Make some Files"
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Get some basic tools"
 # --------------------------------------------------------------------------------------------
-## ,"SysinternalsSuite.zip"
+
 $downloadList = @(
     "new-service-core.bat",
     "new-service-datacollection.bat",
@@ -917,13 +922,14 @@ $downloadList = @(
     "du.exe",
     "LGPO.exe",
     "BootUpdCmd20.exe",
-    "psexec.exe")
+    "psexec.exe"
+)
 ForEach ($downloadTools in $downloadList) {
     # better if we used Get-FileHash to check, but no time to write good code ...
-    if (!(Test-Path "$env:local\bin\$_")) {
-        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/bin/$_" -Destination "$env:local\bin\$_" -DisplayName "LockerLifeLocalBin" -Description "Download LockerLife Local Tools $_" -TransferType Download -RetryInterval 60
+    if (!(Test-Path "$env:local\bin\$downloadTools")) {
+        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/bin/$downloadTools" -Destination "$env:local\bin\$downloadTools" -DisplayName "LockerLifeLocalBin" -Description "Download LockerLife Local Tools $downloadTools" -TransferType Download -RetryInterval 60
     } else {
-        WriteInfoHighlighted "$basename -- Skipping $_" 
+        Write-Host "$basename -- Skipping $downloadTools" 
     }
 }
 #commit the downloaded files
@@ -973,7 +979,7 @@ Get-BitsTransfer | Complete-BitsTransfer
 
 
 Write-Host "$basename -- Download DRIVERS ..."
-"printer-filter.zip","printer.zip" | ForEach-Object {
+"printer.zip","printer-filter.zip","printer-test.zip" | ForEach-Object {
     # better if we used Get-FileHash, but no time to write good code ...
     if (!(Test-Path "$_")) {
         Start-BitsTransfer -Source "http://lockerlife.hk/deploy/drivers/$_" -Destination "c:\local\drivers\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife System Drivers $_" -TransferType Download -RetryInterval 60
@@ -1049,10 +1055,12 @@ $disableServices = @(
     "vmicheartbeat"
 )
 foreach ($service in $disableServices) {
-    Stop-Service -Name $service -Force
-    # sc.exe config $service start= disabled
-    # Start-Process "C:\Windows\system32\sc.exe" -ArgumentList "config SensrSvc start= disabled" -PassThru -NoNewWindow -Wait
-    Set-Service -Name $service -StartupType Disabled
+    if (Get-Service $service -ErrorAction SilentlyContinue) {
+        Stop-Service -Name $service -Force
+        # sc.exe config $service start= disabled
+        # Start-Process "C:\Windows\system32\sc.exe" -ArgumentList "config SensrSvc start= disabled" -PassThru -NoNewWindow -Wait
+        Set-Service -Name $service -StartupType Disabled
+    }
 }
 
 # --------------------------------------------------------------------------------------------
@@ -1097,8 +1105,8 @@ net.exe USER Administrator /active:yes
 net.exe USER Administrator Locision123
 #net user administrator /active:no
 
-$U = Get-WmiObject -class Win32_UserAccount | Where-Object { $_.Name -eq "AAICON" }
-if ($U) {
+if (Get-CimInstance win32_useraccount | where { $_.Name -eq "AAICON" }) {
+    #$U = Get-WmiObject -class Win32_UserAccount | where { $_.Name -eq "AAICON" }
     WriteInfo "$basename -- AAICON user exists"
     WriteInfoHighlighted "$basename -- force Update AAICON Password ..."
     net user AAICON Locision123
@@ -1114,41 +1122,44 @@ if ($U) {
     #Start-ChocolateyProcessAsAdmin -statements $args -exeToRun $vcdmount
     net.exe user AAICON Locision123
     net.exe user AAICON Locision123 /add /expires:never /passwordchg:no
+    
 }
 
 # add taskbot account
-#Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
-& net.exe user /add taskbot TaskBotPassW0rd /active:yes /comment:"Sweep sweep" /fullname:"Cleaning Robot" /passwordchg:no /Y
-net.exe user /add taskbot TaskBotPassW0rd /active:yes /comment:"Sweep sweep" /fullname:"Cleaning Robot" /passwordchg:no /Y
+if (!(Get-CimInstance win32_useraccount | where { $_.Name -eq "taskbot" })) {
 
-# create profile for taskbot
+    #Start-Process "$Env:SystemRoot\System32\net.exe" -ArgumentList 'user /add kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no' -NoNewWindow
+    & net.exe user /add taskbot TaskBotPassW0rd /active:yes /comment:"Sweep sweep" /fullname:"Cleaning Robot" /passwordchg:no /Y
+    net.exe user /add taskbot TaskBotPassW0rd /active:yes /comment:"Sweep sweep" /fullname:"Cleaning Robot" /passwordchg:no /Y
 
-# do not let taskbot interactive login because he is only background use
-#reg add new key HKEY_LOCAL_MACHINE\Software\Microsoft\WindowsNT\CurrentVersion\Winlogon /v SpecialAccounts
-# reg add new key HKEY_LOCAL_MACHINE\Software\Microsoft\WindowsNT\CurrentVersion\Winlogon /v UserList /t REG_DWORD
-#HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList
+    # create profile for taskbot
+
+    # do not let taskbot interactive login because he is only background use
+    #reg add new key HKEY_LOCAL_MACHINE\Software\Microsoft\WindowsNT\CurrentVersion\Winlogon /v SpecialAccounts
+    # reg add new key HKEY_LOCAL_MACHINE\Software\Microsoft\WindowsNT\CurrentVersion\Winlogon /v UserList /t REG_DWORD
+    #HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList
 
 
-$taskbotUser = "taskbot"
-$taskbotPass = ConvertTo-SecureString -String "TaskBotPassW0rd" -AsPlainText -Force
+    $taskbotUser = "taskbot"
+    $taskbotPass = ConvertTo-SecureString -String "TaskBotPassW0rd" -AsPlainText -Force
 
-# just use $cred ...
-$taskbotCred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList "$taskbotUser, $taskbotPass"
+    # just use $cred ...
+    $taskbotCred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList "$taskbotUser, $taskbotPass"
 
-# [] auto create user profile (super quick, super dirty!)
-# redundant because user profile creation isn't always guranteed ...
-Write-Host "$basename -- Create taskbot user profile"
-#Start-Process -Credential $taskbotCred cmd.exe -ArgumentList "/c dir"
-#Start-Process -Credential $taskbotCred -LoadUserProfile cmd.exe -ArgumentList "/c dir"
-Invoke-Expression "psexec -accepteula -nobanner -u taskbot -p TaskBotPassW0rd cmd /c dir"
-
+    # [] auto create user profile (super quick, super dirty!)
+    # redundant because user profile creation isn't always guranteed ...
+    Write-Host "$basename -- Create taskbot user profile"
+    #Start-Process -Credential $taskbotCred cmd.exe -ArgumentList "/c dir"
+    #Start-Process -Credential $taskbotCred -LoadUserProfile cmd.exe -ArgumentList "/c dir"
+    Invoke-Expression "psexec -accepteula -nobanner -u taskbot -p TaskBotPassW0rd cmd /c dir"
+}
 
 
 # Change LogonUI wallpaper
 Copy-Item "$Env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\logon-background-black.jpg" -Force | Out-Null
 Copy-Item "$env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\System32\oobe\info\backgrounds\backgroundDefault.jpg" -Force | Out-Null
 #Copy-Item "$env:local\etc\pantone-process-black-c.bmp" -Destination "$Env:SystemRoot\System32\oobe\background.bmp" -Force | Out-Null
-Copy-Item "$env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\Web\Wallpaper\Windows\img0.jpg" -Force | Out-Null
+#Copy-Item "$env:local\etc\pantone-process-black-c.jpg" -Destination "$Env:SystemRoot\Web\Wallpaper\Windows\img0.jpg" -Force | Out-Null
 
 
 # --------------------------------------------------------------------------------------------
@@ -1206,7 +1217,7 @@ cleanmgr.exe /verylowdisk
 
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
-New-Item -ItemType File -Path "$env:local\status\$basename.done" | Out-Null
+New-Item -ItemType File -Path "$env:local\status\$basename.done" -Force | Out-Null
 
 Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
