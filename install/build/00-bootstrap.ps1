@@ -47,7 +47,10 @@ if (Test-Path C:\local\lib\WASP.dll) {
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
 (New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/Get-InstalledSoftware.ps1","C:\Get-InstalledSoftware.ps1")
 . C:\99-DeploymentConfig.ps1
+. C:\Get-InstalledSoftware.ps1
+
 $basename = "00-bootstrap"
 
 SetConsoleWindow
@@ -70,13 +73,13 @@ Select-Window -Title "Administrator`: 00-init" | Send-Keys ~
 Start-Sleep -Seconds 2
 if (Select-Window -Title "00-init") {
     Select-Window -Title "00-init" | Send-Keys ~
+    Select-Window -Title "00-init" | Send-Keys ~
 }
 
 # Start Time and Transcript
 Start-Transcript -Path "$Env:temp\$basename.log"
 $StartDateTime = Get-Date
 Write-Host "Script started at $StartDateTime" -ForegroundColor Green
-
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - System eligibility check"
@@ -130,15 +133,17 @@ cinst Boxstarter.Chocolatey
 cinst chocolatey-core.extension
 cinst chocolatey-uninstall.extension
 
-cinst teamviewer.host --version 12.0.72365
-Start-Sleep -Seconds 5
-Restart-Service TeamViewer
-Write-Host "$basename -- Download TeamViewer Settings"
-Start-BitsTransfer -Source "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg" -Destination "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg"
-Write-Host "$basename -- Install teamviewer Settings"
-Stop-Service TeamViewer
-Stop-Service TeamViewer
-reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
+if (!(Get-Service -Name "TeamViewer" -ErrorAction SilentlyContinue)) {
+    cinst teamviewer.host --version 12.0.72365
+    Start-Sleep -Seconds 5
+    Write-Host "$basename -- Download TeamViewer Settings"
+    Start-BitsTransfer -Source "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg" -Destination "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg"
+    Write-Host "$basename -- Install teamviewer Settings"
+    reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
+    Stop-Service TeamViewer
+    Stop-Service TeamViewer
+}
+
 $env:TeamViewerClientID = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
 $env:TeamViewerClientID = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
 
@@ -235,6 +240,7 @@ Breathe
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename -- Checking for Java ... "
+(Get-InstalledSoftware -Verbose -Computername $env:computername).DisplayName -like '*java*'
 if (!(Test-Path "$JAVA_HOME\java.exe")) {
     Write-Host "`n $basename -- Installing Java jre"
     & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
@@ -243,22 +249,38 @@ if (!(Test-Path "$JAVA_HOME\java.exe")) {
 } else {
     Write-Host "`n $basename -- Java already installed, skipping ..." 
 }
+Reg.exe DELETE "HKLM\SOFTWARE\JavaSoft\Java Update" /f
 
 Breathe
 
 # --------------------------------------------------------------------------------------------
 # Write-Host "$basename -- Installing Dropbox ..."
 #cinst dropbox --ignore-checksums
+# Get-WmiObject -Verbose -Class Win32_Product 
+
+
+# $dropboxUninstall = $env:PROGRAMFILES\Dropbox\Client\DropboxUninstaller.exe 
+# if (Test-Path -Path $dropboxUninstall) {
+#     Stop-Service -Verbose Dropbox
+     Start-Process -WorkingDirectory $env:programfiles -FilePath 'C:\Program Files\Dropbox\Client\DropboxUninstall.exe' -ArgumentList '/S'
+# } else {
+#     Write-Host "$basename --- Dropbox already uninstalled"
+# }
 
 
 # --------------------------------------------------------------------------------------------
 Write-Host "$basename - Out of band Installers"
 # --------------------------------------------------------------------------------------------
 
-WriteInfoHighlighted "$basename -- Installing QuickSet"
-Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive /L*v e:\logs\quickset-install.log' -Wait
+if ( Get-WmiObject -Class Win32_Product | where { $_.Name -like "QuickSet*" } ) {
+    WriteInfoHighlighted "$basename -- Installing QuickSet"
+    Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive /L*v e:\logs\quickset-install.log' -Wait
 
-Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/AMC_Embedded_msi.msi /quiet /passive /L*v e:\logs\amcembedded-install.log' -Wait
+}
+
+if (Test-Path -Path '$env:programfiles\Axis*') {
+    Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/AMC_Embedded_msi.msi /quiet /passive /L*v e:\logs\amcembedded-install.log' -Wait
+}
 
 
 
@@ -323,7 +345,7 @@ Start-Service Spooler -Verbose
 Breathe
 
 Set-Location -Path "$env:local\drivers"
-"printer-filter.zip","printer.zip" | ForEach-Object {
+"printer.zip","printer-filter.zip","printer-test.zip" | ForEach-Object {
     if (Test-Path $_) {
         C:\ProgramData\chocolatey\bin\unzip.exe -o $_
         #Remove-Item $_ -Force -Confirm:$false -Force
@@ -340,7 +362,7 @@ Set-Location -Path "$env:local\drivers"
 # check; don't reinstall if already exists
 # ** implementation incomplete ...
 #Write-Host "Checking printer status ..."
-& "$Env:SystemRoot\System32\webm\wmic.exe" printer list status | Select-String 80mm
+& "$Env:SystemRoot\System32\wbem\wmic.exe" printer list status | Select-String 80mm
 
 ## step 1: install port
 & C:\windows\system32\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 C:\local\drivers\printer\Windows81Driver\POS88EN.inf
