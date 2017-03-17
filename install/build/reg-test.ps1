@@ -8,24 +8,56 @@
 $basename = "register-locker"
 $ErrorActionPreference = "Continue"
 
+Write-Host "Set Encoding"
+& "$env:windir\system32\chcp" 65001
+
 $OutputEncoding = [Console]::OutputEncoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
-& "$env:windir\system32\chcp" 65001
 
+# TeamViewer Check
+Write-Host "Teamviewer Setup"
+$TVtoken = "Bearer","2034214-P3aa9qGG323SKWVqqKBV"
 
+$TVheader = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+$TVheader.Add("authorization", $TVtoken)
+$TVcontentType = 'application/json; charset=utf-8'
+
+Write-Host "test connectivity to teamviewer api"
+$ping = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/ping" -ContentType $TVcontentType -Method Get -Headers $TVheader
+
+# get current computer TeamViewer ClientID
+$TVclientId = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
+
+# Note: TeamViewer API calls this "remotecontrol_id"
+# changes to device profile require "device_id"
+# Need to convert "remotecontrol_id" to "device_id"
+# testing -- $TVclientId = "629313250"
+Write-Host "Get TeamViewer Profile"
+$TVremoteControlId = "r" + $TVclientId
+$TVprofileUri = "https://webapi.teamviewer.com/api/v1/devices/?remotecontrol_id=" + $TVremoteControlId
+$TVdeviceProfile = Invoke-RestMethod -Method Get -Uri $TVprofileUri -Headers $TVheader
+
+Write-Host "Get LockerManagement Data"
 $lockerManagement = "LockerManagement.csv"
 if (Test-Path -Path "C:\temp\$lockerManagement") {
-	Remove-Item "C:\temp\$lockerManagement" -Force -ErrorAction SilentlyContinue
+    Remove-Item "C:\temp\$lockerManagement" -Force -ErrorAction SilentlyContinue
 }
-$request = Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/$lockerManagement" -OutFile (Join-Path -Path "C:\temp" -ChildPath $lockerManagement)
+$request = Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/$lockerManagement" -OutFile C:\temp\$lockerManagement
+
+Write-Host "Consume LockerManagement Data"
 $lmdata = Get-Content "c:\temp\$lockerManagement" -Encoding UTF8 | Select-Object | ConvertFrom-Csv
 
 #$FdataCheck1 = $lmdata | where { $_.LockerName -eq $env:sitename }
 #$FdataCheck2 = $lmdata | where { $_.SIMCardNumber -eq $env:iccid }
 
-$Fdata = $lmdata | where { $_.LockerName -eq $env:sitename }
+# Testing
+#$Fdata = $lmdata | where { $_.LockerName -eq "test-hk3" }
+
+# PRODUCTION
+$Fdata = $lmdata | where { $_.LockerName -eq $env:computername }
 $address = $Fdata.StreetNo + " " + $Fdata.StreetName
+$address
 
 
 # use Google Maps Geocoding API
@@ -33,6 +65,7 @@ $address = $Fdata.StreetNo + " " + $Fdata.StreetName
 # https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=AIzaSyClvw0s2I9miLfAniQ97wb6QkxFlGalho4
 #address=$convertedAddress,
 
+Write-Host "Get GPS Coordinates"
 [string]$RegionBias = "hk"
 [switch]$Sensor = $false
 $protocol = "https"
@@ -49,7 +82,7 @@ $geourl = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawD
 $georesponse = Invoke-RestMethod -Uri $geourl -UseBasicParsing
 #$geo.results.geometry.location
 
-# because google geocode-api uses lat/lng 
+# because google geocode-api uses lat/lng
 # and we use lat/lon
 $location = $georesponse.results.geometry.location | Select-Object @{N='lat'; E={$georesponse.results.geometry.location.lat}}, @{N='lon'; E={$georesponse.results.geometry.location.lng}}
 
@@ -72,8 +105,8 @@ if (!(Get-Module BitsTransfer)) {
 #. C:\99-DeploymentConfig.ps1
 #$basename = "00-init"
 
-
-$lp = New-Object PSObject 
+Write-Host "Create lp object"
+$lp = New-Object PSObject
 #$lp = [PSCustomObject]
 
 # $location = @"
@@ -85,10 +118,17 @@ $lp = New-Object PSObject
 
 $description = @"
 {
-  "en": "empty"
+  "en": "null"
 }
 "@ | ConvertFrom-Json
 
+if ($Fdata.Description) {
+    $description | Add-Member -Name "en" -Value $Fdata.Description -MemberType NoteProperty -Force -Verbose
+}
+if ($Fdata.DescriptionC) {
+    $description | Add-Member -Name "zh_HK" -Value $Fdata.DescriptionC -MemberType NoteProperty -Force -Verbose
+    $description | Add-Member -Name "zh_CN" -Value $Fdata.DescriptionC -MemberType NoteProperty -Force -Verbose
+}
 
 $lockerProfile = @"
 {
@@ -114,7 +154,7 @@ $address = [pscustomobject]@{
         city = "Hong Kong"
         country = "CHINA"
         district = $Fdata.District
-        room = $Fdata.Floor
+        room = $Fdata.Room
         street = $Fdata.StreetNo + " " + $Fdata.StreetName
         town = $Fdata.Town
     }
@@ -123,7 +163,7 @@ $address = [pscustomobject]@{
         city = "香港"
         country = "中国"
         district = $Fdata.DistrictC
-        room = $Fdata.FloorC
+        room = $Fdata.Room
         street = $Fdata.StreetNoC + " " + $Fdata.StreetNameC
         town = $Fdata.TownC
     }
@@ -132,7 +172,7 @@ $address = [pscustomobject]@{
         city = "香港"
         country = "中國"
         district = $Fdata.DistrictC
-        room = $Fdata.FloorC
+        room = $Fdata.Room
         street = $Fdata.StreetNoC + " " + $Fdata.StreetNameC
         town = $Fdata.TownC
     }
@@ -145,26 +185,31 @@ $address = [pscustomobject]@{
 #     "boxes" += @([PSCustomObject]@{"bayNum"=1; "boxNum"=2; "owner"="LIKONS"; "size"=0})
 # }
 # @{bayNum=1; boxNum=2; owner="LIKONS"; size=0}, @{bayNum=1; boxNum=3; owner="LIKONS"; size=0}, @{bayNum=1; boxNum=4; owner="LIKONS"; size=0})
-# }      
+# }
 
 $boxes = @()
 $type = $Fdata.Boxes
 
 if ($type -eq 72) {
+    $typeDescription = "Standard Locker, 72 Boxes"
     $col = 8
     $row = 9
 } elseif ($type -eq 54) {
+    $typeDescription = "Standard Locker, 54 Boxes"
     $col = 6
     $row = 9
 } elseif ($type -eq 36) {
+    $typeDescription = "Standard Locker, 36 Boxes"
     $col = 4
     $row = 9
 } elseif ($type -eq 18) {
+    $typeDescription = "Standard Locker, 18 Boxes"
     $col = 2
     $row = 9
 } else {
     # $type probably == 13
     # Locker Type == 7-11
+    $typeDescription = "Mini Locker, 13 Boxes"
     $col = 2
     # set $row within foreach
 }
@@ -173,7 +218,7 @@ if ($type -eq 72) {
 
 ForEach ($i in (1..$col)) {
     # 7-11 exception (column 1 has only 4 rows; column 2 has 9)
-    if ($type -eq 7) {
+    if ($type -eq 7 -Or $type -eq 13) {
         if ($i -eq 1) {
             $row = 4
         } else {
@@ -181,7 +226,7 @@ ForEach ($i in (1..$col)) {
         }
     }
     ForEach ($j in (1..$row)) {
-        if ($type -eq 7) {
+        if ($type -eq 7 -Or $type -eq 13) {
             $size = 0
         } else {
             if ($j -eq 1) {
@@ -217,8 +262,7 @@ $lp | Add-Member -Name "csNumber" -Value "85236672668" -MemberType NoteProperty
 $lp | Add-Member -Name "status" -Value 0 -MemberType NoteProperty
 $lp | Add-Member -Name "openTime" -Value $Fdata.Availability -MemberType NoteProperty -Force
 $lp | Add-Member -Name "location" -Value $location -MemberType NoteProperty
-#$lp | Add-Member -Name "description" -Value $description -MemberType NoteProperty
-$lp | Add-Member -Name "description" -Value $Fdata.Description -MemberType NoteProperty
+$lp | Add-Member -Name "description" -Value $description -MemberType NoteProperty
 $lp | Add-Member -Name "lockerProfile" -Value $lockerProfile -MemberType NoteProperty
 #$lp | Add-Member -Name "mac" -Value (Get-WimObject Win32_NetworkAdapter -Filter "MACAddress != NULL").MACAddress -MemberType NoteProperty
 $lp | Add-Member -Name "mac" -Value ((Get-CimInstance Win32_NetworkAdapterConfiguration -Filter "MACAddress != NULL").MACAddress).Replace(':', '-') -MemberType NoteProperty
@@ -233,25 +277,77 @@ $lp.address
 $lp.address.zh_HK
 
 $lockercfgfile = "locker-configuration.properties"
-#$uri = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers"
-$uri = "https://kv7slzj8yk.execute-api.ap-northeast-1.amazonaws.com/local/lockers"
+#$uri = "https://kv7slzj8yk.execute-api.ap-northeast-1.amazonaws.com/local/lockers"
+$uri = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers"
 
 try {
-    #-SkipCertificateCheck
+    #"application/json; charset=utf-8"
     $result = Invoke-RestMethod -DisableKeepAlive -body $body -ContentType "application/json; charset=utf-8" -Method Post -Headers @{"X-API-KEY" = "123456789"} -Uri $uri -Verbose -Debug -TimeoutSec 30
-    $r2 = $result.lockerId 
-
-    $uri2 = "https://kv7slzj8yk.execute-api.ap-northeast-1.amazonaws.com/local/lockers/$r2"
-    $result2 =  Invoke-RestMethod -DisableKeepAlive -ContentType "application/json; charset=utf-8" -Method Get -Headers @{"X-API-KEY" = "123456789"} -Uri $uri2 -Verbose -Debug -TimeoutSec 30
-    $lockercfg = ($result2.configuration).Replace(" : ", "=")
-    Set-Location "D:\" -Verbose
-    $lockercfg | Out-File -Encoding utf8 -FilePath "$lockercfgfile" -Force -Verbose
-    
+    $r2 = $result.lockerId
 } catch {
-    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__ 
+    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
+    Write-Host "StatusDescription:" $_.Exception.Response.StatusDescription
+    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
+
+}
+
+try {
+    # capture lockerId; append to $uri
+    $uri2 = $uri + "/" + $r2
+    $result2 =  Invoke-RestMethod -DisableKeepAlive -ContentType "application/json; charset=utf-8" -Method Get -Headers @{"X-API-KEY" = "123456789"} -Uri $uri2 -Verbose -Debug -TimeoutSec 30
+    $lockercfg = ($result2.configuration | Out-String).Replace(" : ", "=")
+    Set-Location "D:\" -Verbose
+    $lockercfg | Out-File -Encoding utf8 -FilePath "d:\$lockercfgfile" -Force -Verbose
+
+} catch {
+  Write-Host "StatusCode:" $_.Exception
+    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
     Write-Host "StatusDescription:" $_.Exception.Response.StatusDescription
 }
 
-# capture lockerId; append to $uri
+# -- Update TeamViewer Description
+# if setting groups:
+# disabled: "groupid": "g95467798"
+# testing: "groupid": "g95523178",
+# production: "groupid": "g95523193",
+# deploying: "groupid": "g96017647",
+# DEV: "groupid": "g101663132"
+
+# reg all lockers with locker-cloud
+# move locker into teamviewer dev group
+$TVdeviceProfileData = @"
+{
+    "alias": "$Fdata.LockerShortName",
+    "password": "Locision123",
+    "groupid": "g101663132",
+    "description": "LockerLife Locker,\n$Fdata.LockerName\nType: $typeDescription"
+}
+"@
+
+$TVprofileUri = "https://webapi.teamviewer.com/api/v1/devices/?remotecontrol_id=" + $TVremoteControlId
+$TVdeviceProfile = Invoke-RestMethod -Method Get -Uri $TVprofileUri -Headers $TVheader
+$TVdeviceUri = "https://webapi.teamviewer.com/api/v1/devices/" + $TVdeviceProfile.devices.device_id
+$TVrepsonse = Invoke-RestMethod -Method Put -Uri $TVdeviceUri -Headers $TVheader -ContentType $TVcontentType -Body $TVdeviceProfileData -UseBasicParsing -Verbose
+
+# send email
+$ehlo_domain = "locision.com"
+$to = "derekyuen@lockerlife.hk"
+$replyto = "pi-admin@locision.com"
+$from = "locker-deploy@locision.com"
+$fromname = "Locker Deployment - Registration"
+$returnpath = "pi-admin@locision.com"
+$subject = "testing"
+#$attach = "c:\temp\speedtest.txt"
+$mailbody = "message body"
+$mimetype = "text/plain"
+#$extargs = " -ehlo -info"
+#Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer $smtphost -Port $smtpport -UseSsl -Credential (Get-Credential) -Debug
+#C:\local\bin\mailsend.exe -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment: locker registered" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
+
+
+# rename computer using $LockerShortName
+if (!($fdata.LockerShortName -eq $env:computername)) {
+    Rename-Computer -NewName $Fdata.LockerShortName
+}
 
 # END
