@@ -1,9 +1,9 @@
 @ECHO OFF
-NSSM install scanner D:\java\jre\bin\java.exe 
+NSSM install scanner D:\java\jre\bin\java.exe
 NSSM set scanner DisplayName scanner
 NSSM set scanner Description LockerLife
 NSSM set scanner Application D:\java\jre\bin\java.exe
-NSSM set scanner AppParameters -Dconfig=D:\status -jar D:\scanner.jar
+NSSM set scanner AppParameters -Dconfig=D:\locker-configuration.properties -jar D:\scanner.jar
 NSSM set scanner AppDirectory D:\java\jre\bin
 NSSM set scanner AppEnvironmentExtra "JAVA_HOME=D:\JAVA\JRE"
 NSSM set scanner Start SERVICE_AUTO_START
