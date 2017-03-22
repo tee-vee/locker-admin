@@ -261,12 +261,12 @@ function Test-4G {
     Get-Content $SpeedTestResults | Select -Skip 1 | Out-File -Encoding utf8 c:\temp\speedtest8.txt
     Move-Item c:\temp\speedtest8.txt $SpeedTestResults -Force
     $ehlo_domain = "locision.com"
-    $to = "derekyuen@lockerlife.hk"
+    $to = "4g-speedtest@lockerlife.hk"
     $replyto = "pi-admin@locision.com"
     $from = "locker-deploy@locision.com"
     $fromname = "Locker Deployment"
     $returnpath = "pi-admin@locision.com"
-    $subject = "testing"
+    $subject = "4G SpeedTest for $env:computername"
     $attach = "c:\temp\speedtest.txt"
     $mailbody = "message body"
     $mimetype = "text/plain"
