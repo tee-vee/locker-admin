@@ -416,7 +416,6 @@ if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
 # Cleanup Desktop
 CleanupDesktop
 Create-DeploymentLinks
-#cleanmgr.exe /verylowdisk
 
 #New-Item -ItemType File -Path "$env:local\status\00-bootstrap.done" | Out-Null
 

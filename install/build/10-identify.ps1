@@ -284,7 +284,7 @@ Stop-Process -Name iexplore -ErrorAction SilentlyContinue
 # Cleanup Desktop
 CleanupDesktop
 Create-DeploymentLinks
-cleanmgr.exe /verylowdisk
+Start-Process -FilePath CleanMgr.exe -ArgumentList '/verylowdisk' -WindowStyle Hidden -Wait
 
 # touch $Env:local\status\00-init.done file
 # echo date/time into file, add lines ...
