@@ -927,43 +927,36 @@ $downloadList = @(
 ForEach ($downloadTools in $downloadList) {
     # better if we used Get-FileHash to check, but no time to write good code ...
     if (!(Test-Path "$env:local\bin\$downloadTools")) {
-        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/bin/$downloadTools" -Destination "$env:local\bin\$downloadTools" -DisplayName "LockerLifeLocalBin" -Description "Download LockerLife Local Tools $downloadTools" -TransferType Download -RetryInterval 60
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/bin/$downloadTools" -OutFile "$env:local\bin\$downloadTools" -Verbose
     } else {
         Write-Host "$basename -- Skipping $downloadTools" 
     }
 }
 #commit the downloaded files
-Get-BitsTransfer | Complete-BitsTransfer
 
 
 Write-Host "$basename -- GAC Update ..."
-Start-BitsTransfer -Source "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1" -Destination "$Env:local\bin\update-Gac.ps1" -DisplayName "LockerLifeLocalEtc" -Description "Download LockerLife System Settings" -TransferType Download -RetryInterval 60
-#commit the downloaded files
-Get-BitsTransfer | Complete-BitsTransfer
-
+Invoke-WebRequest -Uri "https://msdnshared.blob.core.windows.net/media/MSDNBlogsFS/prod.evol.blogs.msdn.com/CommunityServer.Components.PostAttachments/00/08/92/01/09/update-Gac.ps1" -Outfile "$Env:local\bin\update-Gac.ps1"
 
 Write-Host "$basename -- Download System Settings Files ..."
 "2017-01-gpo.zip","kiosk-production-black.bgi","lockerlife-boot.bs7","lockerlife-boot-custom.bs7","pantone-classic-blue.bmp","pantone-classic-blue.jpg","pantone-process-black-c.bmp","pantone-process-black-c.jpg","production-admin.bgi","production-kiosk.bgi","PRODUCTION-201701-TEAMVIEWER-HOST.reg","production-gpo.zip" | ForEach-Object {
     # better if we used Get-FileHash, but no time to write good code ...
     if (!(Test-Path "$env:local\etc\$_")) {
-        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/etc/$_" -Destination "$env:local\etc\$_" -DisplayName "LockerLifeLocalEtc" -Description "Download LockerLife System Settings $_" -TransferType Download -RetryInterval 60
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/etc/$_" -OutFile "$env:local\etc\$_" -Verbose
     } else {
         WriteInfoHighlighted "$basename -- Skipping $_" 
     }
 } # ForEach-Object ...
-#commit the downloaded files
-Get-BitsTransfer | Complete-BitsTransfer
 
 "WASP.dll" | ForEach-Object {
     # better if we used Get-FileHash, but no time to write good code ...
     if (!(Test-Path "$_")) {
-        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/lib/$_" -Destination "$env:local\lib\$_" -DisplayName "LockerLifeLocalLib" -Description "Download LockerLife Local Libraries $_" -TransferType Download -RetryInterval 60
+        #Start-BitsTransfer -Source "http://lockerlife.hk/deploy/lib/$_" -Destination "$env:local\lib\$_" -DisplayName "LockerLifeLocalLib" -Description "Download LockerLife Local Libraries $_" -TransferType Download -RetryInterval 60
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/lib/$_" -OutFile "$env:local\lib\$_" -Verbose
     } else {
         WriteInfoHighlighted "$basename -- Skipping $_" 
     }
 } # ForEach-Object
-#commit the downloaded files
-Get-BitsTransfer | Complete-BitsTransfer
 
 Write-Host "$basename -- Download Installers ..."
 "jre-8u111-windows-i586.exe","jre-install.properties","Windows6.1-KB2889748-x86.msu","402810_intl_i386_zip.exe" | ForEach-Object {
