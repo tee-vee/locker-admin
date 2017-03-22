@@ -15,7 +15,7 @@ $OutputEncoding = [Console]::OutputEncoding
 [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
 
 # locker-cloud api-key
-$lockerCloudApiKey = @{ "X-API-KEY" = "123456789" } 
+$lockerCloudApiKey = @{ "X-API-KEY" = "123456789" }
 
 
 # --------------------------------------------------------------------------------------------
@@ -130,8 +130,7 @@ $groups = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/groups" -
 $account = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/account" -Method Get -Headers $TVheader
 
 # --------------------------------------------------------------------------------------------
-# lockermanagement data
-
+# Locker Management data
 
 Write-Host "Get LockerManagement Data"
 $lockerManagement = "LockerManagement.csv"
@@ -143,11 +142,7 @@ $request = Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/$lockerManagement
 Write-Host "Consume LockerManagement Data"
 $lmdata = Get-Content "c:\temp\$lockerManagement" -Encoding UTF8 | Select-Object | ConvertFrom-Csv
 
-#$FdataCheck1 = $lmdata | where { $_.LockerName -eq $env:sitename }
-#$FdataCheck2 = $lmdata | where { $_.SIMCardNumber -eq $env:iccid }
-
-# Testing
-#$Fdata = $lmdata | where { $_.LockerName -eq "test-hk3" }
+#$Fdata = $lmdata | where { $_.LockerShortName -ieq $env:computername }
 
 
 #--------------------------------------------------------------------
@@ -161,7 +156,7 @@ if (!(Test-Path -Path "c:\sitename.done")) {
 
     Write-Host "Scan SIM card to identify locker" -ForegroundColor Red
     $Env:iccid = [Microsoft.VisualBasic.Interaction]::InputBox('Scan SIM Card', 'LockerLife Locker Deployment', "")
-
+    #[Environment]::SetEnvironmentVariable("iccid", "" ", "Machine")
     if ($env:iccid) {
         New-Item -ItemType File -Path "C:\local\status\$env:iccid"
         New-Item -ItemType File -Path "c:\sitename.done"
@@ -192,9 +187,9 @@ if (!(Test-Path -Path "c:\sitename.done")) {
     }
 
 	# find additional sitename/computername info using lockermanagement sheet
-    $Fdata = $lmdata | where { $_.LockerName -eq $env:computername }
-    $address = $Fdata.StreetNo + " " + $Fdata.StreetName
-    $address
+    $Fdata = $lmdata | where { $_.LockerShortName -eq $env:computername }
+    #$address = $Fdata.StreetNo + " " + $Fdata.StreetName
+    #$address
 
     Write-Host "$basename -- iccid -- $env:iccid"
     Write-Host "$basename -- sitename - $env:sitename"
