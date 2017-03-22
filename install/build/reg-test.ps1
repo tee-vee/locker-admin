@@ -199,8 +199,8 @@ Write-Host "Reading LockerManagement Data"
 $lmdata = Get-Content "c:\temp\$lockerManagement" -Encoding UTF8 | Select-Object | ConvertFrom-Csv
 
 # Get Site ... 
-#$Fdata = $lmdata | where { $_.LockerShortName -eq "test-hk3" }
-$Fdata = $lmdata | where { $_.LockerShortName -ieq $env:computername }
+#$Fdata = $lmdata | Where-Object { $_.LockerShortName -eq "test-hk3" }
+$Fdata = $lmdata | Where-Object { $_.LockerShortName -ieq $env:computername }
 
 
 if (!$Fdata) {
@@ -465,7 +465,7 @@ $lp | Add-Member -Name "location" -Value $location -MemberType NoteProperty
 $lp | Add-Member -Name "description" -Value $description -MemberType NoteProperty
 $lp | Add-Member -Name "lockerProfile" -Value $lockerProfile -MemberType NoteProperty
 #$lp | Add-Member -Name "mac" -Value ((Get-CimInstance Win32_NetworkAdapterConfiguration -Filter "MACAddress != NULL").MACAddress).Replace(':', '-') -MemberType NoteProperty
-$lp | Add-Member -Name "mac" -Value (getmac /fo csv | ConvertFrom-Csv | where { -not ( $_.'Transport Name' -eq "Hardware not present")}).'Physical Address' -MemberType NoteProperty
+$lp | Add-Member -Name "mac" -Value (getmac /fo csv | ConvertFrom-Csv | Where-Object { -not ( $_.'Transport Name' -eq "Hardware not present")}).'Physical Address' -MemberType NoteProperty
 $lp | Add-Member -Name "address" -value $address -MemberType NoteProperty
 $lp | Add-Member -Name "boxes" -value $boxes -MemberType NoteProperty
 
