@@ -124,6 +124,7 @@ cinst 7zip.commandline
 cinst unzip --ignore-checksums
 
 cinst dotnet4.5.1 --ignore-checksums
+cinst dotnet4.5.2 --ignore-checksums
 cinst dotnet4.6.2 --version 4.6.01590.0
 
 # below: requires .Net 4+ to run
@@ -397,7 +398,7 @@ if (-not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startu
     $WshShell = New-Object -comObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\bginfo.lnk")
     $Shortcut.TargetPath = "$Env:local\bin\Bginfo.exe"
-    $Shortcut.Arguments = "$Env:local\etc\production-kiosk.bgi /nolicprompt /timer:0 /silent"
+    $Shortcut.Arguments = "$Env:local\etc\kiosk-production-black.bgi /nolicprompt /timer:0 /silent"
     $Shortcut.Save()
 }
 
