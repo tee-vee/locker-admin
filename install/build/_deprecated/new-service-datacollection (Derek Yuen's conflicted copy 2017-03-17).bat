@@ -1,0 +1,21 @@
+@ECHO OFF
+NSSM install data-collection D:\java\jre\bin\java.exe 
+NSSM set data-collection DisplayName data-collection
+NSSM set data-collection Description LockerLife
+NSSM set data-collection Application D:\java\jre\bin\java.exe
+NSSM set data-collection AppParameters -Dconfig=D:\locker-configuration.properties -jar D:\data-collection.jar
+NSSM set data-collection AppDirectory D:\java\jre\bin
+NSSM set data-collection AppEnvironmentExtra "JAVA_HOME=D:\Java\jre"
+NSSM set data-collection Start SERVICE_DELAYED_AUTO_START
+NSSM set data-collection AppStdout e:\logs\data-collection-service.log
+NSSM set data-collection AppStderr e:\logs\data-collection-service.err
+NSSM set data-collection AppRotateFiles 1
+NSSM set data-collection AppRotateOnline 0
+NSSM set data-collection AppRotateSeconds 86400
+REM Replace stdout and stderr files
+NSSM set data-collection AppStdoutCreationDisposition 4
+NSSM set data-collection AppStderrCreationDisposition 4
+REM Disable WM_CLOSE, WM_QUIT in the Shutdown options. Without it, NSSM can't stop data-collection properly
+NSSM set data-collection AppStopMethodSkip 0
+REM Let's start data-collection. I assume a correct configuration is already in place
+NET START data-collection
