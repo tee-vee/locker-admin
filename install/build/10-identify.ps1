@@ -19,7 +19,7 @@ $lockerCloudApiKey = @{ "X-API-KEY" = "123456789" }
 
 
 # --------------------------------------------------------------------------------------------
-Write-Host "$basename - Lets start"
+Write-Host "${basename}: Lets start"
 # --------------------------------------------------------------------------------------------
 $timer = Start-TimedSection "10-identify"
 
@@ -38,7 +38,7 @@ If (!( $isAdmin )) {
 
 
 # --------------------------------------------------------------------------------------------
-Write-Host "$basename - Loading Modules ..."
+Write-Host "${basename}: Loading Modules ..."
 # --------------------------------------------------------------------------------------------
 
 # Import BitsTransfer ...
@@ -60,7 +60,7 @@ SetConsoleWindow
 $host.ui.RawUI.WindowTitle = "10-identify"
 
 # close previous IE windows ...
-Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue
+Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue -Force
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -87,7 +87,7 @@ if (Test-Path -Path "C:\ProgramData\chocolatey\bin\choco.exe") {
 
 cinst dotnet4.5.1 --ignore-checksums
 cinst powershell
-(new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+(New-Object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
 #cinst msaccess2010-redist-x86 --ignore-checksums
 #cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 
@@ -95,7 +95,7 @@ choco feature disable -n=allowGlobalConfirmation
 
 
 # --------------------------------------------------------------------------------------------
-Write-Host "$basename -- Set local variables"
+Write-Host "${basename}: Set local variables"
 # --------------------------------------------------------------------------------------------
 
 # Check if we're running PowerShell Version 2
@@ -116,7 +116,7 @@ $token = "Bearer " + $authtoken
 # --------------------------------------------------------------------------------------------
 # TeamViewer API
 
-Write-Host "$basename -- TeamViewer Setup"
+Write-Host "${basename}: TeamViewer Setup"
 $TVtoken = "Bearer","2034214-P3aa9qGG323SKWVqqKBV"
 
 $TVheader = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
@@ -191,9 +191,9 @@ if (!(Test-Path -Path "c:\sitename.done")) {
     #$address = $Fdata.StreetNo + " " + $Fdata.StreetName
     #$address
 
-    Write-Host "$basename -- iccid -- $env:iccid"
-    Write-Host "$basename -- sitename - $env:sitename"
-    Write-Host "$basename -- serial number - $env:lockerserialnumber"
+    Write-Host "${basename}: iccid -- $env:iccid"
+    Write-Host "${basename}: sitename - $env:sitename"
+    Write-Host "${basename}: serial number - $env:lockerserialnumber"
     #Write-Host "hostname - $Env:hostname"
     #Write-Host "sitename - $Env:sitename"
     #Write-Host "serial number - $Env:lockerserialnumber"
@@ -277,9 +277,9 @@ RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
 # rundll32.exe InetCpl.cpl,ClearMyTracksByProcess 4351
 
 # --------------------------------------------------------------------
-Write-Host "$basename - Cleanup"
+Write-Host "${basename}: Cleanup"
 # --------------------------------------------------------------------
-Stop-Process -Name iexplore -ErrorAction SilentlyContinue
+Stop-Process -Name "iexplore" -ErrorAction SilentlyContinue -Force
 
 # Cleanup Desktop
 CleanupDesktop
@@ -290,7 +290,7 @@ Start-Process -FilePath CleanMgr.exe -ArgumentList '/verylowdisk' -WindowStyle H
 # echo date/time into file, add lines ...
 New-Item -ItemType File -Path "$env:local\status\$basename.done" -Force | Out-Null
 
-Write-Host "$basename -- Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
+Write-Host "${basename}: Script finished at $(Get-date) and took $(((get-date) - $StartDateTime).TotalMinutes) Minutes"
 Stop-Transcript
 
 
@@ -300,7 +300,7 @@ Write-Host "."
 Stop-TimedSection $timer
 
 # --------------------------------------------------------------------
-Write-Host "$basename - Next stage ... "
+Write-Host "${basename}: Next stage ... "
 # --------------------------------------------------------------------
 START http://boxstarter.org/package/url?http://lockerlife.hk/deploy/30-lockerlife.ps1
 

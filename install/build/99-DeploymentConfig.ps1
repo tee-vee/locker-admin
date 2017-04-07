@@ -8,20 +8,19 @@ $host.ui.RawUI.WindowTitle = "99-DeploymentConfig"
 
 $basename = "99-DeploymentConfig"
 #--------------------------------------------------------------------
-Write-Host "99-DeploymentConfig - Lets start"
-#--------------------------------------------------------------------
-Write-Host "$basename - in" -ForegroundColor Green
+Write-Host "${basename}: Lets start" -ForegroundColor Magenta
+
+Write-Host "${basename}: IN" -ForegroundColor Green
 
 # make an entrance ...
-1..5 | % { Write-Host }
+1..3 | % { Write-Host }
 
-Write-Host "$basename -- Set Sound Volume to minimum"
+Write-Host "${basename}: Set Sound Volume to minimum"
 $obj = new-object -com wscript.shell
 $obj.SendKeys([char]173)
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Loading Modules ..."
-#--------------------------------------------------------------------
+Write-Host "${basename}: Loading Modules ..." -ForegroundColor Magenta
 
 # Import BitsTransfer ...
 if (!(Get-Module BitsTransfer)) {
@@ -33,13 +32,13 @@ if (!(Get-Module BitsTransfer)) {
 
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Setting Variables ..."
+Write-Host "${basename}: Setting Variables ..."
 #--------------------------------------------------------------------
 
 $ErrorActionPreference = "Continue"
-$PSDefaultParameterValues += @{'*:Verbose' = $true}
-$PSDefaultParameterValues += @{'*:Confirm' = $false}
-$PSDefaultParameterValues.Add("*:ErrorAction","Continue")
+#$PSDefaultParameterValues += @{'*:Verbose' = $true}
+#$PSDefaultParameterValues += @{'*:Confirm' = $false}
+#$PSDefaultParameterValues.Add("*:ErrorAction","Continue")
 
 $now = Get-Date -Format "yyyy-MM-ddTHH:mm"
 
@@ -63,7 +62,7 @@ $pswindow.buffersize = $newsize
 # the nul ensures window size does not chnage
 #& cmd /c mode con: cols=150  >nul 2>nul
 
-Write-Host "$basename -- Setting additional local variables ..."
+Write-Host "${basename}: Setting additional local variables ..."
 # easy add to %path% to the path based on finding the executable.
 #if(!(where.exe chocolatey)) { $env:Path += ';C:\Chocolatey\bin;' }
 $Env:Path += ";C:\local\bin;C:\$Env:ProgramFiles\GnuWin32\bin"
@@ -116,14 +115,14 @@ if (Get-Command ConvertFrom-JSON -ErrorAction SilentlyContinue) {
     $WebClient = New-Object System.Net.WebClient
     $Env:RouterExternalIpAddress = ((New-Object System.Net.WebClient).DownloadString("https://httpbin.org/ip") | ConvertFrom-JSON).origin
     $RouterExternalIpAddress = $env:RouterExternalIpAddress
-    Write-Host "$basename -- External IP Address found: $Env:RouterExternalIpAddress"
+    Write-Host "${basename}: External IP Address found: $Env:RouterExternalIpAddress" -ForegroundColor Green
 }
 
-Write-Host "$basename -- Console PC Internal IP Address Discovery ..."
+Write-Host "${basename}: Console PC Internal IP Address Discovery ..." -ForegroundColor Yellow
 Install-ChocolateyEnvironmentVariable "LocalIPAddress" "0.0.0.0"
 #$LocalIPAddress = ((Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter 'ipenabled = "true"').IPAddress | findstr [0-9].\.)[0]).Split()[-1] )
 $env:LocalIPAddress = ([net.dns]::GetHostAddresses("")| Select -Expa IP* | findstr [0-9].\. )
-Write-Host "$basename -- Console PC Internal IP Address: $env:LocalIPAddress"
+Write-Host "${basename}: Console PC Internal IP Address: $env:LocalIPAddress" -ForegroundColor Green
 
 #Install-ChocolateyEnvironmentVariable 'JAVA_HOME' 'path\to\jre' 'Machine'
 #Install-ChocolateyEnvironmentVariable -variableName "JAVA_HOME" -variableValue "D:\java\jre\bin" -variableType "Machine"
@@ -170,12 +169,8 @@ Install-ChocolateyEnvironmentVariable 'TeamViewerClientID' '0'
 #$TeamViewerClientID = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID).ClientID
 
 
-# locker-cloud api-key
-$lockerCloudApiKey = @{ "X-API-KEY" = "123456789" } 
-
-
 #--------------------------------------------------------------------
-Write-Host "$basename - Aliases"
+Write-Host "${basename}: Aliases"
 #--------------------------------------------------------------------
 Set-Alias -Name 'iexplore' "C:\Program Files\Internet Explorer\iexplore.exe" -Option AllScope
 Set-Alias -Name 'zip' "C:\Program Files\7-Zip\7z.exe" -Option AllScope -Force
@@ -186,7 +181,7 @@ Set-Alias -Name 'restart' 'invoke-systemReboot'
 
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Get updated SSL Certificate store"
+Write-Host "${basename}: Get updated SSL Certificate store"
 #--------------------------------------------------------------------
 
 #& "$env:curl" --progress-bar --url "https://curl.haxx.se/ca/cacert.pem" > $ALLUSERSPROFILE\cacert.pem
@@ -194,7 +189,7 @@ Write-Host "$basename - Get updated SSL Certificate store"
 
 
 #--------------------------------------------------------------------
-Write-Host "$basename - Functions"
+Write-Host "${basename}: Functions"
 #--------------------------------------------------------------------
 function SetConsoleWindow {
 
@@ -255,7 +250,7 @@ function NewScheduledJob {
 }
 
 function Test-4G {
-    Write-Host "$basename -- Running Internet Connection Speed Test ..."
+    Write-Host "${basename}: Running Internet Connection Speed Test ..."
     $SpeedTestResults = "c:\temp\speedtest.txt"
     C:\local\bin\speedtest-cli.exe | Out-File -Encoding utf8 $SpeedTestResults
     Get-Content $SpeedTestResults | Select -Skip 1 | Out-File -Encoding utf8 c:\temp\speedtest8.txt
@@ -277,7 +272,7 @@ function Test-4G {
 
 function Download-File {
     param ([string]$url,[string]$file)
-    Write-Host "Downloading $url to $file"
+    Write-Host "${basename}: Downloading $url to $file"
     $downloader = new-object System.Net.WebClient
     $downloader.DownloadFile($url, $file)
 }
@@ -317,7 +312,7 @@ function ConfigureDisk {
     # wmic volume list brief
 
     # using diskpart
-    Write-Host "$basename -- Setup D drive"
+    Write-Host "${basename}: Setup D drive"
     #select disk=1
     #create partition primary
     #select partition=1
@@ -327,7 +322,7 @@ function ConfigureDisk {
 
 
     # using diskpart
-    Write-Host "$basename -- Setup E drive"
+    Write-Host "${basename}: Setup E drive"
     #select disk=2
     #create partition primary
     #select partition=1
@@ -364,7 +359,7 @@ Function Set-RegistryKey {
 
 function Breathe {
     # Let libs/modules load ...
-    1..5 | % { Write-Host " -- "}
+    1..3 | % { Write-Host " -- "}
 }
 
 function AddTo-7zip($zipFileName) {
@@ -423,7 +418,7 @@ function Get-WindowsBuildNumber {
 }  #end function Get-WindowsBuildNumber
 
 function Create-DeploymentLinks {
-    Write-Host "$basename -- Create-DeploymentLinks"
+    Write-Host "${basename}: Create-DeploymentLinks"
     Set-Alias InstChocoSCut Install-ChocolateyShortcut
     ## create shortcut to deployment - 00-bootstrap
     InstChocoSCut -ShortcutFilePath "$env:UserProfile\Desktop\LockerDeployment\DeploymentHomepage.lnk" -TargetPath "$env:ProgramFiles\Internet Explorer\iexplore.exe" -Arguments "$env:deployurl" -Description "Locker Deployment Website"
@@ -466,9 +461,9 @@ function Enable-Net40 {
         if((Test-PendingReboot) -and $Boxstarter.RebootOk) {
             return Invoke-Reboot
         }
-        Write-BoxstarterMessage "Downloading .net 4.5..."
+        Write-Host "${basename}: Downloading Microsoft .net 4.5..."
         Get-HttpResource "http://download.microsoft.com/download/b/a/4/ba4a7e71-2906-4b2d-a0e1-80cf16844f5f/dotnetfx45_full_x86_x64.exe" "$env:temp\net45.exe"
-        Write-BoxstarterMessage "Installing .net 4.5..."
+        Write-Host "${basename}: Installing Microsoft .net 4.5..."
         if(Get-IsRemote) {
             Invoke-FromTask @"
 Start-Process "$env:temp\net45.exe" -verb runas -wait -argumentList "/quiet /norestart /log $Env:temp\net45.log"
@@ -489,13 +484,13 @@ Function Rename-ComputerName ([string]$NewComputerName) {
 
 ## cleanup desktop
 function CleanupDesktop {
-    Write-Host "$basename -- Clean up Desktop..." -ForegroundColor Green
-    w32tm /query /configuration
-    w32tm /query /status
-    w32tm /resync /rediscover /nowait
+    Write-Host "${basename}: Desktop cleanup..." -ForegroundColor Green
+    w32tm.exe /query /configuration
+    w32tm.exe /query /status
+    w32tm.exe /resync /rediscover /nowait
     # Internet Explorer: Temp Internet Files:
     RunDll32.exe InetCpl.cpl,ClearMyTracksByProcess 8
-
+    Set-Location -Path "C:\Users"
     "AppData\Roaming\Microsoft\Windows\Libraries\*","AppData\Roaming\Microsoft\Windows\SendTo\*.lnk","SendTo\*.lnk","Recent\*.lnk","LockerDeployment","Desktop\LockerDeployment","Links\*.lnk","Desktop\*.lnk","Favorites\*","Videos\*","Recorded TV","Pictures","Music" | ForEach-Object {
         if (Test-Path -Path "$env:UserProfile\$_") {
             Remove-Item -Path "$env:UserProfile\$_" -Recurse -Force 
@@ -507,20 +502,20 @@ function CleanupDesktop {
             Remove-Item -Path "C:\Users\kiosk\$_" -Recurse -Force 
         }
     }
-    Remove-Item "C:\99-DeploymentConfig.ps1" -Force | Out-Null
+    Remove-Item "C:\99-DeploymentConfig.ps1" -Force -ErrorAction SilentlyContinue
     Enable-UAC
     Disable-MicrosoftUpdate
 }  #end function CleanupDesktop
 
 # Helper functions for user/computer session management
 function invoke-userLogout {
-    shutdown /l /t 0 
+    shutdown.exe /l /t 0 
 }
 function invoke-systemShutdown {
-    shutdown /s /t 5 
+    shutdown.exe /s /t 5 
 }
 function invoke-systemReboot {
-    shutdown /r /t 5 
+    shutdown.exe /r /t 5 
 }
 function invoke-systemSleep {
     RunDll32.exe PowrProf.dll,SetSuspendState 
@@ -529,6 +524,6 @@ function invoke-terminalLock {
     RunDll32.exe User32.dll,LockWorkStation 
 }
 
-Write-Host "$basename - out" -ForegroundColor Green
+Write-Host "${basename}: OUT" -ForegroundColor Green
 
 #END OF FILE
