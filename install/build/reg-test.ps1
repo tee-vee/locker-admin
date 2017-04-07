@@ -1,309 +1,738 @@
-#Requires -Version 3.0
+﻿#Requires -Version 3.0
 
 # Derek Yuen <derekyuen@lockerlife.hk>
 # March 2017
 
-# reg-test.ps1 -- base tester script for locker-registration
+## reg-test.ps1 -- base tester script for locker-registration
 
-$basename = "register-locker"
-$ErrorActionPreference = "Stop"
+## NOTE: MUST SET $Env:ComputerName to LockerShortName else script will FAIL
+## NOTE: NEED PROCESS TO UPDATE SIM CARD
+## powershell-remoting ok - start nlasvc, netprofm, winrm; then run Enable-PsRemoting
 
-Write-Host "Set Encoding"
-& "$env:windir\system32\chcp" 65001
+${basename} = "locker-register"
 
-$OutputEncoding = [Console]::OutputEncoding
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
+Write-Host "${basename} - START`n"
+$StartTime = (Get-Date).Second
 
-# locker check - use sim card?
-# Ask Dropbox API
+# --------------------------------------------------------------------------------------------
+##
+## Configure Locker Environment
+##
 
-# #$authtoken "5nHPkEeCXnAAAAAAAAAAJI71YUOYRZgv4PeQ1h1ZHGmCHnbnosmjFdqkg5NPSggL"
-# $authtoken = "5nHPkEeCXnAAAAAAAAAAIyI533NP8-Y1zXEK7m2LOvAk4-HC0jGOZLKjEoGcq2gU"
-# $token = "Bearer " + $authtoken
-# # Search Dropbox locker-admin
-# $uri = "https://api.dropboxapi.com/2/files/search"
-# $token = "Bearer " + $authtoken
-# $body = '{"path":"/locker-admin/locker","query":"' +  $env:iccid + '"}'
-# $yy = Invoke-RestMethod -Uri $uri -Headers @{ "Authorization" = $token } -Body $body -ContentType 'application/json' -Method Post
+$destEnvironment = "DEV"
+#$destEnvironment = "PRODUCTION"
 
 
-# speedtest
-#if (Test-Path -Path "c:\local\bin\speedtest-cli.exe") {
-#    c:\local\bin\speedtest-cli.exe
-#}
+$LockerStatus = 1
 
-# check services ...
-c:\local\bin\NSSM.exe set data-collection AppParameters -Dconfig=D:\locker-configuration.properties -jar D:\data-collection.jar
-c:\local\bin\NSSM.exe set scanner AppParameters -Dconfig=D:\locker-configuration.properties -jar D:\scanner.jar
-c:\local\bin\NSSM.exe set core AppParameters -Dconfig=D:\locker-configuration.properties -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -jar d:\core.jar
-
-Get-Service -Verbose data-collection
-Get-Service -Verbose scanner
-Get-Service -Verbose core
-
-Stop-Service -Verbose data-collection
-Stop-Service -Verbose scanner
-Stop-Service -Verbose core
-
-$sdkUri = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/latest/sdk"
-$headers = @{ "X-API-KEY" = "123456789" } 
-$sdkResponse = Invoke-RestMethod -Method Get -Headers $headers -Uri $sdkUri
-
-$sdkVersions = @( "core", "scanner", "dataCollection")
-foreach ($sdk in $sdkVersions) {
-    $sdkResponse.$sdk.version | Out-File -Encoding utf8 -FilePath "D:\$sdk.version.txt"
-}
-
-Invoke-RestMethod -Method Get -Headers $headers -Uri $sdkUri -Verbose
-
-if (!(Get-Service -Name kioskserver -ErrorAction SilentlyContinue)) {
-    WriteInfoHighlighted "$basename -- INSTALL KIOSKSERVER AS SERVICE"
-    #CALL %LOCKERINSTALL%\build\new-service-kioskserver.bat
-    #CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-kioskserver.bat
-    Start-Process -FilePath $Env:local\bin\new-service-kioskserver.bat -Verb RunAs -Wait
-    Write-Host "."
-} else {
-    Write-Host "Kioskserver service installed."
-    Restart-Service -Name "kioskserver" -Verbose
-    c:\local\bin\NSSM.exe rotate kioskserver
+if (Test-Path "C:\local\status\$env:hostname-$destEnvironment") {
+    Write-Host "Previous Registration Detected ..."
 }
 
 
-# Algorithm       Hash                                                                   Path
-# ---------       ----                                                                   ----
-# SHA256          8C3046E962A6D633814706E11C4D91AF36EA833F78DC18F5A1E0F61EB4F73F19       D:\core.jar
-# SHA256          07B93CE8D41B40AA4E0061C12976DB789293C5C1200DB4286ADBDF16BB23C852       D:\data-collection.jar
-# SHA256          59410FB0AC13F2971F38117CE54BAD991EFB0AF38C780069C41F4F9141B1472B       D:\scanner.jar
+# --------------------------------------------------------------------------------------------
+##
+## If computername is null, just exit ...
+##
+
+if ($Env:ComputerName -eq "NULL") {
+    Write-Host "${basename}: Locker Console PC Name is not set" -ForegroundColor Red
+    Write-Host "${basename}: Locker Console PC Name: $Env:ComputerName" -ForegroundColor Red
+    Write-Host "${basename}: Break out of script and fix computername!" -ForegroundColor Red
+
+    $score -= 1000
+    Start-Sleep -Seconds 30
+}
+else {
+    Write-Host "${basename}: Locker Console PC Name: $Env:ComputerName `n"
+}
 
 
-#$installedSdkVer = unzip -p scanner.jar META-INF/MANIFEST.MF | Select-String "Implementation-Version"
+# --------------------------------------------------------------------------------------------
+##
+## Functions
+##
 
-$lockerJarName = "scanner"
-$lockerJarFile = "$lockerJarName.jar"
-
-#  Add lockerJar File Hash for check 
-if ($lockerJarName -eq "core") {
-    # get updated new-service batch script
-    Remove-Item -Path "c:\local\bin\new-service-$lockerJarName.bat" -Verbose -ErrorAction Continue
-    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-$lockerJarName.bat" -OutFile "c:\local\bin\new-service-$lockerJarName.bat" -Verbose
-
-    $lockerJarHash = "8C3046E962A6D633814706E11C4D91AF36EA833F78DC18F5A1E0F61EB4F73F19"
-    Write-Host "$lockerJarName lockerJarHash - $lockerJarHash"
-    Stop-Service -Name $lockerJarName -Verbose
-    Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-    Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.$lockerJarName.url -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-    if ((Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256).Hash -ne $lockerJarHash) {
-        Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-        Invoke-WebRequest -Method Get -Headers $headers -Uri "$sdkResponse.$lockerJarName.url" -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-        Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256
+# Stop services - Note "data-collection" is hyphenated
+function StopLocalServices {
+    $LockerServicesList = @("core", "data-collection", "scanner", "kioskserver")
+    foreach ($LockerService in $LockerServicesList) {
+        Get-Service -Name $LockerService
+        Stop-Service -Name $LockerService -Force
     }
-    $out = Start-Process -FilePath "C:\local\bin\new-service-$lockerJarName.bat" -Verb RunAs
-    Start-Service -Name $lockerJarName -Verbose
-    c:\local\bin\NSSM.exe rotate core
-
-} elseif ($lockerJarName -eq "data-collection") {
-    # get updated new-service batch script
-    Remove-Item -Path "c:\local\bin\new-service-datacollection.bat" -Verbose -ErrorAction Continue
-    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-datacollection.bat" -OutFile "c:\local\bin\new-service-datacollection.bat" -Verbose
-
-    # data-collection is "datacollection" at LockerCloud API endpoint
-    $lockerJarHash = "07B93CE8D41B40AA4E0061C12976DB789293C5C1200DB4286ADBDF16BB23C852"
-    Write-Host "$lockerJarName lockerJarHash - $lockerJarHash"
-    Stop-Service -Name $lockerJarName -Verbose
-    Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-    Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.datacollection.url -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-    if ((Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256).Hash -ne $lockerJarHash) {
-        Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-        Invoke-WebRequest -Method Get -Headers $headers -Uri "$sdkResponse.$lockerJarName.url" -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-        Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256
-    }
-    $out = Start-Process -FilePath "C:\local\bin\new-service-datacollection.bat" -Verb RunAs
-    Start-Service -Name $lockerJarName -Verbose
-    c:\local\bin\NSSM.exe rotate data-collection
-
-} elseif ($lockerJarName -eq "scanner") {
-    # get updated new-service batch script
-    Remove-Item -Path "c:\local\bin\new-service-$lockerJarName.bat" -Verbose -ErrorAction Continue
-    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-$lockerJarName.bat" -OutFile "c:\local\bin\new-service-$lockerJarName.bat" -Verbose
-
-    $lockerJarHash = "59410FB0AC13F2971F38117CE54BAD991EFB0AF38C780069C41F4F9141B1472B"
-    Write-Host "$lockerJarName lockerJarHash - $lockerJarHash"
-    Stop-Service -Name $lockerJarName -Verbose
-    Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-    Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.$lockerJarName.url -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-    if ((Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256).Hash -ne $lockerJarHash) {
-        Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-        Invoke-WebRequest -Method Get -Headers $headers -Uri "$sdkResponse.$lockerJarName.url" -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-        Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256
-    }
-    $out = Start-Process -FilePath "C:\local\bin\new-service-$lockerJarName.bat" -Verb RunAs
-    Start-Service -Name $lockerJarName -Verbose
-    c:\local\bin\NSSM.exe rotate scanner
-
-} else {
-    Write-Host "unknown locker jar ... not possible!"
 }
 
+# --------------------------------------------------------------------------------------------
+##
+## Environment Setup
+##
 
-# $lockerJarName = "data-collection"
-# $lockerJarFile = "$lockerJarName.jar"
-# if (!(Get-Service -Name "data-collection" -ErrorAction SilentlyContinue)) {
-#     WriteInfoHighlighted "$basename -- INSTALL DATA-COLLECTION AS SERVICE"
-#     Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.dataCollection.url -OutFile "D:\data-collection.jar" -ContentType "application/octet-stream" -Verbose
-#     Start-Process -FilePath $Env:local\bin\new-service-datacollection.bat -Verb RunAs -Wait
-# } else {
-#     Write-Host "data-Collection service installed."
-#     Stop-Service -Name "data-collection" -Verbose
-#     Move-Item -Path "D:\$lockerJarFile" -Destination "D:\data-collection.jar.old" -Force
-#     Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.dataCollection.url -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-#     if ((Get-FileHash -Path "D:\$lockerJarFile" -Algorithm SHA256) -ne "07B93CE8D41B40AA4E0061C12976DB789293C5C1200DB4286ADBDF16BB23C852") {
-#         Remove-Item -Path "D:\$lockerJarFile" -Force -Verbose
-#         Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.scanner.url -OutFile "D:\$lockerJarFile" -ContentType "application/octet-stream" -Verbose
-#     }
-#     Start-Service -Name "data-collection" -Verbose
-#     c:\local\bin\NSSM.exe set data-collection AppParameters -Dconfig=D:\locker-configuration.properties -jar D:\data-collection.jar
-#     c:\local\bin\NSSM.exe rotate data-collection
-# }
+[int]$score = 0
+
+## Check if redeploy is needed - use scoreboard
+# set $score = 100
+# check $psversiontable - if base psshell is leq 3  (-100)
+# if java is missing (-100), locker-console (-1), locker-libs (-1)
 
 
-# if (!(Get-Service -Name core -ErrorAction SilentlyContinue)) {
-#     WriteInfoHighlighted "$basename -- INSTALL CORE AS SERVICE"
-#     Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.core.url -OutFile "D:\core.jar" -ContentType "application/octet-stream" -Verbose
-#     ## CALL %USERPROFILE%\Dropbox\locker-admin\install\build\new-service-core.bat
-#     Start-Process -FilePath $Env:local\bin\new-service-core.bat -Verb RunAs -Wait
-#     Write-Host "."
-# } else {
-#     Write-Host "core service installed."
-#     Stop-Service -Name core -Verbose
-#     Move-Item -Path "D:\core.jar" -Destination "D:\core.jar.old" -Force
-#     Invoke-WebRequest -Method Get -Headers $headers -Uri $sdkResponse.core.url -OutFile "D:\core.jar" -ContentType "application/octet-stream" -Verbose
-#     Get-FileHash -Path "D:\core.jar" -Algorithm SHA256
-#     Start-Service -Name core -Verbose
-#     c:\local\bin\NSSM.exe set core AppParameters "-Dconfig=D:\locker-configuration.properties -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -jar d:\core.jar"
-#     c:\local\bin\NSSM.exe rotate core
 
-# }
-
-
-# locker-properties setup
-# get LockerManagement Data
-Write-Host "Get LockerManagement Data"
-$lockerManagement = "LockerManagement.csv"
-if (Test-Path -Path "C:\temp\$lockerManagement") {
-    Remove-Item "C:\temp\$lockerManagement" -Force -ErrorAction SilentlyContinue
-}
-$request = Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/$lockerManagement" -OutFile C:\temp\$lockerManagement
-
-Write-Host "Reading LockerManagement Data"
-$lmdata = Get-Content "c:\temp\$lockerManagement" -Encoding UTF8 | Select-Object | ConvertFrom-Csv
-
-# Get Site ... 
-#$Fdata = $lmdata | Where-Object { $_.LockerShortName -eq "test-hk3" }
-$Fdata = $lmdata | Where-Object { $_.LockerShortName -ieq $env:computername }
-
-
-if (!$Fdata) {
-    # Try using sim iccid
-    $iccid = (Get-ChildItem -Path "C:\local\status\8985*")[0].Name
-    Write-Host "Site not found - please check computername or sitename"
+## Configure PowerShell Environment
+## Verify Running as Admin
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+If (!( $isAdmin )) {
+    Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+    Start-Process powershell.exe "-NoProfile -NoExit -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    1 .. 5 | % { Write-Host }
+    Write-Host "" 
+    Write-Host "${basename}: Unable to elevate to admin ... try psexec instead." -ForegroundColor Red
+    Write-Host "${basename}: Exiting in 10 seconds ..."
+    Start-Sleep -Seconds 10
     exit
 }
 
 
-# locker-properties: location (lat/lon)
-Write-Host "Get GPS Coordinates"
-# use Google Maps Geocoding API
-# Key -> Derek Y Developer Account
+Write-Host "${basename}: Set PowerShell Work Environment"
+$ErrorActionPreference = "Continue"
+$ConfirmPreference = "None"
+
+
+if (Test-Path -Path "$env:programfiles\7-Zip") {
+    #$7zExe = "$env:programfiles\7-Zip\7z.exe"
+    $Env:Path += ";C:\local\bin;$env:programfiles\7-Zip;$Env:Programdata\chocolatey\bin"
+}
+else {
+    $Env:Path += ";C:\local\bin;$Env:Programdata\chocolatey\bin"
+}
+
+if ($PSDefaultParameterValues) {
+    $PSDefaultParameterValues.Clear()
+}
+
+#$PSDefaultParameterValues=@{"<CmdletName>:<ParameterName>"="<DefaultValue>"}
+#$PSDefaultParameterValues.Add("Invoke-*:Verbose", $True)
+#$PSDefaultParameterValues.Add("Invoke-RestMethod:Debug", $True)
+
+## *-File
+$PSDefaultParameterValues.Add("*-File:Confirm", $False)
+$PSDefaultParameterValues.Add("Out-File:Encoding", "utf8")
+
+## *-Item*
+#$PSDefaultParameterValues += @{'New-Item*:Confirm' = $False}
+#$PSDefaultParameterValues.Add("*-Item*:Verbose", $True)
+$PSDefaultParameterValues.Add("Copy-Item:ErrorAction", "SilentlyContinue")
+$PSDefaultParameterValues.Add("Set-ItemProperty:ErrorAction", "SilentlyContinue")
+
+
+## *-Path
+#$PSDefaultParameterValues.Add("*-Path:Verbose", $True)
+$PSDefaultParameterValues.Add("Test-Path:ErrorAction", "SilentlyContinue")
+
+## *-Location
+$PSDefaultParameterValues.Add("*-Location:Verbose", $True)
+
+## *-Service
+$PSDefaultParameterValues.Add("*-Service:Verbose", $True)
+$PSDefaultParameterValues.Add("*-Service:Confirm", $False)
+
+
+## set codepage
+& "$env:windir\system32\chcp" 65001
+
+
+$OutputEncoding = [Console]::OutputEncoding
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
+$ContentTypeJsonU8 = "application/json; charset=utf-8"
+$ContentTypeOctetStream = "application/octet-stream"
+
+# --------------------------------------------------------------------------------------------
+## Some Keys
+
+## Google API Keys
+## Use Google Maps Geocoding API - Developer Key -> Derek Y Developer Account
+$GoogleGeocodeApiKey = "AIzaSyClvw0s2I9miLfAniQ97wb6QkxFlGalho4"
+
+## Use Google Maps Places API for Address Validation - Developer Key -> Derek Y Developer Account
 $googlePlaceApiKey = "AIzaSyBt6QTvw5JEPujtT36s4CE1SV-C3-BhpgM"
+
+## Microsoft API Keys -> Derek Y Developer Account
+$BingMapsApiKey = "Ag0utFeSmBi9G8segv0hBn5jLY896KrizfBeSzQ6JsTsc4vUsNytSbN85UsMAN1r"
+
+
+# --------------------------------------------------------------------------------------------
+##
+## Set URL ... 
+## NOTE: LockerId is different depending on environment ... (hostname-DEV / hostname-PRODUCTION)
+##
+
+$LockerIdFile = "$Env:ComputerName-$destEnvironment"
+
+if ($destEnvironment -eq "DEV") {
+    Write-Host "${basename}: Working in $destEnvironment"
+    $certificateId = "b44cb38a56296034fa13e0c6b9e1ffcb97150b05e11563642b8b4117ab202617"
+    $LockerCloudApiKey = @{ "X-API-KEY" = "2a7d1233-28da-41c1-9349-77a65a69ef93" }
+    #$LockerCloudSdkUrl = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/latest/sdk"
+    $LockerCloudSdkUrl = "https://locker-cloud-test.locision.cloud/latest/sdk"
+    #$LockerRegistrationUrl = "https://kv7slzj8yk.execute-api.ap-northeast-1.amazonaws.com/local/lockers"
+    #$LockerRegistrationUrl = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers"
+    $LockerRegistrationUrl = "https://locker-cloud-test.locision.cloud/lockers"
+
+
+    ## TeamViewer DEV groupid: "g101663132"
+    $TeamViewerGroupId = "g101663132"
+}
+
+if ($destEnvironment -eq "PRODUCTION") {
+    Write-Host "${basename}: Working in $destEnvironment"
+    $certificateId = "f652ade7d63a83429ac22a726b8cdf1b9759893978de335695ac08263b073278"
+    $LockerCloudApiKey = @{ "X-API-KEY" = "1506e0e9-72d2-48c7-98d9-ca6662b40a10" }
+    #$LockerCloudSdkUrl = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/latest/sdk"
+    $LockerCloudSdkUrl = "https://locker-cloud.locision.cloud/latest/sdk"
+    #$LockerRegistrationUrl = "https://0ngcozbnmf.execute-api.ap-northeast-1.amazonaws.com/prod/lockers"
+    $LockerRegistrationUrl = "https://locker-cloud.locision.cloud/lockers"
+
+    ## Google API Keys
+    ## Use Google Maps Geocoding API - Developer Key -> Derek Y Developer Account
+    #$GoogleGeocodeApiKey = "AIzaSyClvw0s2I9miLfAniQ97wb6QkxFlGalho4"
+
+    ## Use Google Maps Places API for Address Validation - Developer Key -> Derek Y Developer Account
+    #$googlePlaceApiKey = "AIzaSyBt6QTvw5JEPujtT36s4CE1SV-C3-BhpgM"
+
+    ## TeamViewer PRODUCTION groupid: "g95523193"
+    $TeamViewerGroupId = "g95523193"
+}
+
+## Configure Windows Environmnet
+
+Write-Host "${basename}: Set Sound Volume to minimum"
+$SetSystemVolumeObj = New-Object -com wscript.shell
+
+## vol down
+$SetSystemVolumeObj.SendKeys([char]174)
+$SetSystemVolumeObj.SendKeys([char]174)
+$SetSystemVolumeObj.SendKeys([char]174)
+$SetSystemVolumeObj.SendKeys([char]174)
+$SetSystemVolumeObj.SendKeys([char]173)                     ## mute
+
+Write-Host "${basename}: Set Time Zone"
+tzutil.exe /s "China Standard Time"
+
+Write-Host "${basename}: Set Nearby NTP Servers"
+w32tm.exe /config /update /manualpeerlist:"stdtime.gov.hk asia.pool.ntp.org"
+
+# fix time service & force time resync
+if (Get-Service -Name "w32time") {
+    Restart-Service "w32time"
+    w32tm.exe /query /peers
+    w32tm.exe /resync
+}
+else {
+    Set-Service -Name "w32time" -StartupType Automatic
+    Restart-Service -Name "w32time"
+    w32tm.exe /query /peers
+    w32tm.exe /resync
+}
+
+
+##
+## Update LockerLife System Configuration (March 2017)
+##
+
+Write-Host "${basename}: Updating LockerLife System Configuration (March 2017) ..." -ForegroundColor Magenta
+Update-Help -ErrorAction SilentlyContinue
+
+
+Write-Host "${basename}: User Accounting Updates ..." -ForegroundColor Magenta
+net.exe accounts /maxpwage:unlimited
+net.exe user kiosk locision123 /active:yes /comment:"LockerLife Kiosk" /fullname:"LockerLife Kiosk" /passwordchg:no /logonpasswordchg:no /expires:never /times:all
+net.exe user AAICON Locision123 /active:yes /expires:never /times:all
+
+net.exe user administrator /active:no
+
+Write-Host "${basename}: Updating kiosk run.bat ..." -ForegroundColor Magenta
+if (!(Get-Item "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup") -is [System.IO.DirectoryInfo]) {
+    Remove-Item "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup" -Force -Verbose
+    New-Item -ItemType Directory -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup" -Verbose
+}
+Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/run.bat" -OutFile "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run.bat"
+
+Remove-Item -Path "C:\Users\kiosk\Desktop\*.*" -Force
+Remove-Item -Path "C:\Users\kiosk\Favorites" -Recurse -Force
+Remove-Item -Path "C:\Users\kiosk\Saved Games" -Recurse -Force
+Remove-Item -Path "C:\Users\kiosk\Pictures" -Recurse -Force
+Remove-Item -Path "C:\Users\kiosk\Music" -Recurse -Force
+Remove-Item -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Libraries\*.*" -Force
+Remove-Item -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\Recent\*.lnk" -Recurse -Force
+Remove-Item -Path "C:\Users\kiosk\AppData\Roaming\Microsoft\Windows\SendTo\*.*" -Force
+
+Remove-Item -Path "C:\Users\public\Music" -Recurse -Force
+Remove-Item -Path "C:\Users\public\Pictures" -Recurse -Force
+Remove-Item -Path "C:\Users\public\Videos" -Recurse -Force
+
+
+Remove-Item -Path "C:\local\bin\nssm.exe" -Verbose -Force -ErrorAction SilentlyContinue
+
+Write-Host "${basename}: System Updates ..." -ForegroundColor Magenta
+# Remove Shutdown option from Start Menu
+#New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WaitToKillAppTimeout" -Verbose -Force
+#Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WaitToKillAppTimeout" -Value "5000" -Verbose -Force
+
+#New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_ButtonAction" -Force
+#Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_ButtonAction" -Value "4" -Force
+
+#New-ItemProperty -Path "HKCU:\Software\Microsoft\Wisp\Pen\SysEventParameters" -Name "FlickMode" -Force
+#Set-ItemProperty -Path "HKCU:\Software\Microsoft\Wisp\Pen\SysEventParameters" -Name "FlickMode" -Value "0" -Force
+
+#New-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\TabletPC" -Name "TurnOffPenFeedback" -Verbose -Force
+#Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\TabletPC" -Name "TurnOffPenFeedback" -Value 1 -Verbose -Force
+
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI" -Name "ShowTabletKeyboard" -Verbose -Force
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI" -Name "ShowTabletKeyboard" -Value "0" -Verbose
+
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name "OEMBackground" -Force -Verbose
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\Background" -Name "OEMBackground" -Value "1" -Force -Verbose
+
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Verbose -Force
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Verbose -Force
+
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Wisp\Pen\SysEventParameters" -Name "FlickMode" -Force
+Set-ItemProperty -Path "HKLM:\Software\Microsoft\Wisp\Pen\SysEventParameters" -Name "FlickMode" -Value "0" -Force
+
+#New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\TabletPC" -Name "TurnOffPenFeedback" -Force
+#Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\TabletPC" -Name "TurnOffPenFeedback" -Value "1" -Force
+
+## disable on-screen keyboard for production 
+Stop-Service -Name "TabletInputService"
+Set-Service -Name "TabletInputService" -StartupType Disabled
+Get-Service -Name "TabletInputService"
+
+## set lock computer background to black
+New-Item -ItemType Directory -Path "C:\Windows\System32\oobe\info" -Force -ErrorAction SilentlyContinue -Verbose
+New-Item -ItemType Directory -Path "C:\Windows\System32\oobe\info\backgrounds" -Force -ErrorAction SilentlyContinue -Verbose
+Copy-Item -Path "C:\local\etc\pantone-process-black-c.jpg" -Destination "C:\Windows\System32\oobe\info\backgrounds\backgroundDefault.jpg" -Force -Verbose -ErrorAction SilentlyContinue
+
+## Additional tools ...
+Write-Host "${basename}: Tools update ..." -ForegroundColor Magenta
+Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/Get-InstalledSoftware.ps1" -OutFile "C:\local\bin\Get-InstalledSoftware.ps1"
+
+
+Write-Host "${basename}: Add fast log viewing program" -ForegroundColor Magenta
+choco install -y baretail
+choco install -y nssm
+
+# Where is 7-zip? Too lazy to do checks ...
+choco install -y 7zip --forcex86
+choco install -y 7zip.commandline
+choco install -y unzip --ignore-checksums
+
+
+Write-Host "${basename}: Hardware Configuration Updates ..." -ForegroundColor Magenta
+& "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
+netsh.exe interface set interface name="Wireless Network Connection" admin=DISABLED
+
+Write-Host "${basename}: Fix Display Resolution Issues ..." -ForegroundColor Magenta
+## Idenify Display ... "Digital" must be "1"
+
+
+
+Write-Host "${basename}: Re-enable touch display ..." -ForegroundColor Magenta
+## Known touch display Hardware IDs:
+##		Standard Locker Generation 1:
+##		Standard Locker Generation 2:
+## 		Mini Generation 1:
+## 		Mini Generation 2:
+## 		Mini Generation 3:
+
+## identify touch display
+$TouchDisplayObj = (Get-CimInstance Win32_PnPEntity | where Service -ieq "HidUsb")
+$TouchDisplayDeviceId = (Get-CimInstance Win32_PnPEntity | where Service -ieq "HidUsb" ).DeviceID
+$TouchDisplayPnPDeviceId = (Get-CimInstance Win32_PnPEntity | where Service -ieq "HidUsb" ).PNPDeviceID
+
+if ($TouchDisplayObj.Status -ieq "Error") {
+    Write-Host "${basename}: Found probable disabled touchscreen at $TouchDisplayId" -ForegroundColor Yellow
+    $TouchDisplayPPID = "{0}{1}" -f '@', $TouchDisplayPnPDeviceId
+    C:\local\bin\devcon.exe status $TouchDisplayPPID
+    ## C:\local\bin\devcon.exe enable $TouchDisplayPPID
+    ## Write-Host "${basename}: Enabled touchscreen at $TouchDisplayId" -ForegroundColor Green
+}
+else {
+    Write-Host "${basename}: No disabled touchscreen found ..." -ForegroundColor Yellow
+}
+
+# C:\local\bin\devcon.exe status "USB\VID_13D3&PID_3393*"
+# $TouchDisplayId = (Get-CimInstance Win32_PnPEntity | where caption -match '_touchscreen_id_placeholder_').pnpDeviceID
+# $ppid = "{0}{1}" -f '@',$id
+
+# .\devcon.exe status $ppid
+
+## Configure Router
+
+
+# speedtest
+# if (Test-Path -Path "c:\local\bin\speedtest-cli.exe") {
+#     c:\local\bin\speedtest-cli.exe
+# }
+
+
+##
+## Fix Printer Driver - Need Printer Filter Driver
+##
+## Start in /local/drivers ...
+
+Set-Location -Path "C:\local\drivers"
+
+## Clear print queue
+Stop-Service Spooler
+Remove-Item "$env:systemroot\System32\spool\printers\*.shd" -Force
+Remove-Item "$env:systemroot\System32\spool\printers\*.spl" -Force
+#cscript c:\windows\system32\Printing_Admin_Scripts\en_US\prnjobs.vbs
+Start-Service Spooler
+
+## test if printer driver install is needed ... 
+## Run Gilbert's run-printer-test.bat ... 
+## capture output ... 
+
+## Use devcon.exe to idenitfy printer and printer driver
+#devcon.exe status "USB\VID_0483&PID_5720&REV_0100"
+## or use rundll32.exe to idenitfy active driver
+
+# printer.zip
+if (Test-Path -Path "C:\local\drivers\printer.zip") {
+    # printer.zip exists ...
+    if (Test-Path -Path "C:\local\drivers\printer\SPRT_Printer.inf") {
+        # .zip file expanded and inf file available; proceed with driver install ...
+        Write-Host "Printer driver available for install ..." -ForegroundColor Green
+        # install code ... 
+    } #if
+    else {
+        # zip file available, needs to be expanded ...
+        Write-Host "Expanding printer.zip"
+        7z.exe t "C:\local\drivers\printer.zip"
+        7z.exe x -aoa -y "C:\local\drivers\printer.zip"
+        # install ...
+    }  # else
+} # if
+else {
+    # printer.zip does not exist; download and prep for install ...
+    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/drivers/printer.zip" -Outfile "C:\local\drivers\printer.zip"
+    Write-Host "Expanding printer.zip"
+    7z.exe t "C:\local\drivers\printer.zip"
+    7z.exe x -aoa -y "C:\local\drivers\printer.zip"
+} # else
+
+
+# printer-filter.zip
+if (Test-Path -Path "C:\local\drivers\printer-filter.zip") {
+    # printer-filter.zip file exists ...
+    if (Test-Path -Path "C:\local\drivers\printer-filter") {
+        # filter expanded ... install filter driver (combined with above printer SPRT_Printer.inf)
+
+        # Install printer-filter driver
+        # RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 path-to-inf\infname.inf
+        #Write-Host "${basename}: Checking printer status ..."
+        & "$Env:SystemRoot\System32\wbem\wmic.exe" printer list status | Select-String 80mm
+
+        # step 1: install port
+        & "C:\Windows\System32\RUNDLL32.EXE" SETUPAPI.DLL, InstallHinfSection DefaultInstall 132 C:\local\drivers\printer\Windows81Driver\POS88EN.inf
+        # %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
+        # %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720"
+
+        Write-Host "${basename}: Installing printer-filter driver ..."
+        #& "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --device=USB\VID_0483"&"PID_5720
+
+        # step 2: connect/bridge printer-filter to printer
+        Write-Host "${basename}: Connecting printer-filter driver to Windows printer object ..."
+        & "$Env:local\drivers\printer-filter\libusb-win32\bin\x86\install-filter.exe" install --inf="$Env:local\drivers\printer\SPRT_Printer.inf"
+
+        Write-Host "${basename}: Printer filter driver should be ok" -ForegroundColor Yellow
+        #Write-Host "${basename}: RUN PARCEL FLOW FOR CHECK" -ForegroundColor Yellow
+    }
+    else {
+        #7z.exe t "C:\local\drivers\printer-filter.zip"
+        # bah, can't capture non-powershell errorcodes easily... expand the zip ...
+        7z.exe x -aoa -y "C:\local\drivers\printer-filter.zip"
+
+    }
+
+}
+#Pop-Location
+
+
+
+# Preparation for updating LockerCloud Middleware (SDK)
+
+Set-Location "D:" -Verbose
+
+# Kill LockerLife processes ...
+if (Get-Process -Name "LockerLife*" -ErrorAction SilentlyContinue) {
+    Stop-Process -Name "LockerLife*" -Force
+}
+
+## Stop Local Services for code update
+StopLocalServices
+
+# Get locker-libs.zip ...
+Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/locker-libs.zip" -OutFile "d:\Locker-Console\locker-libs.zip" -Verbose
+Write-Host "${basename}: locker-libs.zip also available just in case ..."
+
+
+# Update LockerCloud Middleware (SDK)
+$LockerCloudSdkHeaders = $LockerCloudApiKey
+$LockerCloudSdkResponse = Invoke-RestMethod -Method Get -Headers $LockerCloudSdkHeaders -Uri $LockerCloudSdkUrl
+
+Set-Location -Path "c:\local\bin" -Verbose
+Remove-Item -Path "D:\data-collection.jar" -Force -Verbose
+
+# LockerCloudSdk: "datacollection" is NOT hyphenated
+$LockerLifeSdkList = @( "core", "scanner", "dataCollection")
+foreach ($sdk in $LockerLifeSdkList) {
+    # start from scratch ...
+    #$LockerCloudSdkResponse.$sdk.version | Out-File -FilePath "D:\$sdk.version.txt" -Force
+    Remove-Item -Path "C:\local\bin\new-service-$sdk.bat" -Force -Verbose -ErrorAction SilentlyContinue
+    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-$($sdk).bat" -OutFile "C:\local\bin\new-service-$($sdk).bat" -Verbose
+
+    Remove-Item -Path "D:\$sdk.jar" -ErrorAction SilentlyContinue
+    Invoke-WebRequest -Method Get -Headers $LockerCloudSdkHeaders -Uri "$($LockerCloudSdkResponse.$sdk.url)" -OutFile "D:\$sdk.jar" -Verbose
+    $localJarHash = (Get-FileHash -Path "D:\$sdk.jar" -Algorithm SHA256).Hash
+    Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
+    Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
+
+    # check hash
+    if ($localJarHash -eq $LockerCloudSdkResponse.$sdk.sha256) {
+        Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
+        Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
+        Write-Host "${basename}: Hashes match for $sdk!" -ForegroundColor Green
+        #Start-Process -FilePath "c:\local\bin\new-service-$sdk.bat" -Verb RunAs -Wait
+        & "C:\local\bin\new-service-$sdk.bat"
+        Restart-Service -Name $sdk
+    } #if
+    else {
+        Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
+        Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
+        Write-Host "${basename}: Hashes do not match for $sdk!" -ForegroundColor Red
+        & "C:\local\bin\new-service-$sdk.bat"
+        #Start-Process -FilePath "c:\local\bin\new-service-$sdk.bat" -Verb RunAs -Wait
+        Restart-Service -Name $sdk
+    } #else
+} # foreach
+
+Move-Item -Path "D:\datacollection.jar" -Destination "D:\data-collection.jar" -Force -Verbose
+
+## EXCEPTION: kioskserver (not served from LockerCloud)
+## NOTED: Not checking ...
+## sometimes missing kioskserver.exe ...
+Write-Host "${basename}: INSTALL KIOSKSERVER AS SERVICE"
+Remove-Item -Path "C:\local\bin\new-service-kioskserver.bat" -ErrorAction SilentlyContinue -Verbose
+Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-kioskserver.bat" -OutFile "c:\local\bin\new-service-kioskserver.bat" -Verbose
+Start-Process -FilePath "c:\local\bin\new-service-kioskserver.bat" -Verb RunAs -Wait
+
+Write-Host "${basename}: Kioskserver service should be installed ..."
+#Pop-Location
+
+
+## Printer Test
+## REQUIRES: KioskServer Service & on-site
+
+Set-Location -Path "C:\local\drivers" -Verbose
+
+if ((Get-Service -Name "kioskserver").Status -eq "Running") {
+    if (Test-Path -Path "C:\local\drivers\printer-test\run-printer-test.bat") {
+        Write-Host "${basename}: printer-test tool availalble ..." -ForegroundColor Green
+        #Write-Host "checking paper ..."
+    }
+    else {
+        # missing printer-test.zip
+        Write-Host "${basename}: Downloading printer-test ..." -ForegroundColor Yellow
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/drivers/printer-test.zip" -OutFile "C:\local\drivers\printer-test.zip" -Verbose
+        7z.exe x -aoa -y "C:\local\drivers\printer-test.zip"
+        Write-Host "${basename}: printer-test tool availalble ..." -ForegroundColor Green
+        Write-Host "${basename}: Printer status check: "
+        Set-Location -Path "C:\local\drivers\printer-test"
+        Add-Content -Path "C:\local\drivers\printer-test\init.txt" -Value "127.0.0.1 9012"
+        Add-Content -Path "C:\local\drivers\printer-test\init.txt" -Value "WAIT `"connected to server`""
+        Add-Content -Path "C:\local\drivers\printer-test\init.txt" -Value "SEND `"printer_init\m`""
+        #Add-Content -Path "C:\local\drivers\printer-test\init.txt" -Value "WAIT `"printer_init:0`""
+        Start-Process -FilePath "C:\local\drivers\printer-test\TST10.exe" -ArgumentList "/r:init.txt /o:init-out.txt" -NoNewWindow
+        Get-Content -Path "init-out.txt"
+        #Pop-Location
+        
+    } #else
+} 
+else {
+    # Get-Service kioskserver fail - fix kioskserver
+    Write-Host "${basename}: Fixing kioskserver ..."
+    Stop-Service -Name "kioskserver"
+    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-kioskserver.bat" -OutFile "c:\local\bin\new-service-kioskserver.bat" -Verbose
+    Start-Process -FilePath "c:\local\bin\new-service-kioskserver.bat" -Verb RunAs -Wait
+    Get-Service -Name "kioskserver"
+}
+
+
+# First, validate sitename & build locker.properties
+# Get LockerManagementDataFile Data
+Write-Host "${basename}: Get LockerManagement Data File"
+$LockerManagementDataFile = "LockerManagement.csv"
+if (Test-Path -Path "C:\temp\$LockerManagementDataFile") {
+    Remove-Item "C:\temp\$LockerManagementDataFile" -Force -ErrorAction SilentlyContinue
+}
+$request = Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/$LockerManagementDataFile" -OutFile "C:\temp\$LockerManagementDataFile"
+
+Write-Host "${basename}: Reading LockerManagementDataFile Data"
+$lmdata = (Get-Content "c:\temp\$LockerManagementDataFile" -Encoding UTF8 -ErrorAction Stop | Select-Object | ConvertFrom-Csv)
+
+# https://translation.googleapis.com/language/translate/v2?key=YOUR_API_KEY&source=en&target=de&q=Hello%20world&q=My%20name%20is%20Jeff
+
+# Build locker.properties - Get Site ...
+#$Fdata = $lmdata | Where-Object { $_.LockerShortName -eq "test-hk3" }
+$Fdata = $lmdata | Where-Object { $_.LockerShortName -ieq $env:computername }
+
+##
+## Check if previously registered & Validate LockerID
+
+if (Test-Path -Path "c:\local\status\$LockerIdFile") {
+    $LockerRegistrationCheck = (Get-Content -Path "C:\local\status\$LockerIdFile" -ErrorAction Stop | Select-Object -Last 1)
+    $LockerRegistrationCheckResult = (Invoke-RestMethod -Method Get -Headers $LockerCloudApiKey -Uri $LockerRegistrationUrl/$($LockerRegistrationCheck)).nickname
+    if ($LockerRegistrationCheckResult -eq $Fdata.LockerName) {
+        Write-Host "${basename}: Locker Identified: $LockerRegistrationCheckResult" -ForegroundColor Green
+        Write-Host "${basename}: Using LockerID $LockerRegistrationCheck" -ForegroundColor Green
+        Write-Host "${basename}: Will Patch LockerCloud LockerProfile" -ForegroundColor Green
+
+        # override LockerRegistrationUrl
+        $LockerRegistrationUrl = "$LockerRegistrationUrl/$LockerRegistrationCheck"
+        Write-Host "${basename}: Using endpoint $LockerRegistrationUrl" -ForegroundColor Green
+        # Set Web Services Methods to PATCH
+        $LockerRegistrationHttpMethod = "PATCH"
+    }
+    else {
+        Write-Host "${basename}: Locker Registerered but LockerId not valid ..." -ForegroundColor Red
+        $score -= 1000
+    }
+}
+else {
+    Write-Host "${basename}: New Registration" -ForegroundColor Green
+    $LockerRegistrationHttpMethod = "POST"
+}
+
+
+# Build locker.properties - location (lat/lon)
+Write-Host "${basename}: Geocode Locker Address to GPS Coordinates"
+
 [string]$RegionBias = "hk"
-[switch]$Sensor = $false
+[string]$GoogleGeocodeApiComponentType = "convenience_store"
 $protocol = "https"
 $RawDataFormat = "JSON"
 [string]$language = "en"
 
-$googleGeocodeApiKey = "AIzaSyClvw0s2I9miLfAniQ97wb6QkxFlGalho4"
+if ($($Fdata.scope) -eq "711") {
+    [string]$GoogleGeocodeApiComponentType = "convenience_store"
+}
 
-# massage address for google ... 
-$geocodeAddress = $Fdata.GpsRef + " " + $Fdata.StreetNo + " " + $Fdata.StreetName + " " + $Fdata.District
-$geocodeAddress = $geocodeAddress.Replace("NULL","")
-$geocodeAddress = $geocodeAddress.TrimEnd(" ") 
-$convertedAddress = $geocodeAddress.Replace(" ","+")
+# massage address for google ...
+# has tendency to include blank spaces
+# v2 fix: construct array -- add if not blank; convertfrom... to build
+# use stack (pushd, popd)
+
+# first try ...
+
+#$geocodeAddress = $Fdata.GpsRef + "," + $Fdata.StreetNo + "," + $Fdata.StreetName + "," + $Fdata.Town + "," + $Fdata.District
+$geocodeAddress = $Fdata.GpsRef + "," + $Fdata.Town + "," + $Fdata.District
+#$geocodeAddress = $geocodeAddress.Replace("NULL", "")
+#$geocodeAddress = $geocodeAddress.TrimEnd(" ")
+$convertedAddress = $geocodeAddress.Replace(" ", "+")
+
 #$url = "https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=AIzaSyClvw0s2I9miLfAniQ97wb6QkxFlGalho4"
-#$url = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&key=$($googleGeocodeApiKey)"
-#$url = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&sensor=$($Sensor.ToString().ToLower())&region=$($RegionBias)&key=$($googleGeocodeApiKey)"
-$geourl = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&key=$($googleGeocodeApiKey)"
-$geourlTW = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&language=zh-TW&key=$($googleGeocodeApiKey)"
-$geourlCN = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&language=zh-CN&key=$($googleGeocodeApiKey)"
-$placeUrl = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/place/details/json?placeid=$placeId&key=$googlePlaceApiKey"
-$placeUrlTW = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/place/details/json?placeid=$placeId&language=zh-TW&key=$googlePlaceApiKey"
-$placeUrlCN = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/place/details/json?placeid=$placeId&language=zh-CN&key=$googlePlaceApiKey"
+#$url = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&key=$($GoogleGeocodeApiKey)"
+#$url = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&result_type=$($GoogleGeocodeApiComponentType)&region=$($RegionBias)&key=$($GoogleGeocodeApiKey)"
+$geourl = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&key=$($GoogleGeocodeApiKey)"
+$geourlTW = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&language=zh-TW&key=$($GoogleGeocodeApiKey)"
+$geourlCN = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/geocode/$($RawDataFormat.ToLower())?address=$($convertedAddress)&region=$($RegionBias)&language=zh-CN&key=$($GoogleGeocodeApiKey)"
 
-try {
-    #[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11
-    #[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    #$geo = Invoke-RestMethod "https://maps.googleapis.com/maps/api/geocode/json?address=2+King+San+Path,+New+Territories,+Hong+Kong&key=$googleGeocodeApiKey"
-    $georesponse = Invoke-RestMethod -Uri $geourl -Method Get -ContentType $TVcontentType
-    $georesponseTW = Invoke-RestMethod -Uri $geourlTW -Method Get -ContentType $TVcontentType
-    $georesponseCN = Invoke-RestMethod -Uri $geourlCN -Method Get -ContentType $TVcontentType
+#[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11
+#[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    #$geo.results.geometry.location
+Write-Host "${basename}: Geocoding $geocodeAddress ..." -ForegroundColor Yellow
+#$geo = Invoke-RestMethod "https://maps.googleapis.com/maps/api/geocode/json?address=2+King+San+Path,+New+Territories,+Hong+Kong&key=$GoogleGeocodeApiKey"
+$georesponse = Invoke-RestMethod -Uri $geourl -Method Get -ContentType $ContentTypeJsonU8
+$georesponseTW = Invoke-RestMethod -Uri $geourlTW -Method Get -ContentType $ContentTypeJsonU8
+$georesponseCN = Invoke-RestMethod -Uri $geourlCN -Method Get -ContentType $ContentTypeJsonU8
 
-    if (!($georesponse)) {
-        $georesponse = c:\local\bin\curl.exe --url "$geourl"
+# difficult to build algo to select best result due to need for fuzzy matching ...
+# google places api can be helpful in fuzzy matching .
+
+if ($georesponse.status -eq "OK") {
+
+    # Verify result
+    Write-Host "${basename}: Found $($georesponse.results.formatted_address)"
+    Write-Host "${basename}: Latitude: $($georesponse.results.geometry.location.lat), Longitude: $($georesponse.results.geometry.location.lng)"
+
+    # Quality of results ...
+    # "ROOFTOP" -> 100% the building found
+    if ($georesponse.results.geometry | where { ($_.location_type -eq "ROOFTOP") -or ($_.location_type -eq "APPROXIMATE") }) {
+        Write-Host "${basename}: Geocode Accuracy: $($georesponse.results.geometry.location_type) " -ForegroundColor Green
     }
-
-    # # approximate can be okay too!
-    # if ($georesponse.results.geometry | where { $_.location_type -eq "ROOFTOP" }) {
-    #     Write-Host "found exact match ..."
-    #     $location = $georesponse.results.geometry | where { $_.location_type -eq "ROOFTOP" }
-    # } else {
-    #     Write-Host "GPS may not be completely accurate ... check georesponse and address immediately"
-    #     $location = $georesponse.results.geometry
-    # }
-
-    # how many responses ?
-    if (($georesponse.results).Count -gt 2) {
-        Write-host "multiple locations found ... check georesponse and location before registering locker"
-        # because google geocode-api uses lat/lng - and we use lat/lon
-        $location = $georesponse.results.geometry.location | Select-Object @{N='lat'; E={($georesponse.results)[0].geometry.location.lat}}, @{N='lon'; E={($georesponse.results)[0].geometry.location.lng}}
-
-    } else {
-        Write-Host "one result found"
-        # because google geocode-api uses lat/lng - and we use lat/lon
-        $location = $georesponse.results.geometry.location | Select-Object @{N='lat'; E={$georesponse.results.geometry.location.lat}}, @{N='lon'; E={$georesponse.results.geometry.location.lng}}
-
+    else {
+        #$location = $georesponse.results.geometry
+        Write-Host "${basename}: Location coordinates may not be completely accurate ... check georesponse and address immediately" -ForegroundColor Yellow
+        Write-Host "${basename}: GPS may not be completely accurate ... check georesponse and address immediately" -ForegroundColor Yellow
+        Write-Host "${basename}: Geocode Accuracy: $($georesponse.results.geometry.location_type) " -ForegroundColor Green
     }
+}
+elseif ($georesponse.Status -eq 'ZERO_RESULTS') {
+    Write-Host "${basename}: Your search for '$($geocodeAddress)' returned zero results."
+}
+elseif ($georesponse.Status -eq 'OVER_QUERY_LIMIT') {
+    Write-Warning "${basename}: Error: Exceeded Address-to-Geocoding service quota."
+}
+elseif ($georesponse.Status -eq 'REQUEST_DENIED') {
+    Write-Warning "${basename}: Request denied ..."
+}
+elseif ($georesponse.Status -eq 'INVALID_REQUEST') {
+    Write-Warning "${basename}: Invalid request ..."
+}
+elseif ($georesponse.Status -eq 'UNKNOWN_ERROR') {
+    Write-Warning "${basename}: Request could not be processed due to a server error. Please try again."
+}
+else {
+    # Not sure what the fuck happened here ...
+    Write-Warning "${basename}: UNKNOWN-UNKNOWN ERROR ... Unable to retrieve location coordinates"
+    #$georesponse = c:\local\bin\curl.exe --url "$geourl"
+}
 
-    # because google geocode-api uses lat/lng - and we use lat/lon 
-    #$location = $georesponse.results.geometry.location | Select-Object @{N='lat'; E={$georesponse.results.geometry.location.lat}}, @{N='lon'; E={$georesponse.results.geometry.location.lng}}
+#lat-long is stored in:
+#$geo.results.geometry.location
 
-    # store place_id - useful later
-    $placeId = $georesponse.results.place_id
 
-    # Testing Google Places API for address verification (based on building name) -- FUTURE
-    #$place = Invoke-RestMethod "https://maps.googleapis.com/maps/api/place/details/json?placeid=ChIJP4Go7FQHBDQR1CUFeViLOzM&key=$googlePlaceApiKey" -Method Get -ContentType $TVcontentType
-    #$place = Invoke-RestMethod -Uri $placeUrl -Method Get -ContentType $TVcontentType
-
-} catch {
-    Write-Host "StatusCode:" $_.Exception
-    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
-    Write-Host "StatusDescription:" $_.Exception.Response.StatusDescription
+# Handling multiple responses
+if (($georesponse.results).Count -ge 2) {
+    Write-host "${basename}: Multiple locations found ... check georesponse and location before registering locker" -ForegroundColor Yellow
+    Write-host "${basename}: Displaying Results ..." -ForegroundColor Yellow
+    $($georesponse.results)
+    # because google geocode-api uses lat/lng - and we use lat/lon
+    $location = $georesponse.results.geometry.location | Select-Object @{N = 'lat'; E = {($georesponse.results)[0].geometry.location.lat}}, @{N = 'lon'; E = {($georesponse.results)[0].geometry.location.lng}}
+}
+else {
+    # because google geocode-api uses lat/lng - and we use lat/lon
+    $location = $georesponse.results.geometry.location | Select-Object @{N = 'lat'; E = {$georesponse.results.geometry.location.lat}}, @{N = 'lon'; E = {$georesponse.results.geometry.location.lng}}
 
 }
 
+# because google geocode-api uses lat/lng - and we use lat/lon
+#$location = $georesponse.results.geometry.location | Select-Object @{N='lat'; E={$georesponse.results.geometry.location.lat}}, @{N='lon'; E={$georesponse.results.geometry.location.lng}}
 
-# # BAD IDEA ... FIXME ASAP - $location not set; set a value
-# $location = @"
-# {
-#     "lat": 22.3964, "lon": 114.1095
-# }
-# "@ | ConvertFrom-Json
+# store place_id
+$placeId = $georesponse.results.place_id
+
+# Testing Google Places API for address verification (based on building name) -- FUTURE
+#$place = Invoke-RestMethod "https://maps.googleapis.com/maps/api/place/details/json?placeid=ChIJP4Go7FQHBDQR1CUFeViLOzM&key=$googlePlaceApiKey" -Method Get -ContentType $ContentTypeJsonU8
+#$place = Invoke-RestMethod -Uri $placeUrl -Method Get -ContentType $ContentTypeJsonU8
+$placeUrl = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/place/details/json?placeid=$($placeId)&key=$googlePlaceApiKey"
+$placeUrlTW = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/place/details/json?placeid=$($placeId)&language=zh-TW&key=$googlePlaceApiKey"
+$placeUrlCN = "$($Protocol.ToLower())://maps.googleapis.com/maps/api/place/details/json?placeid=$($placeId)&language=zh-CN&key=$googlePlaceApiKey"
 
 
-
-# locker-properties: description 
+# locker-properties: description
 $description = @"
 {
   "en": "null"
@@ -311,42 +740,55 @@ $description = @"
 "@ | ConvertFrom-Json
 
 if ($Fdata.Description) {
-    $description | Add-Member -Name "en" -Value $Fdata.Description -MemberType NoteProperty -Force -Verbose
+    $description | Add-Member -Name "en" -Value $Fdata.Description -MemberType NoteProperty -Force
 }
 if ($Fdata.DescriptionC) {
-    $description | Add-Member -Name "zh_HK" -Value $Fdata.DescriptionC -MemberType NoteProperty -Force -Verbose
-    $description | Add-Member -Name "zh_CN" -Value $Fdata.DescriptionC -MemberType NoteProperty -Force -Verbose
+    $description | Add-Member -Name "zh_HK" -Value $Fdata.DescriptionC -MemberType NoteProperty -Force
+    $description | Add-Member -Name "zh_CN" -Value $Fdata.DescriptionC -MemberType NoteProperty -Force
 }
 
 # locker-properties: lockerProfile
-# find camera
-if (($env:CameraIpAddress -eq "0.0.0.0") -or (!$env:CameraIpAddress)) {
-    $findCam = (C:\local\bin\upnpscan.exe -m | Select-String LOCATION).ToString().Split(" ")
-    $env:CameraIpAddress = ([uri]$findCam[1]).Host
-} else {
-    Write-Host "Unable to find camera ..."
-    Write-Host "Unable to find camera ..."
-    Write-Host "Unable to find camera ... setting to 192.168.1.200"
-    $env:CameraIpAddress = "192.168.1.200"
-}
-
 $lockerProfile = @"
 {
-    "cameraHost": "$env:CameraIpAddress",
-    "cameraPassword": "pass",
-    "cameras": [
-      "1",
-      "2"
-    ],
-    "cameraUsername": "Locision",
-    "lockerBoard": 2,
-    "lockerHost": "127.0.0.1",
-    "lockerPort": 9012,
-    "lockerStructure": "001",
-    "scannerHost": "127.0.0.1",
-    "scannerPort": 23
+	"cameraHost": "192.168.1.200",
+	"cameraPassword": "pass",
+	"cameras": [
+	  "1",
+	  "2"
+	],
+	"cameraUsername": "Locision",
+	"lockerBoard": 2,
+	"lockerHost": "127.0.0.1",
+	"lockerPort": 9012,
+	"lockerStructure": "NULL",
+	"scannerHost": "127.0.0.1",
+	"scannerPort": 23
 }
 "@ | ConvertFrom-Json
+
+# update $LockerStructure
+$lockerProfile | Add-Member -Name "lockerStructure" -Value $Fdata.LockerStructure -MemberType NoteProperty -Force
+#$lockerProfile | Add-Member -Name "cameraHost" -Value "192.168.1.200" -MemberType NoteProperty -Force
+
+# find camera
+
+# #wake up UPnP devices
+# c:\local\bin\upnpscan.exe -m
+# c:\local\bin\upnpscan.exe -m
+# c:\local\bin\upnpscan.exe -m
+
+# # #$findCam = (C:\local\bin\upnpscan.exe -m | Select-String LOCATION).ToString().Split(" ")
+# # [uri]$a = (C:\local\bin\upnpscan.exe -m | Select-String LOCATION).ToString().Split(" ") | select -skip 1
+# # $env:CameraIpAddress = $a.Host
+
+# if (($env:CameraIpAddress -eq "0.0.0.0") -or (!$env:CameraIpAddress)) {
+#     $findCam = (C:\local\bin\upnpscan.exe -m | Select-String LOCATION).ToString().Split(" ")
+#     $env:CameraIpAddress = ([uri]$findCam[1]).Host
+# }
+# else {
+#     Write-Host "Unable to find camera ... setting to 192.168.1.200"
+#     $lockerProfile | Add-Member -Name "cameraHost" -Value "192.168.1.200" -MemberType NoteProperty -Force
+# }
 
 # locker-properties: address
 $address = [pscustomobject]@{
@@ -379,60 +821,74 @@ $address = [pscustomobject]@{
     }
 } # $address
 
-
 # locker-properties: boxes
 $boxes = @()
 $type = $Fdata.Boxes
 
 if (!$type) {
-    Write-Host "no type found - cannot continue locker registration - exit"
+    Write-Host "${basename}: Locker type missing ..." -ForegroundColor Red
+    Write-Host "${basename}: Cannot continue locker registration - Exit ..." -ForegroundColor Red
     exit
 }
 
 if ($type -eq 72) {
+    Write-Host "${basename}: Standard 72 Locker Type" -ForegroundColor Green
     $typeDescription = "Standard Locker, 72 Boxes"
     $col = 8
     $row = 9
-} elseif ($type -eq 54) {
+}
+elseif ($type -eq 54) {
+    Write-Host "${basename}: Standard 54 Locker Type" -ForegroundColor Green
     $typeDescription = "Standard Locker, 54 Boxes"
     $col = 6
     $row = 9
-} elseif ($type -eq 36) {
+}
+elseif ($type -eq 36) {
+    Write-Host "${basename}: Standard 36 Locker Type" -ForegroundColor Green
     $typeDescription = "Standard Locker, 36 Boxes"
     $col = 4
     $row = 9
-} elseif ($type -eq 18) {
+}
+elseif ($type -eq 18) {
+    Write-Host "${basename}: Standard 18 Locker Type" -ForegroundColor Green
     $typeDescription = "Standard Locker, 18 Boxes"
     $col = 2
     $row = 9
-} else {
+}
+else {
     # $type probably == 13
     # Locker Type == 7-11
+    Write-Host "${basename}: 7-11 Locker Type" -ForegroundColor Green
     $typeDescription = "Mini Locker, 13 Boxes"
     $col = 2
     # set $row within foreach
 }
 
-ForEach ($i in (1..$col)) {
+ForEach ($i in (1 .. $col)) {
     # 7-11 exception (column 1 has only 4 rows; column 2 has 9)
     if ($type -eq 7 -Or $type -eq 13) {
         if ($i -eq 1) {
             $row = 4
-        } else {
+        }
+        else {
             $row = 9
         }
     }
-    ForEach ($j in (1..$row)) {
+    ForEach ($j in (1 .. $row)) {
         if ($type -eq 7 -Or $type -eq 13) {
             $size = 0
-        } else {
+        }
+        else {
             if ($j -eq 1) {
                 $size = 3
-            } elseif ($j -le 3) {
+            }
+            elseif ($j -le 3) {
                 $size = 2
-            } elseif ($j -le 7) {
+            }
+            elseif ($j -le 7) {
                 $size = 1
-            } elseif ($j -le 9) {
+            }
+            elseif ($j -le 9) {
                 $size = 2
             }
         }
@@ -445,74 +901,126 @@ ForEach ($i in (1..$col)) {
     }
 }
 
-$boxes | ConvertTo-Json | Set-Content -Path boxes.json -Force
-$xboxes = Get-Content -Path boxes.json -Raw
+$boxes | ConvertTo-Json | Set-Content -Path "C:\local\status\boxes.json" -Force
+$xboxes = Get-Content -Path "C:\local\status\boxes.json" -Raw
 $xxboxes = [scriptblock]::Create(($xboxes| ConvertFrom-Json))
 #Measure-Command $TestAddMember | Format-Table TotalSeconds -Autosize
 
 # lp -> locker properties
-Write-Host "Create locker.properties profile"
+Write-Host "${basename}: Create locker.properties profile"
 $lp = New-Object PSObject
 #$lp = [PSCustomObject]
 
-## Reminder: check if [System.Environment]::MachineName == $env:hostname == $env:sitename
-$lp | Add-Member -Name "nickname" -Value "$env:computername" -MemberType NoteProperty -Force
-$lp | Add-Member -Name "certificateId" -Value "561b31425b2fac5695c236b2b42244bb55777f25538b5a2cd0f920bb91b2d6d2" -MemberType NoteProperty
-$lp | Add-Member -Name "csNumber" -Value "85236672668" -MemberType NoteProperty
-#$lp | Add-Member -Name "status" -Value 0 -MemberType NoteProperty
-$lp | Add-Member -Name "openTime" -Value $Fdata.Availability -MemberType NoteProperty -Force
-$lp | Add-Member -Name "location" -Value $location -MemberType NoteProperty
-$lp | Add-Member -Name "description" -Value $description -MemberType NoteProperty
-$lp | Add-Member -Name "lockerProfile" -Value $lockerProfile -MemberType NoteProperty
-#$lp | Add-Member -Name "mac" -Value ((Get-CimInstance Win32_NetworkAdapterConfiguration -Filter "MACAddress != NULL").MACAddress).Replace(':', '-') -MemberType NoteProperty
-$lp | Add-Member -Name "mac" -Value (getmac /fo csv | ConvertFrom-Csv | Where-Object { -not ( $_.'Transport Name' -eq "Hardware not present")}).'Physical Address' -MemberType NoteProperty
-$lp | Add-Member -Name "address" -value $address -MemberType NoteProperty
-$lp | Add-Member -Name "boxes" -value $boxes -MemberType NoteProperty
+# if Method = Patch, do not send certificateId, mac, boxes
+if ($LockerRegistrationHttpMethod -eq "PATCH") {
+    $lp | Add-Member -Name "nickname" -Value $Fdata.LockerName -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "csNumber" -Value "85236672668" -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "status" -Value $LockerStatus -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "openTime" -Value $Fdata.Availability -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "location" -Value $location -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "description" -Value $description -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "lockerProfile" -Value $lockerProfile -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "address" -Value $address -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "scope" -Value $Fdata.scope -MemberType NoteProperty -Force
+}
+else {
+    $lp | Add-Member -Name "nickname" -Value $Fdata.LockerName -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "certificateId" -Value $certificateId -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "csNumber" -Value "85236672668" -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "status" -Value $LockerStatus -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "openTime" -Value $Fdata.Availability -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "location" -Value $location -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "description" -Value $description -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "lockerProfile" -Value $lockerProfile -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "mac" -Value (getmac /fo csv | ConvertFrom-Csv | Where-Object { -not ( $_.'Transport Name' -eq "Hardware not present") -and -not ( $_.'Transport Name' -eq "Disconnected")}).'Physical Address' -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "address" -Value $address -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "boxes" -Value $boxes -MemberType NoteProperty -Force
+    $lp | Add-Member -Name "scope" -Value $Fdata.scope -MemberType NoteProperty -Force
+}
 
+Write-Host "${basename}: "
+Write-Host "${basename}: backup locker.properties to file ..."
+$lp > D:\locker.properties.txt
+
+# assemble $body from $lp
 $body = ($lp | ConvertTo-Json)
+$body | Out-File -FilePath "C:\local\status\locker-registration.properties" -ErrorAction SilentlyContinue
+Write-Host "${basename}: Locker Profile Created" -ForegroundColor Green
+Write-Host "${basename}: "
 
-Write-Host "backup locker.properties to file ..."
-$lp | Out-File -Encoding utf8 -FilePath "D:\locker.properties.txt" -Force
+
+Write-Host "${basename}: lp check ..."
 $lp
 
 #$lp.address
 #$lp.address.zh_HK
 
 $lockercfgfile = "locker-configuration.properties"
-#$uri = "https://kv7slzj8yk.execute-api.ap-northeast-1.amazonaws.com/local/lockers"
-$uri = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers"
-$lockerCloudApiKey = @{ "X-API-KEY" = "123456789" }
 
 try {
-    #"application/json; charset=utf-8"
-    #$result = Invoke-RestMethod -DisableKeepAlive -body $body -ContentType "application/json; charset=utf-8" -Method Post -Headers @{"X-API-KEY" = "123456789"} -Uri $uri -Verbose -Debug -TimeoutSec 30
-    $result = Invoke-RestMethod -DisableKeepAlive -body $body -ContentType "application/json; charset=utf-8" -Method Post -Headers $lockerCloudApiKey -Uri $uri -Verbose -Debug -TimeoutSec 30
-    $r2 = $result.lockerId
-} catch {
+    Write-Host "${basename}: "
+    Write-Host "${basename}: Using $LockerRegistrationHttpMethod on locker for $destEnvironment  ..." -ForegroundColor Yellow
+
+    $LockerRegistrationResult = Invoke-RestMethod -Method $LockerRegistrationHttpMethod -Body $body -ContentType "application/json; charset=utf-8" -Headers $LockerCloudApiKey -Uri $LockerRegistrationUrl -DisableKeepAlive -TimeoutSec 30
+    if ($LockerRegistrationCheck) {
+        $LockerCloudId = $LockerRegistrationCheck
+    }
+    else {
+        $LockerCloudId = $($LockerRegistrationResult.lockerId)
+    }
+
+    Write-Host "${basename}: $($Fdata.LockerName) $LockerRegistrationHttpMethod successful in $destEnvironment ..." -ForegroundColor Green
+    Write-Host "${basename}: LockerCloud ID: $LockerCloudId" -ForegroundColor Green
+
+    # hard-store the LockerCloudId (reference only); file-creation time serves as a registration timestamp
+    New-Item -ItemType File -Path "C:\local\status\$LockerCloudId" -ErrorAction SilentlyContinue
+    Get-Date -Format "yyyy-MM-dd HH:mm:ss" | Out-File -Append -FilePath "c:\local\status\$LockerCloudId"
+
+    # if LockerCloud Locker ID changed, add it to bottom of file. (i.e.: Last line is most recent/newest Locker ID)
+    #Add-Content -Path "C:\local\status\$env:computername" -Value "4bc0ae55-d000-41d2-84b9-139047d3c950" -Verbose
+    Add-Content -Path "C:\local\status\$LockerIdFile" -Value "$LockerCloudId" -Verbose
+
+    Write-Host "${basename}: Retrieving configuration information for $LockerCloudId $destEnvironment ..."
+
+    # capture lockerId and append to url used to get locker configuration url
+    if ($LockerRegistrationCheck) {
+        Write-Host "Using $LockerConfigurationUrl"
+        $LockerConfigurationUrl = $LockerRegistrationUrl
+    }
+    else {
+        $LockerCloudId = $($LockerRegistrationResult.lockerId)
+        $LockerConfigurationUrl = "$LockerRegistrationUrl/$($LockerCloudId)"
+
+    }
+
+    $result2 = Invoke-RestMethod -Method Get -DisableKeepAlive -ContentType "application/json; charset=utf-8" -Headers $LockerCloudApiKey -Uri $LockerConfigurationUrl -TimeoutSec 30
+    $lockercfg = ($result2.configuration | Out-String).Replace(" : ", "=")
+    # Set-Location "D:\"
+    $lockercfg | Out-File -FilePath "d:\$lockercfgfile"
+    $configContent = Get-Content "d:\$lockercfgfile"
+    $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+    #[IO.File]::WriteAllLines($filename, $content)
+    [System.IO.File]::WriteAllLines("d:\$lockercfgfile", $configContent, $Utf8NoBomEncoding)
+
+    Write-Host "${basename}: Locker Configuration Created" -ForegroundColor Green
+
+}
+catch {
     # set-location d:
     # curl --url $uri -H "X-API-KEY: 123456789" -H "Content-Type: application/json" -d "@locker.properties.txt"
-    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
-    Write-Host "StatusDescription:" $_.Exception.Response.StatusDescription
-    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
+    Write-Host "${basename}: Error somewhere ..." -ForegroundColor Red
+
+    Write-Host "${basename}: StatusCode:" $_.Exception.Response.StatusCode.value__
+    Write-Host "${basename}: StatusDescription:" $_.Exception.Response.StatusDescription
+    Write-Host "${basename}: StatusCode:" $_.Exception.Response.StatusCode.value__
 
 }
 
-try {
-    # capture lockerId; append to $uri
-    $uri2 = $uri + "/" + $r2
-    $result2 =  Invoke-RestMethod -DisableKeepAlive -ContentType "application/json; charset=utf-8" -Method Get -Headers $lockerCloudApiKey -Uri $uri2 -Verbose -Debug -TimeoutSec 30
-    $lockercfg = ($result2.configuration | Out-String).Replace(" : ", "=")
-    Set-Location "D:\" -Verbose
-    $lockercfg | Out-File -Encoding utf8 -FilePath "d:\$lockercfgfile" -Force -Verbose
+Write-Host "${basename}: Locker Registration Complete!`n" -ForegroundColor Green
 
-} catch {
-    Write-Host "StatusCode:" $_.Exception
-    Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
-    Write-Host "StatusDescription:" $_.Exception.Response.StatusDescription
-}
 
 # Update TeamViewer
-Write-Host "Teamviewer Setup"
+Write-Host "${basename}: Teamviewer: Start"
 
 # Groups:
 #   disabled: "groupid": "g95467798"
@@ -526,109 +1034,236 @@ $TVclientId = (Get-ItemProperty -Path "HKLM:\SOFTWARE\TeamViewer" -Name ClientID
 
 # teamviewer api setup
 
+Write-Host "${basename}: TeamViewer: API Setup"
 $TVheader = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$TVtoken = "Bearer","2034214-P3aa9qGG323SKWVqqKBV"
+$TVtoken = "Bearer", "2034214-P3aa9qGG323SKWVqqKBV"
 $TVheader.Add("authorization", $TVtoken)
-$TVcontentType = 'application/json; charset=utf-8'
 $TVdeviceProfileData = @"
 {
-    "alias": "$($fdata.LockerName)",
-    "password": "Locision123",
-    "groupid": "g101663132",
-    "description": "LockerLife Locker\nComputerName: $($Fdata.LockerName)\nType: $typeDescription"
+	"alias": "$($fdata.LockerName)",
+	"password": "Locision123",
+	"groupid": "$TeamViewerGroupId",
+	"description": "LockerLife Locker\nComputerName: $($Fdata.LockerName)\nType: $typeDescription"
 }
 "@
 
 
-Write-Host "test connectivity to teamviewer api"
-$ping = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/ping" -ContentType $TVcontentType -Method Get -Headers $TVheader
+Write-Host "${basename}: TeamViewer: Test API Connectivity ..."
+$ping = Invoke-RestMethod -Uri "https://webapi.teamviewer.com/api/v1/ping" -ContentType $ContentTypeJsonU8 -Method Get -Headers $TVheader
 
 if ($ping.token_valid -eq "True") {
-
+    Write-Host "${basename}: TeamViewer API Connection Established" -ForegroundColor Green
     # Note: TeamViewer API calls this "remotecontrol_id"
     # changes to device profile require "device_id"
     # Need to convert "remotecontrol_id" to "device_id"
-    # testing -- $TVclientId = "629313250"
-    Write-Host "Get TeamViewer Profile"
     $TVremoteControlId = "r" + $TVclientId
+    Write-Host "${basename}: TeamViewer: Init ..."
     $TVprofileUri = "https://webapi.teamviewer.com/api/v1/devices/?remotecontrol_id=" + $TVremoteControlId
     $TVdeviceProfile = Invoke-RestMethod -Method Get -Uri $TVprofileUri -Headers $TVheader
 
-    # move locker into teamviewer dev group
+    Write-Host "${basename}: TeamViewer: Get Profile"
     $TVprofileUri = "https://webapi.teamviewer.com/api/v1/devices/?remotecontrol_id=" + $TVremoteControlId
     $TVdeviceProfile = Invoke-RestMethod -Method Get -Uri $TVprofileUri -Headers $TVheader
+
+    Write-Host "${basename}: TeamViewer: Move locker into teamviewer to $destEnvironment group"
     $TVdeviceUri = "https://webapi.teamviewer.com/api/v1/devices/" + $TVdeviceProfile.devices.device_id
-    $TVrepsonse = Invoke-RestMethod -Method Put -Uri $TVdeviceUri -Headers $TVheader -ContentType $TVcontentType -Body $TVdeviceProfileData -Verbose
+    $TVrepsonse = Invoke-RestMethod -Method Put -Uri $TVdeviceUri -Headers $TVheader -ContentType $ContentTypeJsonU8 -Body $TVdeviceProfileData
+    Write-Host "${basename}: Teamviewer: Locker Moved into $destEnvironment group" -ForegroundColor Green
 
-} else {
-    Write-Host "Unable to connect to TeamViewer API"
+    Write-Host "${basename}: Teamviewer: END"
+    Write-Host "${basename}: Teamviewer Complete`n" -ForegroundColor Green
+
+}
+else {
+    Write-Host "${basename}: Unable to connect to TeamViewer API" -ForegroundColor Red
 }
 
 
-start-service data-collection
-start-service scanner
-start-service core
+Write-Host "${basename}: Starting Services ..."
+Restart-Service -Name "data-collection"
+Restart-Service -Name "scanner"
+Restart-Service -Name "core"
 
-c:\local\bin\nssm.exe rotate data-collection
-c:\local\bin\nssm.exe rotate scanner
-c:\local\bin\nssm.exe rotate core
+Write-Host "${basename}: Checking Services ..."
+Get-Service -Name "data-collection"
+Get-Service -Name "scanner"
+Get-Service -Name "core"
 
-
-get-service data-collection
-get-service scanner
-get-service core
+# Write-Host "${basename}: Rotating logs"
+# c:\local\bin\nssm.exe rotate data-collection
+# c:\local\bin\nssm.exe rotate scanner
+# c:\local\bin\nssm.exe rotate core
 
 # pull down new locker-console (purple screen)
-set-location d:
-New-Item -ItemType Directory -Path "D:\backup"
-copy-item -Recurse -path "d:\Locker-Console" -Destination "D:\backup"
-Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/production-Locker-Console.zip" -OutFile "d:\Locker-Console"
+Write-Host "${basename}: Updating locker-console ..."
+Set-Location -Path "D:"
+
+if (!(Test-Path "D:\Locker-Console\Locker-Console-2.zip" -ErrorAction SilentlyContinue)) {
+    Remove-Item -Path "d:\Locker-Console" -Recurse -Force
+    New-Item -ItemType Directory -Path "D:\Locker-Console" -Force
+    Set-Location -Path "D:\Locker-Console"
+    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/Locker-Console-2.zip" -OutFile "d:\Locker-Console\Locker-Console-2.zip" -Verbose
+    7z.exe x -aoa -y .\Locker-Console-2.zip
+    Write-Host "Updating locker-console ... Done" -ForegroundColor Green
+    #Pop-Location
+}
+else {
+    Write-Host "${basename}: Locker-Console already up-to-date" -ForegroundColor Green
+}
+#Pop-Location
+
+$sim = (Get-ChildItem -Path "C:\local\status\8985*").Name
+$deployDate = (Get-ChildItem -Path "C:\local\status\8985*").CreationTime
+$LockerConsoleLocalIpAddress = ([net.dns]::GetHostAddresses("")).IPAddressToString
+$LockerConsoleExternalIpAddress = (Invoke-RestMethod -Method Get -Uri "https://httpbin.org/ip").origin
+
+$EndTime = (Get-Date).Second
+$runtime = $StartTime - $EndTime
+
+Write-Host "Registration took $($EndTime - $StartTime) seconds to run"
+
+
+Write-Host "${basename}: Pre-flight checks:" -ForegroundColor Green
+
+
+Write-Host "${basename}: Verify services startup parameters ..." -ForegroundColor Yellow
+Write-Host "${basename}: 15-second timer to review ..." -ForegroundColor Yellow
+
+[Console]::OutputEncoding = [Text.Encoding]::Unicode
+nssm.exe get core AppParameters
+nssm.exe get data-collection AppParameters
+nssm.exe get scanner AppParameters
+nssm.exe get kioskserver AppParameters
+[Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
+
+
+
 
 
 # send email
+Write-Host "${basename}: Sending email ..."
+
+if ($destEnvironment -eq "PRODUCTION") {
+    $to = "locker-admin@lockerlife.hk"
+    $cc = "pi-admin@locision.com"
+    #$to = "derekyuen@l2iot.com"
+    #$cc = "pi-admin@locision.com"
+}
+else {
+    $to = "derekyuen@l2iot.com"
+    $cc = "pi-admin@locision.com"
+    #$to = "derekyuen@l2iot.com"
+    #$cc = "gilbertzhong@locision.com"
+}
 
 $ehlo_domain = "lockerlife.hk"
-$to = "derekyuen@lockerlife.hk"
-# $cc = "derekyuen@lockerlife.hk"
-$replyto = "postmaster@lockerlife.hk"
 $from = "postmaster@lockerlife.hk"
-$fromname = "Locker Deployment - Registration"
-$returnpath = "postmaster@lockerlife.hk"
-$subject = "testing"
-#$attach = "c:\temp\speedtest.txt"
-$mailbody = "message body"
+$fromname = "Locker Registration Robot"
+$returnpath = "derekyuen@lockerlife.hk"
+$subject = "locker-registration: $($Fdata.LockerName) $destEnvironment"
+$attach = "d:\locker.properties.txt"
 $mimetype = "text/plain"
 
+$SMTPServer = "ns62.hostingspeed.net"
+$SMTPPort = "587"
+$Username = "postmaster@lockerlife.hk"
+$Password = "Locision123"
 
-# $SMTPServer = "ns62.hostingspeed.net"
-# $SMTPPort = "587"
-# $Username = "postmaster@lockerlife.hk"
-# $Password = "Locision123"
+$rfc822body = @"
+Hi, it's me - your friendly Locker Registration Robot!
 
-# $body = "Insert body text here"
-# #$attachment = "C:\test.txt"
+I registered another locker today. Details as follows:
 
-# $message = New-Object System.Net.Mail.MailMessage
-# $message.subject = $subject
-# $message.body = $body
-# $message.to.add($to)
-# $message.cc.add($cc)
-# $message.from = $username
-# $message.attachments.add($attachment)
+LockerLife $destEnvironment Environment
 
-# $smtp = New-Object System.Net.Mail.SmtpClient($SMTPServer, $SMTPPort);
-# $smtp.EnableSSL = $true
-# $smtp.Credentials = New-Object System.Net.NetworkCredential($Username, $Password);
-# $smtp.send($message)
-# write-host "Mail Sent"
-#$extargs = " -ehlo -info"
-#Send-MailMessage -From $from -To $to -Subject $subject -Body $mailbody -SmtpServer ns62.hostingspeed.net -Port $smtpport -UseSsl -Credential (Get-Credential) -Debug
-#C:\local\bin\mailsend.exe -smtp $env:smtphost -port $env:smtpport -domain $ehlo_domain -t $to -f $from -name -sub $subject -name "locker-deployment: locker registered" -rp $returnpath -rt $replyto -ssl -auth -user $emailUser -pass "Locision1707" -attach $attach -M $mailbody -mime-type $mimetype -v
+--- CUSTOMER VISIBLE - PLEASE VERIFY ---
+
+Locker Name: $($Fdata.LockerName)
+Customer Service Number: $($lp.csNumber)
+Operational Hours: $($lp.openTime)
+
+Locker Structure: $($lp.lockerProfile.lockerStructure)
+
+Description:
+  English: $($lp.description.en)
+  Chinese: $($lp.description.zh_HK)
+
+Address (English):
+  Room: $($lp.address.en.room)
+  Building: $($lp.address.en.building)
+  Street: $($lp.address.en.street)
+  Town: $($lp.address.en.town)
+  District: $($lp.address.en.district)
+  City: $($lp.address.en.city)
+
+Address (Chinese):
+  Room: $($lp.address.zh_HK.room)
+  Building: $($lp.address.zh_HK.building)
+  Street: $($lp.address.zh_HK.street)
+  Town: $($lp.address.zh_HK.town)
+  District: $($lp.address.zh_HK.district)
+  City: $($lp.address.zh_HK.city)
+
+GPS Coordinates: $($lp.location.lat)N, $($lp.location.lon)W (DMS)
+
+
+
+--- LOCKERLIFE INTERNAL USE ONLY ---
+
+Locker Name: $($Fdata.LockerName)
+$destEnvironment Environment
+
+Deployment Date: $deployDate
+Registration Date: $(Get-Date)
+
+Locker ID: $LockerCloudId
+Locker Console (PC) Name: $($Fdata.LockerShortName)
+Locker Console IP Address (internal): $LockerConsoleLocalIpAddress
+Locker Console IP Address (external): $LockerConsoleExternalIpAddress
+
+TeamViewer ID: $TVclientId
+TeamvViewer Group: $destEnvironment
+
+Camera Model:
+Camera IP Address:
+Camera Serial Number:
+
+Router IMEI:
+Current Active SIM Card:
+SIM ICCID: $sim
+
+
+Locker Profile:
+$lp
+
+
+Love,
+Locker Registration Robot
+
+"@
+
+$message = New-Object System.Net.Mail.MailMessage
+$message.subject = $subject
+$message.body = $rfc822body
+$message.to.add($to)
+$message.cc.add($cc)
+$message.from = $username
+$message.attachments.add($attach)
+
+$smtp = New-Object System.Net.Mail.SmtpClient($SMTPServer, $SMTPPort);
+$smtp.EnableSSL = $true
+$smtp.Credentials = New-Object System.Net.NetworkCredential($Username, $Password);
+$smtp.send($message)
+
+
+Write-Host "${basename}: Email Sent `n" -ForegroundColor Green
 
 
 # rename computer using $LockerShortName
-if (!($fdata.LockerShortName -eq $env:computername)) {
-    Rename-Computer -NewName $($Fdata.LockerShortName) -Force -ErrorAction SilentlyContinue
-}
+# if (!($fdata.LockerShortName -eq $env:computername)) {
+#     Rename-Computer -NewName $($Fdata.LockerShortName) -Force -ErrorAction SilentlyContinue
+# }
+
+Write-Host "${basename}: END"
 
 # END
