@@ -18,7 +18,13 @@ Write-Host "Disabling Touch Screen"
 Disable-UAC
 
 $devcon = "C:\local\bin\devcon.exe"
+#"USB\VID_222A&PID_0001*"," "USB\VID_0EEF&PID_C000"
 $touchscreenId = "USB\VID_0EEF&PID_C000"
+
+# C:\local\bin\devcon.exe disable "USB\VID_222A&PID_0001*"
+# USB\VID_222A&PID_0001\6&97C04CA&0&6                         : Disable failed
+# USB\VID_222A&PID_0001&MI_00\7&659BED&0&0000                 : Disabled
+# USB\VID_222A&PID_0001&MI_01\7&659BED&0&0001                 : Disable failed 
 
 if (!(Test-Path "C:\local\bin\devcon.exe")) {
 	$WebClient = New-Object System.Net.WebClient
