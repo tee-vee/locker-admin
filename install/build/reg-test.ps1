@@ -23,16 +23,13 @@ $destEnvironment = "DEV"
 #$destEnvironment = "PRODUCTION"
 
 
-$LockerStatus = 1
 
-if (Test-Path "C:\local\status\$env:hostname-$destEnvironment") {
-    Write-Host "Previous Registration Detected ..."
-}
+$LockerStatus = 1
 
 
 # --------------------------------------------------------------------------------------------
 ##
-## If computername is null, just exit ...
+## Deployment Checks ...
 ##
 
 if ($Env:ComputerName -eq "NULL") {
@@ -45,6 +42,11 @@ if ($Env:ComputerName -eq "NULL") {
 }
 else {
     Write-Host "${basename}: Locker Console PC Name: $Env:ComputerName `n"
+}
+
+
+if (Test-Path "C:\local\status\$env:hostname-$destEnvironment") {
+    Write-Host "Previous Registration Detected ..."
 }
 
 
@@ -120,8 +122,9 @@ $PSDefaultParameterValues.Add("Out-File:Encoding", "utf8")
 #$PSDefaultParameterValues += @{'New-Item*:Confirm' = $False}
 #$PSDefaultParameterValues.Add("*-Item*:Verbose", $True)
 $PSDefaultParameterValues.Add("Copy-Item:ErrorAction", "SilentlyContinue")
-$PSDefaultParameterValues.Add("Set-ItemProperty:ErrorAction", "SilentlyContinue")
+$PSDefaultParameterValues.Add("Remove-Item:ErrorAction", "SilentlyContinue")
 
+$PSDefaultParameterValues.Add("Set-ItemProperty:ErrorAction", "SilentlyContinue")
 
 ## *-Path
 #$PSDefaultParameterValues.Add("*-Path:Verbose", $True)
@@ -133,6 +136,13 @@ $PSDefaultParameterValues.Add("*-Location:Verbose", $True)
 ## *-Service
 $PSDefaultParameterValues.Add("*-Service:Verbose", $True)
 $PSDefaultParameterValues.Add("*-Service:Confirm", $False)
+
+## if running in ISE ...
+if ($host.Name -like '*ISE*') {
+    Write-Host "${basename}: Detected ISE Runtime ..." -ForegroundColor Yellow
+    $ProgressPreference = 'SilentlyContinue'
+    $PSDefaultParameterValues.Add("Invoke-*:Verbose", $True)
+}
 
 
 ## set codepage
@@ -174,9 +184,11 @@ if ($destEnvironment -eq "DEV") {
     $LockerCloudApiKey = @{ "X-API-KEY" = "2a7d1233-28da-41c1-9349-77a65a69ef93" }
     #$LockerCloudSdkUrl = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/latest/sdk"
     $LockerCloudSdkUrl = "https://locker-cloud-test.locision.cloud/latest/sdk"
+    $LockerLibsUrl = "https://locker-cloud-test.locision.cloud/lockers/libs"
     #$LockerRegistrationUrl = "https://kv7slzj8yk.execute-api.ap-northeast-1.amazonaws.com/local/lockers"
     #$LockerRegistrationUrl = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/lockers"
     $LockerRegistrationUrl = "https://locker-cloud-test.locision.cloud/lockers"
+    $LockerConsoleConsumerFeatureUrl = "http://naccs-uat.azurewebsites.net/html_temps/en_us/testing.php?lockerId=1&lastupdate=636173302545200000"
 
 
     ## TeamViewer DEV groupid: "g101663132"
@@ -189,8 +201,10 @@ if ($destEnvironment -eq "PRODUCTION") {
     $LockerCloudApiKey = @{ "X-API-KEY" = "1506e0e9-72d2-48c7-98d9-ca6662b40a10" }
     #$LockerCloudSdkUrl = "https://770txnczi6.execute-api.ap-northeast-1.amazonaws.com/dev/latest/sdk"
     $LockerCloudSdkUrl = "https://locker-cloud.locision.cloud/latest/sdk"
+    $LockerLibsUrl = "https://locker-cloud.locision.cloud/lockers/libs"
     #$LockerRegistrationUrl = "https://0ngcozbnmf.execute-api.ap-northeast-1.amazonaws.com/prod/lockers"
     $LockerRegistrationUrl = "https://locker-cloud.locision.cloud/lockers"
+    $LockerConsoleConsumerFeatureUrl = "http://naccs-uat.azurewebsites.net/html_temps/en_us/testing.php?lockerId=1&lastupdate=636173302545200000"
 
     ## Google API Keys
     ## Use Google Maps Geocoding API - Developer Key -> Derek Y Developer Account
@@ -234,14 +248,36 @@ else {
     w32tm.exe /resync
 }
 
-
 ##
 ## Update LockerLife System Configuration (March 2017)
 ##
 
-Write-Host "${basename}: Updating LockerLife System Configuration (March 2017) ..." -ForegroundColor Magenta
-Update-Help -ErrorAction SilentlyContinue
 
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+    Write-Host "${basename}: PowerShell $($PSversiontable.PSVersion) detected ..." -ForegroundColor Red
+    Write-Host "${basename}: Need to update Powershell ..." -ForegroundColor Red
+    if ($PSVersionTable.PSVersion.Major -eq 4) {
+        Write-Host "${basename}: Powershell 4 detected, auto update to version 5 ..." -ForegroundColor Yellow
+        choco install -y dotnet4.5.1
+        choco install -y dotnet4.5.2
+        choco install -y dotnet4.6.2 --version 4.6.01590.0
+        Invoke-WebRequest -Method Get -Uri "http://download.microsoft.com/download/2/C/6/2C6E1B4A-EBE5-48A6-B225-2D2058A9CEFB/Win7-KB3134760-x86.msu" -OutFile "c:\temp\Win7-KB3134760-x86.msu"
+        Start-Process -FilePath "C:\temp\Win7-KB3134760-x86.msu" -ArgumentList "/quiet /norestart" -Wait
+
+    }
+    else {
+        Write-Host "${basename}: Not too sure about version ... Chinese address encoding may not work ..." -ForegroundColor Red
+    }
+}
+
+iex ((New-Object System.Net.WebClient).DownloadString('http://lockerlife.hk/deploy/bin/Get-InstalledSoftware.ps1'))
+(Get-InstalledSoftware -ComputerName $env:computername  | where { $_.Displayname -like "*chrome*" } ).UninstallString
+
+if (!(Test-Path -Path "C:\local\status\update-help.done")) {
+    Write-Host "${basename}: Updating LockerLife System Configuration (March 2017) ..." -ForegroundColor Magenta
+    Update-Help -ErrorAction SilentlyContinue
+    New-Item -ItemType File -Path "C:\local\status\update-help.done"
+}
 
 Write-Host "${basename}: User Accounting Updates ..." -ForegroundColor Magenta
 net.exe accounts /maxpwage:unlimited
@@ -314,7 +350,7 @@ Copy-Item -Path "C:\local\etc\pantone-process-black-c.jpg" -Destination "C:\Wind
 
 ## Additional tools ...
 Write-Host "${basename}: Tools update ..." -ForegroundColor Magenta
-Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/Get-InstalledSoftware.ps1" -OutFile "C:\local\bin\Get-InstalledSoftware.ps1"
+Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/bin/Get-InstalledSoftware.ps1" -OutFile "C:\local\bin\Get-InstalledSoftware.ps1"
 
 
 Write-Host "${basename}: Add fast log viewing program" -ForegroundColor Magenta
@@ -330,6 +366,9 @@ choco install -y unzip --ignore-checksums
 Write-Host "${basename}: Hardware Configuration Updates ..." -ForegroundColor Magenta
 & "$Env:SystemRoot\System32\netsh.exe" interface set interface name="Wireless Network Connection" admin=DISABLED
 netsh.exe interface set interface name="Wireless Network Connection" admin=DISABLED
+
+# add local loopback adapter ... to gurantee json array generated for net interface MAC address ...
+#c:\local\bin\devcon.exe -r install $env:windir\Inf\Netloop.inf *MSLOOP
 
 Write-Host "${basename}: Fix Display Resolution Issues ..." -ForegroundColor Magenta
 ## Idenify Display ... "Digital" must be "1"
@@ -355,6 +394,7 @@ if ($TouchDisplayObj.Status -ieq "Error") {
     C:\local\bin\devcon.exe status $TouchDisplayPPID
     ## C:\local\bin\devcon.exe enable $TouchDisplayPPID
     ## Write-Host "${basename}: Enabled touchscreen at $TouchDisplayId" -ForegroundColor Green
+    $FoundDisabledTouchScreen = "YES"
 }
 else {
     Write-Host "${basename}: No disabled touchscreen found ..." -ForegroundColor Yellow
@@ -394,7 +434,7 @@ Start-Service Spooler
 ## capture output ... 
 
 ## Use devcon.exe to idenitfy printer and printer driver
-#devcon.exe status "USB\VID_0483&PID_5720&REV_0100"
+C:\local\bin\devcon.exe status "USB\VID_0483&PID_5720*"
 ## or use rundll32.exe to idenitfy active driver
 
 # printer.zip
@@ -473,62 +513,131 @@ if (Get-Process -Name "LockerLife*" -ErrorAction SilentlyContinue) {
 StopLocalServices
 
 # Get locker-libs.zip ...
-Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/locker-libs.zip" -OutFile "d:\Locker-Console\locker-libs.zip" -Verbose
-Write-Host "${basename}: locker-libs.zip also available just in case ..."
+Write-Host "${basename}: Refresh locker-libs" -ForegroundColor Magenta
 
+if (!(Test-Path -Path "D:\locker-libs" -PathType Container)) {
+    New-Item -ItemType Directory -Path "D:\locker-libs"
+    Set-Location -Path "D:\locker-libs"
+}
+else {
+    Set-Location -Path "D:\locker-libs"
+}
+
+foreach ($LockerLibFileDownloadUrl in ((Invoke-RestMethod -Method Get -Uri "$LockerLibsUrl").url)) {
+    $localLockerLibFileChecksum = (Get-FileHash -Path "D:\locker-libs\$LockerLibFileName" -Algorithm SHA256).Hash
+    $LockerLibFileName = $LockerLibFileDownloadUrl.SubString($LockerLibFileDownloadUrl.LastIndexOf('/') + 1)
+    #Write-host "$item, -- $itemname"
+
+    Invoke-WebRequest -Method Get -Uri "$LockerLibFileDownloadUrl" -OutFile "D:\locker-libs\$LockerLibFileName" -ContentType "application/octet-stream"
+}              
 
 # Update LockerCloud Middleware (SDK)
 $LockerCloudSdkHeaders = $LockerCloudApiKey
 $LockerCloudSdkResponse = Invoke-RestMethod -Method Get -Headers $LockerCloudSdkHeaders -Uri $LockerCloudSdkUrl
 
-Set-Location -Path "c:\local\bin" -Verbose
-Remove-Item -Path "D:\data-collection.jar" -Force -Verbose
+Set-Location -Path "C:\local\bin" -Verbose
+Remove-Item -Path "C:\local\bin\new-service-*.bat" -Verbose -Force
 
-# LockerCloudSdk: "datacollection" is NOT hyphenated
-$LockerLifeSdkList = @( "core", "scanner", "dataCollection")
-foreach ($sdk in $LockerLifeSdkList) {
-    # start from scratch ...
-    #$LockerCloudSdkResponse.$sdk.version | Out-File -FilePath "D:\$sdk.version.txt" -Force
-    Remove-Item -Path "C:\local\bin\new-service-$sdk.bat" -Force -Verbose -ErrorAction SilentlyContinue
-    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-$($sdk).bat" -OutFile "C:\local\bin\new-service-$($sdk).bat" -Verbose
-
-    Remove-Item -Path "D:\$sdk.jar" -ErrorAction SilentlyContinue
-    Invoke-WebRequest -Method Get -Headers $LockerCloudSdkHeaders -Uri "$($LockerCloudSdkResponse.$sdk.url)" -OutFile "D:\$sdk.jar" -Verbose
-    $localJarHash = (Get-FileHash -Path "D:\$sdk.jar" -Algorithm SHA256).Hash
-    Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
-    Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
-
-    # check hash
-    if ($localJarHash -eq $LockerCloudSdkResponse.$sdk.sha256) {
-        Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
-        Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
-        Write-Host "${basename}: Hashes match for $sdk!" -ForegroundColor Green
-        #Start-Process -FilePath "c:\local\bin\new-service-$sdk.bat" -Verb RunAs -Wait
-        & "C:\local\bin\new-service-$sdk.bat"
-        Restart-Service -Name $sdk
-    } #if
-    else {
-        Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
-        Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
-        Write-Host "${basename}: Hashes do not match for $sdk!" -ForegroundColor Red
-        & "C:\local\bin\new-service-$sdk.bat"
-        #Start-Process -FilePath "c:\local\bin\new-service-$sdk.bat" -Verb RunAs -Wait
-        Restart-Service -Name $sdk
-    } #else
-} # foreach
-
-Move-Item -Path "D:\datacollection.jar" -Destination "D:\data-collection.jar" -Force -Verbose
-
-## EXCEPTION: kioskserver (not served from LockerCloud)
+#
+## EXCEPTION #1: kioskserver (not served from LockerCloud)
 ## NOTED: Not checking ...
 ## sometimes missing kioskserver.exe ...
-Write-Host "${basename}: INSTALL KIOSKSERVER AS SERVICE"
-Remove-Item -Path "C:\local\bin\new-service-kioskserver.bat" -ErrorAction SilentlyContinue -Verbose
-Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-kioskserver.bat" -OutFile "c:\local\bin\new-service-kioskserver.bat" -Verbose
-Start-Process -FilePath "c:\local\bin\new-service-kioskserver.bat" -Verb RunAs -Wait
+Set-Location -Path "D:\"
 
-Write-Host "${basename}: Kioskserver service should be installed ..."
+Write-Host "${basename}: Updating LockerLife middleware - kioskserver" -ForegroundColor Magenta
+Set-Location -Path "D:\"
+
+Get-Service -Name "kioskserver"
+
+## get updated service script
+Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-kioskserver.bat" -OutFile "c:\local\bin\new-service-kioskserver.bat"
+
+if (Test-Path -Path "D:\kioskServer\kioskserver.exe") {
+    Write-Host "${basename}: kioskserver executable available, updating and restarting local kioskserver service ..." -ForegroundColor Magenta
+    Start-Process -FilePath "c:\local\bin\new-service-kioskserver.bat" -Verb RunAs -Wait
+    Restart-Service -Name "kioskserver"
+    Start-Sleep -Seconds 2
+    # use scripted telnet to port 9012 to do board check?
+} else {
+    Write-Host "${basename}: Missing kioskserver executable" -ForegroundColor Red
+    Set-Location -Path "D:\"
+    
+    if (Test-Path -Path "D:\production-kioskServer.zip") {
+        7z.exe x -aoa -y production-kioskServer.zip
+    } else {
+        Write-Host "${basename}: Downloading kioskserver package ..." -ForegroundColor Yellow
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/app/production-kioskServer.zip" -OutFile "D:\production-kioskServer.zip"
+        7z.exe x -aoa -y production-kioskServer.zip
+    }
+
+    Start-Process -FilePath "c:\local\bin\new-service-kioskserver.bat" -Verb RunAs -Wait
+    Restart-Service -Name "kioskserver"
+}
+Write-Host "${basename}: kioskserver setup should be complete ..." -ForegroundColor Green
 #Pop-Location
+
+
+## EXCEPTION #2: Inside LockerCloudSdk - "datacollection" must be handled differently due to inconsistent naming
+Write-Host "${basename}: Updating LockerLife middleware - data-collection ..." -ForegroundColor Magenta
+
+# Get new-service-build script ...
+Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/bin/new-service-datacollection.bat" -OutFile "C:\local\bin\new-service-datacollection.bat"
+
+# check .jar to see if update is needed by comparing local/remote file checksums... 
+$localJarHash = (Get-FileHash -Path "D:\data-collection.jar" -Algorithm SHA256).Hash
+$remoteJarHash = ($LockerCloudSdkResponse.dataCollection).sha256
+Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
+Write-Host "${basename}: remote hash from remote: $remoteJarHash"
+
+if (-not ($localJarHash -eq $remoteJarHash)) {
+    Write-Host "${basename}: NOT MATCH - Local and remote checksums for data-collection not match!" -ForegroundColor Red
+    Remove-Item -Path "D:\data-collection.jar" -Force -Verbose
+    Invoke-WebRequest -Method Get -Headers $LockerCloudSdkHeaders -Uri "$($LockerCloudSdkResponse.dataCollection.url)" -OutFile "D:\$($LockerCloudSdkResponse.dataCollection.name).jar"
+}
+else {
+    Write-Host "${basename}: MATCH - Local and remote checksums" -ForegroundColor Green
+    Write-Host "${basename}: data-collection update not needed" -ForegroundColor Green
+}
+Start-Process -FilePath "c:\local\bin\new-service-datacollection.bat" -Verb RunAs -Wait
+Restart-Service -Name "data-collection"
+
+Remove-Variable -Name "localJarHash"
+Remove-Variable -Name "remoteJarHash"
+
+Set-Location -Path "D:"
+
+## LockerCloudSdk: Core, scanner update ...
+$LockerLifeSdkList = @("core", "scanner")
+foreach ($sdk in $LockerLifeSdkList) {
+    # start from scratch ...
+    Write-Host "${basename}: Updating LockerLife middleware - $sdk" -ForegroundColor Magenta
+
+    #$LockerCloudSdkResponse.$sdk.version | Out-File -FilePath "D:\$sdk.version.txt" -Force
+    Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/bin/new-service-$($sdk).bat" -OutFile "C:\local\bin\new-service-$($sdk).bat"
+
+    $localJarHash = (Get-FileHash -Path "$sdk.jar" -Algorithm SHA256).Hash
+    $remoteJarHash = ($LockerCloudSdkResponse.$sdk).sha256
+
+    if (-not ($localJarHash -eq $remoteJarHash)) {
+        Write-Host "${basename}: MISMATCH - Local and remote checksums for $sdk" -ForegroundColor Red
+        Write-Host "${basename}: local hash for ${sdk}: $localJarHash"
+        Write-Host "${basename}: remote hash: $($LockerCloudSdkResponse.$sdk.sha256)"
+        Remove-Item -Path "D:\$sdk.jar" -Force -Verbose
+        #Invoke-WebRequest -Method Get -Headers $LockerCloudSdkHeaders -Uri "$($LockerCloudSdkResponse.$sdk.url)" -OutFile "D:\$($sdk).jar" -Verbose
+        Invoke-WebRequest -Method Get -Headers $LockerCloudSdkHeaders -Uri "$($LockerCloudSdkResponse.$sdk.url)" -OutFile "D:\$($LockerCloudSdkResponse.$sdk.name).jar"
+        Write-Host "${basename}: Downloaded $($LockerCloudSdkResponse.$sdk.name), Version $($LockerCloudSdkResponse.$sdk.version)" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "${basename}: MATCH - Local and remote checksums" -ForegroundColor Green
+        Write-Host "${basename}: Update to $sdk not needed ..." -ForegroundColor Green
+    }
+    [Console]::OutputEncoding = [Text.Encoding]::Unicode
+    Start-Process -FilePath "c:\local\bin\new-service-$sdk.bat" -Verb RunAs -Wait
+    [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
+    Restart-Service -Name $sdk
+    Start-Sleep -Seconds 2
+    Get-Service -Name $sdk
+} # foreach
 
 
 ## Printer Test
@@ -544,7 +653,7 @@ if ((Get-Service -Name "kioskserver").Status -eq "Running") {
     else {
         # missing printer-test.zip
         Write-Host "${basename}: Downloading printer-test ..." -ForegroundColor Yellow
-        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/drivers/printer-test.zip" -OutFile "C:\local\drivers\printer-test.zip" -Verbose
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/drivers/printer-test.zip" -OutFile "C:\local\drivers\printer-test.zip"
         7z.exe x -aoa -y "C:\local\drivers\printer-test.zip"
         Write-Host "${basename}: printer-test tool availalble ..." -ForegroundColor Green
         Write-Host "${basename}: Printer status check: "
@@ -563,7 +672,7 @@ else {
     # Get-Service kioskserver fail - fix kioskserver
     Write-Host "${basename}: Fixing kioskserver ..."
     Stop-Service -Name "kioskserver"
-    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-kioskserver.bat" -OutFile "c:\local\bin\new-service-kioskserver.bat" -Verbose
+    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/bin/new-service-kioskserver.bat" -OutFile "c:\local\bin\new-service-kioskserver.bat"
     Start-Process -FilePath "c:\local\bin\new-service-kioskserver.bat" -Verb RunAs -Wait
     Get-Service -Name "kioskserver"
 }
@@ -636,7 +745,8 @@ if ($($Fdata.scope) -eq "711") {
 # first try ...
 
 #$geocodeAddress = $Fdata.GpsRef + "," + $Fdata.StreetNo + "," + $Fdata.StreetName + "," + $Fdata.Town + "," + $Fdata.District
-$geocodeAddress = $Fdata.GpsRef + "," + $Fdata.Town + "," + $Fdata.District
+#$geocodeAddress = $Fdata.GpsRef + "," + $Fdata.Town + "," + $Fdata.District
+$geocodeAddress = $Fdata.GpsRef + "," + $Fdata.District
 #$geocodeAddress = $geocodeAddress.Replace("NULL", "")
 #$geocodeAddress = $geocodeAddress.TrimEnd(" ")
 $convertedAddress = $geocodeAddress.Replace(" ", "+")
@@ -1009,11 +1119,9 @@ catch {
     # set-location d:
     # curl --url $uri -H "X-API-KEY: 123456789" -H "Content-Type: application/json" -d "@locker.properties.txt"
     Write-Host "${basename}: Error somewhere ..." -ForegroundColor Red
-
     Write-Host "${basename}: StatusCode:" $_.Exception.Response.StatusCode.value__
     Write-Host "${basename}: StatusDescription:" $_.Exception.Response.StatusDescription
     Write-Host "${basename}: StatusCode:" $_.Exception.Response.StatusCode.value__
-
 }
 
 Write-Host "${basename}: Locker Registration Complete!`n" -ForegroundColor Green
@@ -1102,7 +1210,7 @@ if (!(Test-Path "D:\Locker-Console\Locker-Console-2.zip" -ErrorAction SilentlyCo
     Remove-Item -Path "d:\Locker-Console" -Recurse -Force
     New-Item -ItemType Directory -Path "D:\Locker-Console" -Force
     Set-Location -Path "D:\Locker-Console"
-    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/Locker-Console-2.zip" -OutFile "d:\Locker-Console\Locker-Console-2.zip" -Verbose
+    Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/Locker-Console-2.zip" -OutFile "d:\Locker-Console\Locker-Console-2.zip"
     7z.exe x -aoa -y .\Locker-Console-2.zip
     Write-Host "Updating locker-console ... Done" -ForegroundColor Green
     #Pop-Location
@@ -1137,11 +1245,8 @@ nssm.exe get kioskserver AppParameters
 [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
 
 
-
-
-
 # send email
-Write-Host "${basename}: Sending email ..."
+Write-Host "${basename}: Sending email ..." -ForegroundColor Yellow
 
 if ($destEnvironment -eq "PRODUCTION") {
     $to = "locker-admin@lockerlife.hk"
@@ -1150,7 +1255,7 @@ if ($destEnvironment -eq "PRODUCTION") {
     #$cc = "pi-admin@locision.com"
 }
 else {
-    $to = "derekyuen@l2iot.com"
+    $to = "locker-admin@lockerlife.hk"
     $cc = "pi-admin@locision.com"
     #$to = "derekyuen@l2iot.com"
     #$cc = "gilbertzhong@locision.com"
@@ -1175,6 +1280,7 @@ Hi, it's me - your friendly Locker Registration Robot!
 I registered another locker today. Details as follows:
 
 LockerLife $destEnvironment Environment
+("Dev" registrations go to new dev environment [April 3])
 
 --- CUSTOMER VISIBLE - PLEASE VERIFY ---
 
@@ -1263,6 +1369,23 @@ Write-Host "${basename}: Email Sent `n" -ForegroundColor Green
 # if (!($fdata.LockerShortName -eq $env:computername)) {
 #     Rename-Computer -NewName $($Fdata.LockerShortName) -Force -ErrorAction SilentlyContinue
 # }
+
+
+## Reminders ...
+
+if ($FoundDisabledTouchScreen -eq "YES") {
+    Write-Host "${basename}: Robot found disabled touch screen. Please check ..." -ForegroundColor Yellow
+}
+Write-Host "${basename}: Checking LockerConsoleUiConsumerFeatureEndpoint" -ForegroundColor Yellow
+if (!((Invoke-RestMethod -Method Get -Uri "$LockerConsoleConsumerFeatureUrl").status -eq 200)) {
+    Write-Host "${basename}: Warning - LockerConsoleUi may not load properly" -ForegroundColor Red
+    Write-Host "${basename}: Warning - LockerConsoleUi may not load properly" -ForegroundColor Red
+}
+Else {
+    Write-Host "${basename}: LockerConsoleUiConsumerFeatureEndpoint Reachable ..." -ForegroundColor Green
+    Write-Host "${basename}: LockerConsoleUi should load properly without any errors" -ForegroundColor Green
+}
+
 
 Write-Host "${basename}: END"
 
