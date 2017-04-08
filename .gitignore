@@ -2,7 +2,9 @@
 Icon?
 .DS_Store
 .dropbox
+_deprecated/
 docs/
+.vscode/
 *.swp
 *.dll
 *.exe
