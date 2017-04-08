@@ -20,7 +20,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
 If (!( $isAdmin )) {
     Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-    1..5 | % { Write-Host }
+    1 .. 5 | % { Write-Host }
     exit
 }
 
@@ -44,23 +44,17 @@ if (Test-Path C:\local\lib\WASP.dll) {
     Import-Module C:\local\lib\WASP.dll
 }
 
-
 Write-Host "${basename}: Load DeploymentConfig"
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp ...
-(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1","C:\99-DeploymentConfig.ps1")
-(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/Get-InstalledSoftware.ps1","C:\Get-InstalledSoftware.ps1")
-. C:\99-DeploymentConfig.ps1
-. C:\Get-InstalledSoftware.ps1
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1", "C:\local\bin\99-DeploymentConfig.ps1")
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/bin/Get-InstalledSoftware.ps1", "C:\local\bin\Get-InstalledSoftware.ps1")
+. C:\local\bin\99-DeploymentConfig.ps1
+. C:\local\bin\Get-InstalledSoftware.ps1
 
 $basename = "00-bootstrap"
 
 SetConsoleWindow
 $host.ui.RawUI.WindowTitle = "00-bootstrap"
-
-# close previous IE windows ...
-if (Get-Process -Name iexplore -ErrorAction SilentlyContinue) {
-    Stop-Process -Name iexplore -Force
-}
 
 # remove limitations
 Disable-MicrosoftUpdate
@@ -88,20 +82,19 @@ Write-Host "${basename}: System eligibility check" -ForegroundColor Magenta
 # Checking for Compatible OS
 Write-Host "Checking if OS is Windows 7"
 
-$BuildNumber=Get-WindowsBuildNumber
+$BuildNumber = Get-WindowsBuildNumber
 if ($BuildNumber -le 7601) {
     # Windows 7 RTM=7600, SP1=7601
     WriteSuccess "`t PASS: OS is Windows 7 (RTM 7600/SP1 7601)"
-} else {
+}
+else {
     WriteErrorAndExit "`t FAIL: Windows version $BuildNumber detected and is not supported. Exiting"
 }
-
 
 # --------------------------------------------------------------------------------------------
 # get updated root certificates
 #msiexec /i http://www.cacert.org/certs/CAcert_Root_Certificates.msi /quiet /passive
 
-# --------------------------------------------------------------------------------------------
 Write-Host "${basename}: Install Software and Required Toolset ..." -ForegroundColor Magenta
 
 choco feature enable -n=allowGlobalConfirmation
@@ -118,7 +111,7 @@ Breathe
 #Move-Item -Path "$Env:ProgramData\chocolatey\tools\7z.exe" "$Env:ProgramData\chocolatey\tools\7z-x64.exe" -Force
 #Move-Item "$Env:ProgramData\chocolatey\tools\7za.exe" "$Env:ProgramData\chocolatey\tools\7z.exe" -Force
 
-cinst 7zip --forcex86
+cinst 7zip
 cinst 7zip.commandline
 cinst unzip --ignore-checksums
 
@@ -140,7 +133,7 @@ if (!(Get-Service -Name "TeamViewer" -ErrorAction SilentlyContinue)) {
     #Start-BitsTransfer -Source "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg" -Destination "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg"
     Invoke-WebRequest -Uri "$Env:deployurl/etc/PRODUCTION-201701-TEAMVIEWER-HOST.reg" -OutFile "$Env:local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg" -Verbose
     Write-Host "${basename}: Install teamviewer Settings"
-    reg import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
+    reg.exe import c:\local\etc\PRODUCTION-201701-TEAMVIEWER-HOST.reg
     Stop-Service TeamViewer
     Stop-Service TeamViewer
 }
@@ -170,8 +163,6 @@ cinst git.install -params '"/WindowsTerminal /GitOnlyOnPath /NoAutoCrlf"'
 #cinst powershell -version 3.0.20121027
 #schtasks /Run /TN "\Microsoft\Windows\.NET Framework\.NET Framework NGEN v4.0.30319"
 
-Write-Host "${basename}: Temporarily enable Windows Update"
-Enable-MicrosoftUpdate
 Write-Host "${basename}: Fixing critical Windows svchost.exe memory leak -- KB2889748"
 & "$Env:SystemRoot\System32\wusa.exe" "$Env:_tmp\Windows6.1-KB2889748-x86.msu" /quiet
 #& "$Env:SystemRoot\System32\wusa.exe" "$Env:_tmp\Windows6.1-KB2889748-x86.msu" /quiet /forcereboot
@@ -180,7 +171,7 @@ Start-Process -FilePath wusa.exe -ArgumentList "$Env:_tmp\Windows6.1-KB2889748-x
 Breathe
 
 Write-Host "${basename}: Disable Windows Update"
-Disable-MicrosoftUpdate
+#Disable-MicrosoftUpdate
 Breathe
 
 Write-Host "${basename}: Installing Powershell 5"
@@ -201,13 +192,9 @@ if ($PSVersionTable.PSVersion.Major -gt 4) {
     Install-PackageProvider -Name NuGet -Force
 }
 
-#cinst powershell-packagemanagement
-
-
 # --------------------------------------------------------------------------------------------
 Write-Host "${basename}: Installing Microsoft Security Essentials (antivirus)"
 # https://technet.microsoft.com/en-us/library/gg131918.aspx?f=255&MSPPError=-2147217396
-# --------------------------------------------------------------------------------------------
 
 cinst microsoftsecurityessentials -version 4.5.0216.0 --ignore-checksums
 
@@ -218,73 +205,61 @@ Write-Host "${basename}: Update MSAV Signature"
 #& "$Env:SystemRoot\System32\timeout.exe" /t 5 /nobreak
 #& "$Env:SystemRoot\System32\sc.exe" stop MsMpSvc
 
-
 # --------------------------------------------------------------------------------------------
 Write-Host "${basename}: Installing additional tools"
-# --------------------------------------------------------------------------------------------
 
-cinst vim --ignore-checksums -r
-cinst jq --ignore-checksums -r
-cinst clink --ignore-checksums -r
+cinst vim --ignore-checksums
+cinst jq --ignore-checksums
+cinst clink --ignore-checksums
 #cinst wincommandpaste --ignore-checksums
 #cinst webpicmd
 #cinst putty
-cinst rsync --ignore-checksums -r
+cinst rsync --ignore-checksums
 #cinst wget
-cinst which --ignore-checksums -r
-cinst sysinternals --ignore-checksums -r
+cinst which --ignore-checksums
+cinst sysinternals --ignore-checksums
 
 #cinst teraterm
 Breathe
 
 # --------------------------------------------------------------------------------------------
 Write-Host "${basename}: START - Java and Java Runtime Environment ..."
-(Get-InstalledSoftware -Verbose -Computername $env:computername).DisplayName -like '*java*'
+#(Get-InstalledSoftware -Verbose -Computername $env:computername).DisplayName -like '*java*'
 
-## if cannot execute ...
-if (!(Start-Process "d:\java\jre\bin\java.exe" -ArgumentList "-version" -Wait -WindowStyle Hidden -PassThru).ExitCode -eq 0) {
-    Write-Host "${basename}: Installing Java jre"
-    & "$Env:_tmp\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
-    Breathe
-    # Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
-} else {
-    Write-Host "${basename}: Java installed ..." -ForegroundColor Green
-    Start-Process -FilePath "D:\java\jre\bin\java.exe" -ArgumentList "-version" -Wait -NoNewWindow
-}
+Write-Host "${basename}: Installing Java jre"
+Set-Location -Path "C:\temp"
+& ".\jre-8u111-windows-i586.exe" INSTALLCFG=c:\temp\jre-install.properties /L "$Env:logs\jre-install.log"
+Breathe
+
+# Install-ChocolateyPackage 'jre8' 'exe' "/s INSTALLDIR=D:\java\jre NOSTARTMENU=ENABLE WEB_JAVA=DISABLE WEB_ANALYTICS=DISABLE REBOOT=ENABLE SPONSORS=ENABLE AUTO_UPDATE=DISABLE REMOVEOUTOFDATEJRES=1 " 'https://javadl.oracle.com/webapps/download/AutoDL?BundleId=216432'
+Write-Host "${basename}: Java installed ..." -ForegroundColor Green
+#java.exe -version 
 #Reg.exe DELETE "HKLM\SOFTWARE\JavaSoft\Java Update" /f
 Write-Host "${basename}: END - Java and Java Runtime Environment ..."
 
 Breathe
 
 # --------------------------------------------------------------------------------------------
-# Write-Host "${basename}: Installing Dropbox ..."
-#cinst dropbox --ignore-checksums
-# Get-WmiObject -Verbose -Class Win32_Product
-
-
-# $dropboxUninstall = $env:PROGRAMFILES\Dropbox\Client\DropboxUninstaller.exe 
-# if (Test-Path -Path $dropboxUninstall) {
-#     Stop-Service -Verbose Dropbox
-     #Start-Process -WorkingDirectory $env:programfiles -FilePath "C:\Program Files\Dropbox\Client\DropboxUninstall.exe" -ArgumentList '/S'
-# } else {
-#     Write-Host "${basename}: Dropbox already uninstalled"
-# }
-
-
-# --------------------------------------------------------------------------------------------
 Write-Host "${basename}: Out of band Installers"
-# --------------------------------------------------------------------------------------------
+
+Write-Host "${basename}: Install QuickSet ..."
 
 if ( Get-WmiObject -Class Win32_Product | where { $_.Name -like "QuickSet*" } ) {
     Write-Host "${basename}: Installing QuickSet"
     Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/QuickSet-2.07-bulid0805.msi /quiet /passive /L*v e:\logs\quickset-install.log' -Wait
 }
 
+Write-Host "${basename}: Install Axis Camera Tools ..."
+
 if (Test-Path -Path '$env:programfiles\Axis*') {
     Start-Process "msiexec.exe" -ArgumentList '/i http://lockerlife.hk/deploy/_pkg/AMC_Embedded_msi.msi /quiet /passive /L*v e:\logs\amcembedded-install.log' -Wait
 }
+Write-Host "${basename}: Install Axis Companion"
 
 # REMINDER: install Axis companion ...
+#http://cdn.axis.com/ftp/pub_soft/cam_srv/cam_companion/3_31_001/AXISCompanionSetup.exe
+#Invoke-WebRequest -Uri "http://cdn.axis.com/ftp/pub_soft/cam_srv/cam_companion/3_31_001/AXISCompanionSetup.exe" -OutFile "c:\temp\AXISCompanionSetup3_31_001.exe"
+#Invoke-WebRequest -Uri "http://cdn.axis.com/ftp/pub_soft/cam_srv/cam_companion/3_40_007/AXISCompanionSetup.exe" -OutFile "C:\temp\AXISCompanionSetup3_40_007.exe"
 
 Breathe
 # --------------------------------------------------------------------------------------------
@@ -303,8 +278,6 @@ Breathe
 # --------------------------------------------------------------------------------------------
 
 Set-Location -Path "$env:local\drivers"
-#unzip 
-Remove-Item -Path scanner.zip -Force -ErrorAction SilentlyContinue
 
 # step 1: install usb virtual com interface
 # takes 3-5 minutes to install
@@ -347,11 +320,12 @@ Start-Service Spooler -Verbose
 Breathe
 
 Set-Location -Path "$env:local\drivers"
-"printer.zip","printer-filter.zip","printer-test.zip" | ForEach-Object {
+"printer.zip", "printer-filter.zip", "printer-test.zip" | ForEach-Object {
     if (Test-Path $_) {
         C:\ProgramData\chocolatey\bin\unzip.exe -o $_
         #Remove-Item $_ -Force -Confirm:$false -Force
-    } else {
+    }
+    else {
         Write-Host "${basename}: $_ missing" 
     }
 }
@@ -367,7 +341,7 @@ Set-Location -Path "$env:local\drivers"
 & "$Env:SystemRoot\System32\wbem\wmic.exe" printer list status | Select-String 80mm
 
 ## step 1: install port
-C:\windows\system32\RUNDLL32.EXE SETUPAPI.DLL,InstallHinfSection DefaultInstall 132 C:\local\drivers\printer\Windows81Driver\POS88EN.inf
+C:\windows\system32\RUNDLL32.EXE SETUPAPI.DLL, InstallHinfSection DefaultInstall 132 C:\local\drivers\printer\Windows81Driver\POS88EN.inf
 
 ## %LOCKERDRIVERS%\libusb-win32-bin-1.2.6.0\bin\x86\install-filter.exe install "--device=USB\VID_0483&PID_5720&REV_0100"
 
