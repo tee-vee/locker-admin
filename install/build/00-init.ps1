@@ -15,22 +15,26 @@ Write-Host "${basename}: Lets start"
 
 $timer = Start-TimedSection "00-init"
 
-## Verify Running as Admin
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-If (!( $isAdmin )) {
-    Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
-    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-    1 .. 5 | % { Write-Host }
-    exit
-}
+# ## Verify Running as Admin
+# $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+# If (!( $isAdmin )) {
+#     Write-Host "-- Restarting as Administrator" -ForegroundColor Cyan ; Sleep -Seconds 1
+#     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+#     1 .. 5 | % { Write-Host }
+#     exit
+# }
 
 # backup
 $previousHour = [DateTime]::Now.AddHours(-1)
 #if (((Get-ComputerRestorePoint)[-1]).CreationTime -gt $previousHour)
 
-Enable-ComputerRestore -Drive "C:\" -Confirm:$false
-Checkpoint-Computer -Description "Before 00 init"
-
+# temporary ... FIXME
+if (-not (Test-Path -Path "c:\local\status\Enable-ComputerRestore.done")) {
+    Write-Host "Starting system backup ..."
+    Enable-ComputerRestore -Drive "C:\" -Confirm:$false
+    Checkpoint-Computer -Description "Before 00 init"
+    New-Item -ItemType File -Path "C:\local\status\Enable-ComputerRestore.done" -Force
+}
 
 #--------------------------------------------------------------------
 Write-Host "${basename}: Loading Modules ..."
@@ -62,8 +66,8 @@ cinst powershell
 choco feature disable -n=allowGlobalConfirmation
 
 # get and source DeploymentConfig - just throw it into $Env:USERPROFILE\temp
-(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1", "C:\99-DeploymentConfig.ps1")
-. C:\99-DeploymentConfig.ps1
+(New-Object System.Net.WebClient).DownloadFile("http://lockerlife.hk/deploy/99-DeploymentConfig.ps1", "C:\local\bin\99-DeploymentConfig.ps1")
+. C:\local\bin\99-DeploymentConfig.ps1
 $basename = "00-init"
 
 SetConsoleWindow
@@ -975,8 +979,7 @@ if (!(Test-Path "c:\local\lib\wasp.dll" -ErrorAction SilentlyContinue)) {
     "WASP.dll" | ForEach-Object {
         # better if we used Get-FileHash, but no time to write good code ...
         if (!(Test-Path "$_")) {
-            #Start-BitsTransfer -Source "http://lockerlife.hk/deploy/lib/$_" -Destination "$env:local\lib\$_" -DisplayName "LockerLifeLocalLib" -Description "Download LockerLife Local Libraries $_" -TransferType Download -RetryInterval 60
-            Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/lib/$_" -OutFile "$env:local\lib\$_" -Verbose -erroraction SilentlyContinue
+            Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/lib/$_" -OutFile "$env:local\lib\$_" -Verbose -ErrorAction SilentlyContinue
         }
         else {
             WriteInfoHighlighted "${basename}: Skipping $_" 
@@ -990,22 +993,18 @@ Set-Location -Path "C:\temp"
 "jre-8u111-windows-i586.exe", "jre-install.properties", "Windows6.1-KB2889748-x86.msu", "402810_intl_i386_zip.exe" | ForEach-Object {
     # better if we used Get-FileHash, but no time to write good code ...
     if (!(Test-Path "c:\temp\$_")) {
-        Start-BitsTransfer -Source "http://lockerlife.hk/deploy/_pkg/$_" -Destination "$Env:_tmp\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife Installer $_" -TransferType Download -RetryInterval 60
-        #Invoke-WebRequest -Source "http://lockerlife.hk/deploy/_pkg/$_" -Destination "$Env:_tmp\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife Installer $_" -TransferType Download -RetryInterval 60
+        Invoke-WebRequest -Method Get -Uri "http://lockerlife.hk/deploy/_pkg/$_" -OutFile "$Env:_tmp\$_"
     }
     else {
         Write-Host "${basename}: Skipping $_" 
     }
 }
-# commit the downloaded files
-Get-BitsTransfer | Complete-BitsTransfer
 
 
 Write-Host "${basename}: Download DRIVERS ..."
 "printer.zip", "printer-filter.zip", "printer-test.zip" | ForEach-Object {
     # better if we used Get-FileHash, but no time to write good code ...
     if (!(Test-Path "c:\local\drivers\$_")) {
-        #Start-BitsTransfer -Source "http://lockerlife.hk/deploy/drivers/$_" -Destination "c:\local\drivers\$_" -DisplayName "LockerLifeInstaller" -Description "Download LockerLife System Drivers $_" -TransferType Download -RetryInterval 60
         Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/drivers/$_" -OutFile "C:\local\drivers\$_"
     }
     else {
