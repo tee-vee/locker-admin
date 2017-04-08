@@ -97,7 +97,7 @@ Set-Location -Path "D:\"
 "RunLockerLifeConsole.bat","RunLockerLifeTV.bat","core.jar","data-collection.jar","run-manual.bat","run-test.bat","run.bat","scanner.jar","production-Locker-Console.zip","production-Locker-Slider.zip","production-kioskServer.zip" | ForEach-Object {
     if (!(Test-Path $_)) {
         Write-Host "${basename}: Working on $_"
-        Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/app/$_" -Destination "D:\$_" -Description "Download LockerLife Console Setup File $_" -TransferType Download -RetryInterval 60
+        Start-BitsTransfer -DisplayName "LockerLifeConsoleSetup" -Source "http://lockerlife.hk/deploy/app/$_" -Destination "D:\$_" -Description "Download LockerLife Console Setup File $_"
         #Invoke-WebRequest -Uri "http://lockerlife.hk/deploy/app/$_" -OutFile "D:\$_" -Verbose
     } else {
         Write-Host "${basename}: SKIPPING $_" -ForegroundColor Yellow
